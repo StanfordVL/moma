@@ -3,8 +3,6 @@ import json
 import os
 from pprint import pprint
 
-import parse_anns
-
 
 """ Terminology:
  - activity: act
@@ -17,6 +15,27 @@ def hms2s(t):
   h, m, s = [int(i) for i in t.split(':')]
   return int(datetime.timedelta(hours=h, minutes=m, seconds=s).total_seconds())
 
+
+# def load_cnames(moma_dir, fname='cnames.json'):
+#   with open(os.path.join(moma_dir, fname), 'r') as f:
+#     cnames = json.load(f)
+#
+#   act_cnames = sorted(cnames.keys())
+#   sact_cnames = sorted(set(chain(*cnames.values())))
+#   act_cid2cnames = data_structure.bidict({i:act_cname for i, act_cname in enumerate(act_cnames)})
+#   sact_cid2cnames = data_structure.bidict({i:sact_cname for i, sact_cname in enumerate(sact_cnames)})
+#   aact2act_cnames = {}
+#   for aact_cname in cnames:
+#     for sact_cname in cnames[aact_cname]:
+#       if sact_cname in aact2act_cnames:
+#         assert aact2act_cnames[sact_cname] == aact_cname
+#       else:
+#         aact2act_cnames[sact_cname] = aact_cname
+#
+#   pprint(aact2act_cnames)
+#   aact2act_cnames = bidict(aact2act_cnames)
+#
+#   return cnames, act_cid2cnames, sact_cid2cnames, aact2act_cnames
 
 class ActAnn:
   """
@@ -60,7 +79,12 @@ class SactAnn:
     self.act_ann = act_ann
 
 
-# class AGAnn:
+class AGAnn:
+  """
+   - key: a key which uniquely identifies a sub-activity annotation
+  """
+  def __init__(self):
+    pass
 
 
 def main():

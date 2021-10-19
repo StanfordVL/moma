@@ -1,63 +1,55 @@
-from itertools import chain
 import json
 import os
 from pprint import pprint
 
-import data_structure
-
 
 class bidict(dict):
-  def __init__(self, mapping):
-    super(bidict, self).__init__()
-
-    self._dict = {}
+  """
+  A many-to-one bidirectional dictionary
+  Reference: https://stackoverflow.com/questions/3318625/how-to-implement-an-efficient-bidirectional-hash-table
+  """
+  def __init__(self, *args, **kwargs):
+    super(bidict, self).__init__(*args, **kwargs)
     self.inverse = {}
-    assert isinstance(mapping, dict)
-    for key, value in mapping.items():
-      self[key] = value
+    for key, value in self.items():
+      self.inverse.setdefault(value, set()).add(key)
 
   def __setitem__(self, key, value):
-    self._dict[key] = value
+    if key in self:
+      self.inverse[self[key]].remove(key)
+    super(bidict, self).__setitem__(key, value)
     self.inverse.setdefault(value, set()).add(key)
 
-  def __getitem__(self, key):
-    return self._dict[key]
-
   def __delitem__(self, key):
-    self.inverse[self._dict[key]].remove(key)
-    del self._dict[key]
-
-  def __repr__(self):
-    return repr(self._dict)
+    self.inverse[self[key]].remove(key)
+    if len(self.inverse[self[key]]) == 0:
+      del self.inverse[self[key]]
+    super(bidict, self).__delitem__(key)
 
 
 def fix_cname(cname):
   return cname.strip().lower().replace('/ ', '/').replace('\u2019', "'")
 
 
-def load_cnames(moma_dir, fname='cnames.json'):
-  with open(os.path.join(moma_dir, fname), 'r') as f:
-    cnames = json.load(f)
-
-  act_cnames = sorted(cnames.keys())
-  sact_cnames = sorted(set(chain(*cnames.values())))
-  act_cid2cnames = bidict({i:act_cname for i, act_cname in enumerate(act_cnames)})
-  sact_cid2cnames = bidict({i:sact_cname for i, sact_cname in enumerate(sact_cnames)})
-  aact2act_cnames = {}
-  for aact_cname in cnames:
-    for sact_cname in cnames[aact_cname]:
-      if sact_cname in aact2act_cnames:
-        assert aact2act_cnames[sact_cname] == aact_cname
-      else:
-        aact2act_cnames[sact_cname] = aact_cname
-
-  pprint(aact2act_cnames)
-  aact2act_cnames = bidict(aact2act_cnames)
-
-  return cnames, act_cid2cnames, sact_cid2cnames, aact2act_cnames
+def fix_iid(iid):
+  return iid if isinstance(iid, str) else str(iid)
 
 
-def main(parse_video=False, parse_graph=True):
+def fix_rel(rel_raw):
+  # fix dynamic relationships
+  rel_raw = rel_raw.strip()
+  if rel_raw[0] != '(' and rel_raw[-1] != ')':  # unary
+    rel_raw = '('+rel_raw+')'
+
+  # fix static relationships
+  if rel_raw == '(C,(2)':
+    rel_raw += ')'
+
+  return rel_raw
+
+
+def main(parse_video=True, parse_graph=True):
+  """ load data """
   # moma_dir = '/vision/u/zelunluo/moma'
   moma_dir = '../'
   video_anns_fname = 'video_anns_phase1_processed.json'
@@ -68,48 +60,71 @@ def main(parse_video=False, parse_graph=True):
   with open(os.path.join(moma_dir, graph_anns_fname), 'r') as f:
     graph_anns = json.load(f)
 
-  # modify anns
-  for act_key, act_ann in video_anns:
+  """ preprocess data """
+  # fix typos
+  for act_iid, act_ann in video_anns.items():
     for i in range(len(act_ann['subactivity'])):
-      video_anns[act_key]['subactivity'][i]['class'] = fix_cname(video_anns[act_key]['subactivity'][i]['class'])
+      video_anns[act_iid]['subactivity'][i]['class'] = fix_cname(video_anns[act_iid]['subactivity'][i]['class'])
+      video_anns[act_iid]['subactivity'][i]['subactivity_instance_id'] = fix_iid(video_anns[act_iid]['subactivity'][i]['subactivity_instance_id'])
 
+  # fix typos & list -> dict
   graph_anns_new = {}
   for graph_ann in graph_anns:
-    graph_anns_new[graph_ann['trim_video_id']] = graph_ann
+    for i in range(len(graph_ann['atomic_actions'])):
+      graph_ann['atomic_actions'][i]['actor_id'] = fix_rel(graph_ann['atomic_actions'][i]['actor_id'])
+    for i in range(len(graph_ann['relationships'])):
+      graph_ann['relationships'][i]['description'] = fix_rel(graph_ann['relationships'][i]['description'])
+    graph_anns_new.setdefault(graph_ann['trim_video_id'], []).append(graph_ann)
   graph_anns = graph_anns_new
 
+
+  """ init """
+  cnames = {}
+  cnames2 = {}
+  iids = {}
+  for act_iid, act_ann in video_anns.items():
+    act_cname = act_ann['class']
+    for sact_ann in act_ann['subactivity']:
+      cnames.setdefault(act_cname, set()).add(sact_ann['class'])
+      sact_iid = sact_ann['subactivity_instance_id']
+      iids.setdefault(act_iid, set()).add(sact_iid)
+
+  for ag_iid, ag_ann in graph_anns.items():
+    for sg_ann in ag_ann:
+      for actor in sg_ann['actors']:
+        cnames2.setdefault('actor', set()).add(actor['class'])
+      for object in sg_ann['objects']:
+        cnames2.setdefault('object', set()).add(object['class'])
+      for rel in sg_ann['atomic_actions']:
+        cnames2.setdefault('rel', set()).add(rel['class'])
+      for rel in sg_ann['relationships']:
+        cnames2.setdefault('rel', set()).add(rel['class'])
+
+  """ parse video annotations """
   if parse_video:
-    for act_key, act_ann in video_anns.items():
-      # make sure video_id is redundant
-      assert act_key == act_ann['video_id']
-
-      # make sure fps is redundant
-      for sact_ann in act_ann['subactivity']:
-        assert sact_ann['fps'] == act_ann['fps']
-
     # activity classes
     act_cnames = set()
-    for key, act_ann in video_anns.items():
+    for act_iid, act_ann in video_anns.items():
       act_cnames.add(act_ann['class'])
     print(act_cnames, len(act_cnames), '\n')
 
     # sub-activity classes
     sact_cnames = set()
-    for act_key, act_ann in video_anns.items():
+    for act_iid, act_ann in video_anns.items():
       for sact_ann in act_ann['subactivity']:
         sact_cnames.add(sact_ann['class'])
     print(sact_cnames, len(sact_cnames), '\n')
 
-    # make sure sub-activity classes from different activity classes are mutually exclusive
-    cnames = {}
-    for act_key, act_ann in video_anns.items():
-      act_cname = act_ann['class']
-      if act_cname not in cnames:
-        cnames[act_cname] = set()
-      for sact_ann in act_ann['subactivity']:
-        cnames[act_cname].add(sact_ann['class'])
-    # pprint(cnames)
+    # check for redundancy in annotations
+    for act_iid, act_ann in video_anns.items():
+      # make sure video_id is redundant
+      assert act_iid == act_ann['video_id']
 
+      # make sure fps is redundant
+      for sact_ann in act_ann['subactivity']:
+        assert sact_ann['fps'] == act_ann['fps']
+
+    # make sure sub-activity classes from different activity classes are mutually exclusive
     act_cnames = list(cnames.keys())
     for i in range(len(act_cnames)):
       for j in range(i+1, len(act_cnames)):
@@ -117,54 +132,103 @@ def main(parse_video=False, parse_graph=True):
         sact_cnames2 = cnames[act_cnames[j]]
         assert len(set(sact_cnames1).intersection(set(sact_cnames2))) == 0
 
-    # make sure activity key is unique
-    act_keys = []
-    for act_key, act_ann in video_anns.items():
-      act_keys.append(act_key)
-    assert len(act_keys) == len(set(act_keys))
-    print("#activity instances = {}".format(len(act_keys)))
+    # make sure activity instance id is unique
+    act_iids = []
+    for act_iid, act_ann in video_anns.items():
+      act_iids.append(act_iid)
+    assert len(act_iids) == len(set(act_iids))
+    print("#activity instances = {}".format(len(act_iids)))
 
-    # make sure sub-activity key is unique
-    sact_keys = []
-    for act_key, act_ann in video_anns.items():
+    # make sure sub-activity instance id is unique
+    sact_iids = []
+    for act_iid, act_ann in video_anns.items():
       for sact_ann in act_ann['subactivity']:
-        sact_key = sact_ann['subactivity_instance_id']
-        sact_keys.append(sact_key)
-    assert len(sact_keys) == len(set(sact_keys))
-    print("#sub-activity instances = {}".format(len(sact_keys)))
+        sact_iid = sact_ann['subactivity_instance_id']
+        sact_iids.append(sact_iid)
+    assert len(sact_iids) == len(set(sact_iids))
+    print("#sub-activity instances = {}".format(len(sact_iids)))
 
-    # save as json
-    for act_cname in cnames.keys():
-      sact_cnames = list(cnames[act_cname])
-      cnames[act_cname] = sact_cnames
-    with open(os.path.join(moma_dir, '../cnames.json'), 'w') as f:
-      json.dump(cnames, f, indent=4, sort_keys=True)
-
-  act_ann = data_structure.ActAnn(list(video_anns.values())[0])
-
+  """ parse graph annotations """
   if parse_graph:
-    print(len(graph_anns))
-    print(sorted(graph_anns[0].keys()))
-    pprint(graph_anns[200])
+    # ag_key == sact_iid
+    # dict_keys(['actors', 'atomic_actions', 'relationships', 'objects', 'raw_video_id', 'trim_video_id', 'graph_id', 'frame_dim', 'subactivity', 'frame_timestamp', 'activity'])
 
-    # make sure graph id is unique
-    graph_ids = []
-    for key, graph_ann in graph_anns.items():
-      graph_ids.append(graph_ann['graph_id'])
-    assert len(graph_ids) == len(set(graph_ids))
-    print("#graphs = {}".format(len(graph_ids)))
+    # make sure scene graph key (instance id) is unique
+    sg_keys = []
+    for ag_key, ag_ann in graph_anns.items():
+      for sg_ann in ag_ann:
+        sg_key = sg_ann['graph_id']
+        sg_keys.append(sg_key)
+    assert len(sg_keys) == len(set(sg_keys))
+    print("#scene graph instances = {}\n".format(len(sg_keys)))
 
-    # make sure frame timestamp starts at zero and has the same length as the sub-activity videos
-    cur_video_id = graph_anns[0]['trim_video_id']
-    cur_frame_id = 0
-    for graph_ann in graph_anns:
-      if graph_ann['trim_video_id'] != cur_video_id:  # new sub-activity
-        cur_video_id = graph_ann['trim_video_id']
-        assert graph_ann['frame_timestamp'] == 0
-        cur_frame_id = 0
+    # check for redundancy in annotations
+    for ag_key, ag_ann in graph_anns.items():
+      # make sure frame_dim is redundant
+      frame_dim = ag_ann[0]['frame_dim']
+      for sg_ann in ag_ann:
+        assert sg_ann['frame_dim'] == frame_dim
 
-      assert graph_ann['frame_timestamp'] == cur_frame_id, '{} vs. {}'.format(graph_ann['frame_timestamp'], cur_frame_id)
-      cur_frame_id += 1
+    # check relationship formats
+    for ag_key, ag_ann in graph_anns.items():
+      for sg_ann in ag_ann:
+        for aact in sg_ann['atomic_actions']:
+          rel_raw = aact['actor_id']
+          assert 2*rel_raw.count(',')+3 == len(rel_raw), '{}: {} vs. {}'.format(rel_raw, len(rel_raw), 2*rel_raw.count(',')+1)
+        for aact in sg_ann['relationships']:
+          rel_raw = aact['description']
+          assert rel_raw[0] == '(' and rel_raw[-1] == ')' and rel_raw.count('(') == 2 and rel_raw.count(')') == 2, rel_raw
+
+    # check entity instance ids
+    for ag_key, ag_ann in graph_anns.items():
+      actor_iids = set()
+      object_iids = set()
+      rels = set()
+
+      for sg_ann in ag_ann:
+        for actor in sg_ann['actors']:
+          actor_iids.add(actor['id_in_video'])
+        for object in sg_ann['objects']:
+          object_iids.add(object['id_in_video'])
+        for rel in sg_ann['atomic_actions']:
+          rels.add(rel['actor_id'])
+        for rel in sg_ann['relationships']:
+          rels.add(rel['description'])
+
+      entity_iids = set.union(actor_iids, object_iids)
+      rel_iids = set.union(*[set(rel) for rel in rels])-{'(', ')', ','}
+
+      # error 1: entity iids do not match those in relationships
+      # assert iids == rel_iids, ag_key
+      if entity_iids != rel_iids:
+        # print(sorted(actor_iids))
+        # print(sorted(object_iids))
+        # print(sorted(iids))
+        # print(sorted(rel_iids))
+        print('entity iids do not match those in relationships: {}'.format(ag_key))
+
+      # error 2: iids not consecutive
+      if len(actor_iids) > 0 and (sorted(actor_iids)[0] != 'A' or sorted(actor_iids)[-1] != chr(ord('A')+len(actor_iids)-1)):
+        print('actor iids not consecutive: {}'.format(ag_key))
+      if len(object_iids) > 0 and (sorted(object_iids)[0] != '1' or sorted(object_iids)[-1] != str(len(object_iids))):
+        print('object iids not consecutive: {}'.format(ag_key))
+
+  # save as json: cnames mapping
+  for act_cname in cnames.keys():
+    cnames[act_cname] = sorted(cnames[act_cname])  # set -> list
+  with open(os.path.join(moma_dir, './cnames.json'), 'w') as f:
+    json.dump(cnames, f, indent=4, sort_keys=True, ensure_ascii=False)
+
+  for key in cnames2.keys():
+    cnames2[key] = sorted(cnames2[key])  # set -> list
+  with open(os.path.join(moma_dir, './cnames2.json'), 'w') as f:
+    json.dump(cnames2, f, indent=4, sort_keys=True, ensure_ascii=False)
+
+  # save as json: instance id mapping
+  for act_iid in sorted(iids.keys()):
+    iids[act_iid] = sorted(iids[act_iid])  # set -> list
+  with open(os.path.join(moma_dir, './iids.json'), 'w') as f:
+    json.dump(iids, f, indent=4, sort_keys=True)
 
 
 if __name__ == '__main__':

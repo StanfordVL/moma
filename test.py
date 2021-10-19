@@ -4,28 +4,35 @@ import os
 import pprint
 
 
+class bidict(dict):
+  """
+  A many-to-one bidirectional dictionary
+  Reference: https://stackoverflow.com/questions/3318625/how-to-implement-an-efficient-bidirectional-hash-table
+  """
+  def __init__(self, *args, **kwargs):
+    super(bidict, self).__init__(*args, **kwargs)
+    self.inverse = {}
+    for key, value in self.items():
+      self.inverse.setdefault(value, set()).add(key)
+
+  def __setitem__(self, key, value):
+    if key in self:
+      self.inverse[self[key]].remove(key)
+    super(bidict, self).__setitem__(key, value)
+    self.inverse.setdefault(value, set()).add(key)
+
+  def __delitem__(self, key):
+    self.inverse[self[key]].remove(key)
+    if len(self.inverse[self[key]]) == 0:
+      del self.inverse[self[key]]
+    super(bidict, self).__delitem__(key)
+
+
 def main():
-  moma_dir = '/vision/u/zelunluo/moma'
-
-  graph_anns_fname = 'graph_anns.json'
-  video_anns_fname = 'video_anns_phase1_processed.json'
-  trimmed_videos_dname = 'trimmed_videos_cn'
-  videos_dname = 'videos_cn'
-
-  with open(os.path.join(moma_dir, graph_anns_fname), 'r') as f:
-    graph_anns = json.load(f)
-
-  with open(os.path.join(moma_dir, video_anns_fname), 'r') as f:
-    video_anns = json.load(f)
-
-  trimmed_videos = [os.path.basename(x) for x in glob.glob(os.path.join(moma_dir, trimmed_videos_dname, '*.mp4'))]
-  print(trimmed_videos[:10])
-  key = list(video_anns.keys())[0]
-  video_ann = video_anns[key]
-  print(key)
-  print(video_ann)
-  print(video_ann.keys())
-  pprint.pprint(video_ann['subactivity'])
+  map = {'a': 1, 'b': 2, 'c': 1}
+  map = bidict(map)
+  print(map)
+  print(map.inverse[2])
 
 
 if __name__ == '__main__':
