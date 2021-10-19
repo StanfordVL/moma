@@ -35,16 +35,16 @@ def fix_iid(iid):
   return iid if isinstance(iid, str) else str(iid)
 
 
-def fix_rel(rel_raw):
-  # fix dynamic relationships
+def fix_unary_rel(rel_raw):
   rel_raw = rel_raw.strip()
   if rel_raw[0] != '(' and rel_raw[-1] != ')':  # unary
     rel_raw = '('+rel_raw+')'
+  return rel_raw
 
-  # fix static relationships
+
+def fix_binary_rel(rel_raw):
   if rel_raw == '(C,(2)':
     rel_raw += ')'
-
   return rel_raw
 
 
@@ -71,9 +71,9 @@ def main(parse_video=True, parse_graph=True):
   graph_anns_new = {}
   for graph_ann in graph_anns:
     for i in range(len(graph_ann['atomic_actions'])):
-      graph_ann['atomic_actions'][i]['actor_id'] = fix_rel(graph_ann['atomic_actions'][i]['actor_id'])
+      graph_ann['atomic_actions'][i]['actor_id'] = fix_unary_rel(graph_ann['atomic_actions'][i]['actor_id'])
     for i in range(len(graph_ann['relationships'])):
-      graph_ann['relationships'][i]['description'] = fix_rel(graph_ann['relationships'][i]['description'])
+      graph_ann['relationships'][i]['description'] = fix_binary_rel(graph_ann['relationships'][i]['description'])
     graph_anns_new.setdefault(graph_ann['trim_video_id'], []).append(graph_ann)
   graph_anns = graph_anns_new
 
@@ -183,7 +183,8 @@ def main(parse_video=True, parse_graph=True):
     for ag_key, ag_ann in graph_anns.items():
       actor_iids = set()
       object_iids = set()
-      rels = set()
+      unary_rels = set()
+      binary_rels = set()
 
       for sg_ann in ag_ann:
         for actor in sg_ann['actors']:
@@ -191,12 +192,12 @@ def main(parse_video=True, parse_graph=True):
         for object in sg_ann['objects']:
           object_iids.add(object['id_in_video'])
         for rel in sg_ann['atomic_actions']:
-          rels.add(rel['actor_id'])
+          unary_rels.add(rel['actor_id'])
         for rel in sg_ann['relationships']:
-          rels.add(rel['description'])
+          binary_rels.add(rel['description'])
 
       entity_iids = set.union(actor_iids, object_iids)
-      rel_iids = set.union(*[set(rel) for rel in rels])-{'(', ')', ','}
+      rel_iids = set.union(*[set(rel) for rel in unary_rels.union(binary_rels)])-{'(', ')', ','}
 
       # error 1: entity iids do not match those in relationships
       # assert iids == rel_iids, ag_key
