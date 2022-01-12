@@ -8,15 +8,15 @@ import os
 from pprint import pprint
 
 
-def to_seconds(hhmmss):
-  dt = datetime.datetime.strptime(hhmmss, '%H:%M:%S')
+def hms2s(hms):
+  dt = datetime.datetime.strptime(hms, '%H:%M:%S')
   seconds = datetime.timedelta(hours=dt.hour, minutes=dt.minute, seconds=dt.second).total_seconds()
   return seconds
 
 
-def is_hhmmss(hhmmss):
+def is_hms(hms):
   try:
-    datetime.datetime.strptime(hhmmss, '%H:%M:%S')
+    datetime.datetime.strptime(hms, '%H:%M:%S')
     return True
   except ValueError:
     return False
@@ -56,36 +56,36 @@ def check_ann_act(iid_act, ann_act):
     assert os.path.isfile(file_video), 'video file does not exit'
 
     # make sure fps is consistent
-    metadata_ffmpeg = ffmpeg.probe(file_video)['streams'][0]
-    fps_ffmpeg = round(Fraction(metadata_ffmpeg['avg_frame_rate']))
-    assert ann_act['fps'] == fps_ffmpeg, 'activity fps inconsistent'
-    assert all([ann_sact['fps'] == fps_ffmpeg for ann_sact in anns_sact]), 'sub-activity fps inconsistent'
+    metadata_video = ffmpeg.probe(file_video)['streams'][0]
+    fps_video = round(Fraction(metadata_video['avg_frame_rate']))
+    assert ann_act['fps'] == fps_video, 'activity fps inconsistent'
+    assert all([ann_sact['fps'] == fps_video for ann_sact in anns_sact]), 'sub-activity fps inconsistent'
 
     # make sure the activity temporal boundary is in the right format
-    assert is_hhmmss(ann_act['crop_start']) and is_hhmmss(ann_act['crop_end']), 'incorrect activity boundary format'
+    assert is_hms(ann_act['crop_start']) and is_hms(ann_act['crop_end']), 'incorrect activity boundary format'
 
     # make sure the activity temporal boundary is within the video and the length is positive
-    start_act = to_seconds(ann_act['crop_start'])  # inclusive
-    end_act = to_seconds(ann_act['crop_end'])  # exclusive
-    end_ffmpeg = math.ceil(float(metadata_ffmpeg['duration']))
-    assert 0 <= start_act < end_act <= end_ffmpeg, \
-        'incorrect activity boundary: 0 <= {} < {} <= {}'.format(start_act, end_act, end_ffmpeg)
+    start_act = hms2s(ann_act['crop_start'])  # inclusive
+    end_act = hms2s(ann_act['crop_end'])  # exclusive
+    end_video = math.ceil(float(metadata_video['duration']))
+    assert 0 <= start_act < end_act <= end_video, \
+        'incorrect activity boundary: 0 <= {} < {} <= {}'.format(start_act, end_act, end_video)
 
     end_sact_last = start_act
     for i, ann_sact in enumerate(anns_sact):
       # make sure the activity temporal boundary is in the right format
-      assert is_hhmmss(ann_sact['start']) and is_hhmmss(ann_sact['end']), 'incorrect sub-activity boundary format'
+      assert is_hms(ann_sact['start']) and is_hms(ann_sact['end']), 'incorrect sub-activity boundary format'
 
       # make sure the sub-activity temporal boundary is after the previous one
-      start_sact = to_seconds(ann_sact['start'])
-      end_sact = to_seconds(ann_sact['end'])
+      start_sact = hms2s(ann_sact['start'])
+      end_sact = hms2s(ann_sact['end'])
       assert end_sact_last <= start_sact, \
-          'incorrect sub-activity boundary: {} <= {}'.format(end_sact_last, start_sact)
+          'incorrect sub-activity boundary {} <= {}'.format(end_sact_last, start_sact)
       end_sact_last = end_sact
 
       # make sure the sub-activity temporal boundary is within the activity and the length is positive
       assert start_act <= start_sact < end_sact <= end_act, \
-          'incorrect sub-activity boundary: {} <= {} < {} <= {}'.format(start_act, start_sact, end_sact, end_act)
+          'incorrect sub-activity boundary {} <= {} < {} <= {}'.format(start_act, start_sact, end_sact, end_act)
 
       # make sure iid_sact is consecutive
       assert ann_sact['subactivity_instance_id'] == anns_sact[0]['subactivity_instance_id']+i, \
@@ -114,58 +114,58 @@ def check_issues(anns_act):
   assert len(iids_sact) == len(set(iids_sact))
 
   # make sure sub-activity classes from different activity classes are mutually exclusive
-  cnames = {}
+  dict_cnames = {}
   for iid_act, ann_act in anns_act.items():
     cname_act = ann_act['class']
     for ann_sact in ann_act['subactivity']:
-      cnames.setdefault(cname_act, set()).add(ann_sact['class'])
-  cnames_act = list(cnames.keys())
+      dict_cnames.setdefault(cname_act, set()).add(ann_sact['class'])
+  cnames_act = list(dict_cnames.keys())
   for i in range(len(cnames_act)):
     for j in range(i+1, len(cnames_act)):
-      cnames_sact_1 = cnames[cnames_act[i]]
-      cnames_sact_2 = cnames[cnames_act[j]]
-      assert len(set(cnames_sact_1).intersection(set(cnames_sact_2))) == 0
+      cnames_sact_1 = dict_cnames[cnames_act[i]]
+      cnames_sact_2 = dict_cnames[cnames_act[j]]
+      assert len(cnames_sact_1.intersection(cnames_sact_2)) == 0
 
   return anns_act, iids_act_bad
 
 
 def parse_anns(anns_act):
-  cnames = {}
-  iids = {}
+  dict_cnames = {}
+  dict_iids = {}
   for iid_act, ann_act in anns_act.items():
     cname_act = ann_act['class']
     for ann_sact in ann_act['subactivity']:
-      cnames.setdefault(cname_act, set()).add(ann_sact['class'])
+      dict_cnames.setdefault(cname_act, set()).add(ann_sact['class'])
       iid_sact = ann_sact['subactivity_instance_id']
-      iids.setdefault(iid_act, set()).add(iid_sact)
+      dict_iids.setdefault(iid_act, set()).add(iid_sact)
 
   # set -> list
-  for cname_act in cnames.keys():
-    cnames[cname_act] = sorted(cnames[cname_act])
-  for iid_act in sorted(iids.keys()):
-    iids[iid_act] = sorted(iids[iid_act])
+  for cname_act in dict_cnames.keys():
+    dict_cnames[cname_act] = sorted(dict_cnames[cname_act])
+  for iid_act in sorted(dict_iids.keys()):
+    dict_iids[iid_act] = sorted(dict_iids[iid_act])
 
-  # pprint(cnames, width=150)
-  # pprint(iids)
+  # pprint(dict_cnames, width=150)
+  # pprint(dict_iids)
     
-  return cnames, iids
+  return dict_cnames, dict_iids
 
 
 def main():
-  with open(os.path.join(dir_moma, dname_ann, fname_ann)) as f:
+  with open(os.path.join(dir_moma, dname_ann, fname_ann), 'r') as f:
     anns_act = json.load(f)
 
   anns_act = fix_issues(anns_act)
   anns_act, iids_act_bad = check_issues(anns_act)
-  cnames, iids = parse_anns(anns_act)
+  dict_cnames, dict_iids = parse_anns(anns_act)
 
   # save as json
+  with open(os.path.join(dir_moma, './dict_cnames.json'), 'w') as f:
+    json.dump(dict_cnames, f, indent=4, sort_keys=True, ensure_ascii=False)
+  with open(os.path.join(dir_moma, './dict_iids.json'), 'w') as f:
+    json.dump(dict_iids, f, indent=4, sort_keys=True)
   with open(os.path.join(dir_moma, './iids_act_bad.json'), 'w') as f:
     json.dump(iids_act_bad, f, indent=4, sort_keys=True, ensure_ascii=False)
-  with open(os.path.join(dir_moma, './cnames.json'), 'w') as f:
-    json.dump(cnames, f, indent=4, sort_keys=True, ensure_ascii=False)
-  with open(os.path.join(dir_moma, './iids.json'), 'w') as f:
-    json.dump(iids, f, indent=4, sort_keys=True)
 
 
 if __name__ == '__main__':
