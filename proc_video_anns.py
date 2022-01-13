@@ -6,12 +6,17 @@ import math
 from multiprocessing import cpu_count, Pool
 import os
 from pprint import pprint
+import time
 
 
 def hms2s(hms):
   dt = datetime.datetime.strptime(hms, '%H:%M:%S')
   seconds = datetime.timedelta(hours=dt.hour, minutes=dt.minute, seconds=dt.second).total_seconds()
   return seconds
+
+
+def s2hms(s):
+  return time.strftime('%H:%M:%S', time.gmtime(s))
 
 
 def is_hms(hms):
@@ -22,7 +27,9 @@ def is_hms(hms):
     return False
 
 
-def fix_issues(anns_act):
+def fix_issues():
+  global anns_act
+
   # remove activity instances without sub-activities
   for iid_act in list(anns_act):
     ann_sact = anns_act[iid_act]['subactivity']
@@ -35,8 +42,27 @@ def fix_issues(anns_act):
     ann_sact['fps'] = 24
 
   # fix activity boundary format
-  anns_act['Kuhc6od_huU']['crop_end'] = '00:01:00'
-  anns_act['Kuhc6od_huU']['subactivity'][1]['end'] = '00:10:00'
+  anns_act['Kuhc6od_huU']['crop_end'] = '00:01:18'
+  anns_act['Kuhc6od_huU']['subactivity'][1]['end'] = '00:01:00'
+
+  anns_act['3SU6a9jrGgo']['crop_start'] = '00:00:36'
+  anns_act['3SU6a9jrGgo']['crop_end'] = '00:09:02'
+
+  anns_act['4pptxtS9K7E']['crop_end'] = '00:08:22'
+
+  anns_act['0HxGaLh6YM4']['crop_end'] = '00:10:00'
+  anns_act['0HxGaLh6YM4']['subactivity'][-1]['end'] = '00:10:00'
+
+  anns_act['K50aHl3UcU0']['crop_end'] = '00:05:38'
+
+  anns_act['g3PRJgSfFuk']['crop_end'] = '00:10:00'
+  anns_act['g3PRJgSfFuk']['subactivity'][-1]['end'] = '00:10:00'
+
+  anns_act['pA6FaBIa3iM']['crop_end'] = '00:02:23'
+
+  anns_act['y6GNrpcXtqM']['crop_end'] = '00:09:53'
+
+  anns_act['4pptxtS9K7E']['crop_end'] = '00:08:22'
 
   return anns_act
 
@@ -71,32 +97,46 @@ def check_ann_act(iid_act, ann_act):
     assert 0 <= start_act < end_act <= end_video, \
         'incorrect activity boundary: 0 <= {} < {} <= {}'.format(start_act, end_act, end_video)
 
+    msgs_sact = []
     end_sact_last = start_act
     for i, ann_sact in enumerate(anns_sact):
-      # make sure the activity temporal boundary is in the right format
-      assert is_hms(ann_sact['start']) and is_hms(ann_sact['end']), 'incorrect sub-activity boundary format'
+      iid_sact = ann_sact['subactivity_instance_id']
+      try:
+        # make sure the activity temporal boundary is in the right format
+        assert is_hms(ann_sact['start']) and is_hms(ann_sact['end']), 'incorrect sub-activity boundary format'
 
-      # make sure the sub-activity temporal boundary is after the previous one
-      start_sact = hms2s(ann_sact['start'])
-      end_sact = hms2s(ann_sact['end'])
-      assert end_sact_last <= start_sact, \
-          'incorrect sub-activity boundary {} <= {}'.format(end_sact_last, start_sact)
-      end_sact_last = end_sact
+        # make sure the sub-activity temporal boundary is after the previous one
+        start_sact = hms2s(ann_sact['start'])
+        end_sact = hms2s(ann_sact['end'])
+        assert end_sact_last <= start_sact, \
+            'overlapped sub-activity {} boundary {} <= {}'.format(iid_sact, s2hms(end_sact_last), s2hms(start_sact))
+        # if end_sact_last > start_sact:
+        #   assert ann_sact['class'] == anns_sact[i-1]['class'], \
+        #       'overlapped sub-activity {} boundary {} <= {}'.format(iid_sact, s2hms(end_sact_last), s2hms(start_sact))
+        end_sact_last = end_sact
 
-      # make sure the sub-activity temporal boundary is within the activity and the length is positive
-      assert start_act <= start_sact < end_sact <= end_act, \
-          'incorrect sub-activity boundary {} <= {} < {} <= {}'.format(start_act, start_sact, end_sact, end_act)
+        # make sure the sub-activity temporal boundary is within the activity and the length is positive
+        assert start_act <= start_sact < end_sact <= end_act, \
+            'incorrect sub-activity {} boundary {} <= {} < {} <= {}' \
+            .format(iid_sact, s2hms(start_act), s2hms(start_sact), s2hms(end_sact), s2hms(end_act))
 
-      # make sure iid_sact is consecutive
-      assert ann_sact['subactivity_instance_id'] == anns_sact[0]['subactivity_instance_id']+i, \
-          'iid_sact not consecutive'
+        # make sure iid_sact is consecutive
+        assert ann_sact['subactivity_instance_id'] == anns_sact[0]['subactivity_instance_id']+i, \
+            'iid_sact not consecutive'
+      except AssertionError as msg:
+        if iid_sact in iids_sact_phase2:
+          msgs_sact.append(str(msg))
+
+    assert len(msgs_sact) == 0, ', '.join(msgs_sact)
 
   except AssertionError as msg:
     print('{}: {}'.format(iid_act, msg))
     return iid_act
 
 
-def check_issues(anns_act):
+def check_issues():
+  global anns_act
+
   # check video files
   fnames_video_all = os.listdir(os.path.join(dir_moma, dname_video))
   assert all([fname_video.endswith('.mp4') for fname_video in fnames_video_all])
@@ -129,7 +169,7 @@ def check_issues(anns_act):
   return anns_act, iids_act_bad
 
 
-def parse_anns(anns_act):
+def parse_anns():
   dict_cnames = {}
   dict_iids = {}
   for iid_act, ann_act in anns_act.items():
@@ -152,12 +192,9 @@ def parse_anns(anns_act):
 
 
 def main():
-  with open(os.path.join(dir_moma, dname_ann, fname_ann), 'r') as f:
-    anns_act = json.load(f)
-
-  anns_act = fix_issues(anns_act)
-  anns_act, iids_act_bad = check_issues(anns_act)
-  dict_cnames, dict_iids = parse_anns(anns_act)
+  fix_issues()
+  iids_act_bad = check_issues()
+  dict_cnames, dict_iids = parse_anns()
 
   # save as json
   with open(os.path.join(dir_moma, './dict_cnames.json'), 'w') as f:
@@ -173,6 +210,16 @@ if __name__ == '__main__':
   dname_video = 'videos_cn'
   dname_ann = 'anns'
   fname_ann = 'video_anns_updated.json'
+  fname_iids_sact_phase2 = 'iids_sact_phase2.json'
   # fname_ann = 'video_anns_phase1_processed.json'
+
+  global anns_act, iids_sact_phase2
+
+  with open(os.path.join(dir_moma, dname_ann, fname_ann), 'r') as f:
+    anns_act = json.load(f)
+
+  with open(os.path.join(dir_moma, dname_ann, fname_iids_sact_phase2), 'r') as f:
+    iids_sact_phase2 = json.load(f)
+    iids_sact_phase2 = [int(x) for x in iids_sact_phase2]
 
   main()
