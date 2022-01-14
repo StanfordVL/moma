@@ -28,7 +28,7 @@ class bidict(dict):
     super(bidict, self).__delitem__(key)
 
 
-def main():
+def test_bidict():
   map = {'a': 1, 'b': 2, 'c': 1}
   map = bidict(map)
   print(map)
@@ -36,4 +36,4 @@ def main():
 
 
 if __name__ == '__main__':
-  main()
+  test_bidict()
