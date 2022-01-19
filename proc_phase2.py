@@ -1,263 +1,188 @@
 import itertools
 import json
-from multiprocessing import cpu_count, Pool
+import math
 import os
-from pprint import pprint
-import string
+
+from momaapi.data import Entity, Description
+from momaapi import utils
 
 
-def is_actor(iid):
-  return iid.isupper() and (len(iid) == 1 or (len(iid) == 2 and iid[0] == 'A'))  # 52
+def check_ann_image(ann_image_raw):
+  errors = []
 
+  assert len(ann_image_raw['task_result']['annotations']) == 4
 
-def is_object(iid):
-  return iid.isnumeric() and 1 <= int(iid) <= 52
+  """ actor & object """
+  iids = []
+  for i, type in enumerate(['actor', 'object']):
+    assert cn2en[ann_image_raw['task_result']['annotations'][i]['label']] == type
+    anns_entity_raw = ann_image_raw['task_result']['annotations'][i]['slotsChildren']
+    anns_entity = [Entity(ann_entity_raw, cn2en) for ann_entity_raw in anns_entity_raw]
 
+    for ann_entity in anns_entity:
+      # check type
+      if ann_entity.type != type:
+        errors.append(f'[{type}] wrong type {ann_entity.type}')
 
-def is_actor_or_object(iid):
-  return is_actor(iid) or is_object(iid)
+      # check cname
+      if ann_entity.cname not in taxonomy_entity[type]:
+        errors.append(f'[{type}] unseen cname {ann_entity.cname}')
 
+      # check iid
+      if not utils.is_entity(ann_entity.iid):
+        errors.append(f'[{type}] wrong iid {ann_entity.iid}'.encode('unicode_escape').decode('utf-8'))
 
-def are_actors(iids):
-  return all([is_actor(iid) for iid in iids])
+      # check bbox
+      if ann_entity.bbox.x < 0 or ann_entity.bbox.y < 0 or ann_entity.bbox.width <= 0 or ann_entity.bbox.height <= 0:
+        errors.append(f'[{type}] wrong bbox {ann_entity.bbox}')
 
+    iids += [ann_entity.iid for ann_entity in anns_entity]
 
-def are_objects(iids):
-  return all([is_object(iid) for iid in iids])
+  # check duplicate iids
+  if len(set(iids)) != len(iids):
+    errors.append(f'[actor/object] duplicate iids {iids}')
 
-
-def are_actors_or_objects(iids):
-  return all([is_actor_or_object(iid) for iid in iids])
-
-
-def sort(iids):
-  iids_int = [iid for iid in iids if iid.isnumeric()]
-  iids_not_int = [iid for iid in iids if not iid.isnumeric()]
-  return sorted(iids_not_int)+sorted(iids_int, key=int)
-
-
-def is_consecutive(iids):
-  if are_actors(iids):
-    return iids == list(string.ascii_uppercase)[:len(iids)]
-  elif are_objects(iids):
-    return iids == [str(x) for x in range(1, len(iids)+1)]
-  else:
-    return False
-
-
-class BBox:
-  def __init__(self, bbox_raw):
-    x_tl = round(bbox_raw['topLeft']['x'])
-    y_tl = round(bbox_raw['topLeft']['y'])
-    x_tr = round(bbox_raw['topRight']['x'])
-    y_tr = round(bbox_raw['topRight']['y'])
-    x_bl = round(bbox_raw['bottomLeft']['x'])
-    y_bl = round(bbox_raw['bottomLeft']['y'])
-    x_br = round(bbox_raw['bottomRight']['x'])
-    y_br = round(bbox_raw['bottomRight']['y'])
-
-    assert x_tl == x_bl and x_tr == x_br and y_tl == y_tr and y_bl == y_br, \
-        '[BBox] coordinates inconsistent {}'.format(bbox_raw)
-
-    # FIXME: fix negative size error
-    # assert x_tl < x_tr and y_tl < y_bl, '[BBox] negative size {}'.format(bbox_raw)
-    self.x = min(x_tl, x_tr)
-    self.y = min(y_tl, y_bl)
-    self.width = abs(x_tr-x_tl)
-    self.height = abs(y_bl-y_tl)
-
-
-class Entity:
-  def __init__(self, entity_raw):
-    """ type """
-    type = cn2en[entity_raw['slot']['label']]
-    assert type == 'actor' or type == 'object', '[Entity] wrong entity type {}'.format(type)
-
-    """ cname """
-    cname = entity_raw['children'][0]['input']['value']
-    # FIXME: fix type error
-    if cname == '服务员':
-      type = 'actor'
-    if cname == '花洒' or cname == '飞盘' or cname == '钢琴' or cname == '足球门' or cname == '车' or cname == '纸' or \
-       cname == '剃刀' or cname == '梳子' or cname == '吹风机' or cname == '相机' or \
-       cname == '无法识别但确实和正在进行的动作相关的物体':
-      type = 'object'
-    # FIXME: fix typos
-    cname = cname.replace(',', '，').replace(' ', '').replace('·', '')\
-                 .replace('蓝球', '篮球').replace('蓝球框', '篮球框').replace('篮子', '篮球框').replace('篮筐', '篮球框')
-    assert cname in cn2en.keys(), '[Entity] unseen class name {}'.format(cname)
-    cname = cn2en[cname]
-    # FIXME: fix firefighting
-    taxonomy_object.append('firefighting')
-    assert (type == 'actor' and cname in taxonomy_actor) or (type == 'object' and cname in taxonomy_object), \
-        '[Entity] wrong entity type {} for {}'.format(type, cname)
-
-    """ iid """
-    iid = entity_raw['children'][1]['input']['value']
-    # FIXME: fix typos
-    iid = iid.replace(' ', '').replace('\n', '').upper()
-    assert isinstance(iid, str) and ((type == 'actor' and is_actor(iid)) or (type == 'object' and is_object(iid))), \
-           '[Entity] wrong entity iid \'{}\' for {} ({})'\
-           .format(iid, cname, type).encode('unicode_escape').decode('utf-8')
-
-    self.type = type
-    self.cname = cname
-    self.iid = iid
-    self.bbox = BBox(entity_raw['slot']['plane'])
-
-
-class Description:
-  def __init__(self, description_raw):
-    """ type """
-    type = cn2en[description_raw['slot']['label']]
-    assert type == 'binary description' or type == 'unary description', \
-        '[Description] wrong entity type {}'.format(type)
-
-    """ cname """
-    cname = description_raw['children'][0]['input']['value']
-    # FIXME: fix typos
-    cname = cname.replace('(', '（').replace(')', '）').replace(',', '，').replace(' ', '')\
-                 .replace('保持低头的姿势', '保持低头的姿势且身体没有移动')\
-                 .replace('保持蹲着的姿势', '保持蹲着的姿势且身体没有移动')\
-                 .replace('保持跪姿并且没有移动', '保持跪姿并且身体没有移动')
-    assert cname in cn2en.keys(), '[Description] unseen class name {}'.format(cname)
-    cname = cn2en[cname]
-    assert (type == 'binary description' and cname in cnames_binary) or \
-           (type == 'unary description' and cname in cnames_unary), \
-           '[Description] wrong description type {} for {}'.format(type, cname)
-
-    """ iid """
-    iids = description_raw['children'][1]['input']['value']
-    iids = iids.replace('（', '(').replace('）', ')').replace('，', ',')\
-               .replace(' ', '').replace('\n', '').replace('.', ',').replace(')(', '),(')
-
-    if type == 'binary description':
-      assert iids[0] == '(' and iids[-1] == ')' and len(iids[1:-1].split('),(')) == 2, \
-          '[Binary Description] wrong iids format {}'.format(iids)
-      iids = iids[1:-1].split('),(')
-      iids = [iids[0].split(','), iids[1].split(',')]
-      assert are_actors_or_objects(iids[0]+iids[1]), \
-          '[Binary Description] wrong iids {} -> {} for {} ({})'.format(iids[0], iids[1], cname, type)
-      type_entity_src, type_entity_trg = taxonomy_binary[cnames_binary.index(cname)][1:]
-      for type_entity, iids_entity in zip([type_entity_src, type_entity_trg], iids):
-        assert (type_entity == 'actor' and are_actors(iids_entity)) or \
-               (type_entity == 'object' and are_objects(iids_entity)) or \
-               (type_entity == 'actor/object' and are_actors_or_objects(iids_entity)), \
-               '[Binary Description] wrong entity type for {}: {}'.format(cname, iids)
-
-    if type == 'unary description':
-      iids = iids.split(',')
-      assert are_actors(iids), '[Unary Description] wrong iids {} for {} ({})'.format(iids, cname, type)
+  """ binary description & unary description """
+  for i, type in enumerate(['binary description', 'unary description']):
+    assert cn2en[ann_image_raw['task_result']['annotations'][i+2]['label']] == type
+    anns_description_raw = ann_image_raw['task_result']['annotations'][i+2]['slotsChildren']
+    anns_description = [Description(ann_description_raw, cn2en) for ann_description_raw in anns_description_raw]
     
-    self.iids = iids
-    self.type = type
-    self.cname = cname
+    for ann_description in anns_description:
+      # check type
+      if ann_description.type != type:
+        errors.append(f'[{type}] wrong type {ann_description.type}')
 
+      # check cname
+      if ann_description.cname not in [x[0] for x in taxonomy_description[type]]:
+        errors.append(f'[{type}] unseen cname {ann_description.cname}')
 
-def check_ann(ann_raw):
-  assert len(ann_raw['task_result']['annotations']) == 4
+      # check iids_associated
+      if type == 'binary description':
+        if ann_description.iids_associated[0] != '(' or \
+           ann_description.iids_associated[-1] != ')' or \
+           len(ann_description.iids_associated[1:-1].split('),(')) != 2:
+          errors.append(f'[{type}] wrong iids_associated format {ann_description.iids_associated}')
+          continue
 
-  # actor
-  assert cn2en[ann_raw['task_result']['annotations'][0]['label']] == 'actor'
-  anns_actor_raw = ann_raw['task_result']['annotations'][0]['slotsChildren']
-  anns_actor = [Entity(ann_actor_raw) for ann_actor_raw in anns_actor_raw]
-  iids_actor = [ann_actor.iid for ann_actor in anns_actor]
-  assert all([ann_actor.type == 'actor' for ann_actor in anns_actor])
+        iids_src = ann_description.iids_associated[1:-1].split('),(')[0].split(',')
+        iids_trg = ann_description.iids_associated[1:-1].split('),(')[1].split(',')
+        if not utils.are_entities(iids_src+iids_trg):
+          errors.append(f'[{type}] wrong iids_associated format {iids_src} -> {iids_trg}')
+          continue
 
-  # object
-  assert cn2en[ann_raw['task_result']['annotations'][1]['label']] == 'object'
-  anns_object_raw = ann_raw['task_result']['annotations'][1]['slotsChildren']
-  anns_object = [Entity(ann_object_raw) for ann_object_raw in anns_object_raw]
-  iids_object = [ann_object.iid for ann_object in anns_object]
-  assert all([ann_object.type == 'object' for ann_object in anns_object])
+        if not set(iids_src+iids_trg).issubset(iids):
+          errors.append(f'[{type}] unseen iids_associated {set(iids_src+iids_trg)} in {iids}')
+          continue
 
-  # binary description: transitive action and relationship
-  assert cn2en[ann_raw['task_result']['annotations'][2]['label']] == 'binary description'
-  anns_binary = []
-  anns_binary_raw = ann_raw['task_result']['annotations'][2]['slotsChildren']
-  for ann_binary_raw in anns_binary_raw:
-    ann_binary = Description(ann_binary_raw)
-    assert ann_binary.type == 'binary description', ann_binary.type
-    assert len(ann_binary.iids) == 2, ann_binary.iids
-    assert set(ann_binary.iids[0]+ann_binary.iids[1]).issubset(set(iids_actor+iids_object)), \
-        '[Binary Description] unseen iids {} vs seen iids {}' \
-        .format(sort(set(ann_binary.iids[0]+ann_binary.iids[1])), sort(set(iids_actor+iids_object)))
-    anns_binary.append(ann_binary)
+        cnames_binary = [x[0] for x in taxonomy_binary]
+        if ann_description.cname not in cnames_binary:  # unseen cname
+          continue
+        index = cnames_binary.index(ann_description.cname)
+        type_src, type_trg = taxonomy_binary[index][1:]
+        if (type_src == 'actor' and not utils.are_actors(iids_src)) or \
+           (type_src == 'object' and not utils.are_objects(iids_src)) or \
+           (type_src == 'actor/object' and not utils.are_entities(iids_src)) or \
+           (type_trg == 'actor' and not utils.are_actors(iids_trg)) or \
+           (type_trg == 'object' and not utils.are_objects(iids_trg)) or \
+           (type_trg == 'actor/object' and not utils.are_entities(iids_trg)):
+          errors.append(f'[{type}] wrong iids_associated {ann_description.iids_associated} '
+                        f'for types {type_src} -> {type_trg}')
 
-  # unary description: intransitive action and attribute
-  assert cn2en[ann_raw['task_result']['annotations'][3]['label']] == 'unary description'
-  anns_unary = []
-  anns_unary_raw = ann_raw['task_result']['annotations'][3]['slotsChildren']
-  for ann_unary_raw in anns_unary_raw:
-    ann_unary = Description(ann_unary_raw)
-    assert ann_unary.type == 'unary description', ann_unary.type
-    assert set(ann_unary.iids).issubset(set(iids_actor)), \
-        '[Unary Description] unseen iids {} vs seen iids {}' \
-        .format(sort(set(ann_unary.iids)), sort(set(iids_actor)))
-    anns_unary.append(ann_unary)
+      elif type == 'unary description':
+        iids_src = ann_description.iids_associated.split(',')
+        if not utils.are_actors(iids_src):
+          errors.append(f'[{type}] wrong iids_associated format {ann_description.iids_associated}')
+          continue
 
+        if not set(iids_src).issubset(iids):
+          errors.append(f'[{type}] unseen iids_associated {set(iids_src)} in {iids}')
 
-def check_ann_catch(ann_raw):
-  name_video = ann_raw['task']['task_params']['record']['metadata']['additionalInfo']['videoName']
-  id_video = name_video.split('_')[-1].split('/')[0]
-  try:
-    check_ann(ann_raw)
-  except AssertionError as msg:
-    print('{}: {}'.format(id_video, msg))
-    return False
-  return True
-
-
-def check_issues1(anns_raw):
-  p = Pool(processes=cpu_count()-1)
-  results = p.map(check_ann_catch, anns_raw)
-  print('ERR: {}/{}={}'.format(len(results)-sum(results), len(results), (len(results)-sum(results))/len(results)))
+  return errors
 
 
 def check_ann_video(ann_video_raw):
+  errors = []
+
   anns_video_actor, anns_video_object = [], []
-  for ann_frame_raw in ann_video_raw:
+  for ann_image_raw in ann_video_raw:
     # actor
-    anns_frame_actor_raw = ann_frame_raw['task_result']['annotations'][0]['slotsChildren']
-    anns_frame_actor = [Entity(ann_actor_raw) for ann_actor_raw in anns_frame_actor_raw]
-    anns_video_actor += anns_frame_actor
+    anns_image_actor_raw = ann_image_raw['task_result']['annotations'][0]['slotsChildren']
+    anns_image_actor = [Entity(ann_actor_raw, cn2en) for ann_actor_raw in anns_image_actor_raw]
+    anns_video_actor += anns_image_actor
 
     # object
-    anns_frame_object_raw = ann_frame_raw['task_result']['annotations'][1]['slotsChildren']
-    anns_frame_object = [Entity(ann_object_raw) for ann_object_raw in anns_frame_object_raw]
-    anns_video_object += anns_frame_object
+    anns_image_object_raw = ann_image_raw['task_result']['annotations'][1]['slotsChildren']
+    anns_image_object = [Entity(ann_object_raw, cn2en) for ann_object_raw in anns_image_object_raw]
+    anns_video_object += anns_image_object
 
-  iids_video_actor = sort(set([ann_video_actor.iid for ann_video_actor in anns_video_actor]))
-  iids_video_object = sort(set([ann_video_object.iid for ann_video_object in anns_video_object]))
-  anns_instance_actor = [list(v) for _, v in itertools.groupby(anns_video_actor, lambda x: x.iid)]
-  anns_instance_object = [list(v) for _, v in itertools.groupby(anns_video_object, lambda x: x.iid)]
+  iids_video_actor = utils.sort(set([ann_video_actor.iid for ann_video_actor in anns_video_actor]))
+  iids_video_object = utils.sort(set([ann_video_object.iid for ann_video_object in anns_video_object]))
+  anns_instances_actor = [list(v) for _, v in itertools.groupby(anns_video_actor, lambda x: x.iid)]
+  anns_instances_object = [list(v) for _, v in itertools.groupby(anns_video_object, lambda x: x.iid)]
 
-  assert is_consecutive(iids_video_actor) and is_consecutive(iids_video_object), \
-      '[Video] iids not consecutive: {}, {}'.format(iids_video_actor, iids_video_object)
+  if not utils.is_consecutive(iids_video_actor):
+    errors.append(f'[actor instance] iids not consecutive {iids_video_actor}')
 
+  if not utils.is_consecutive(iids_video_object):
+    errors.append(f'[object instance] iids not consecutive {iids_video_object}')
 
-def check_ann_video_catch(ann_video_raw):
-  name_video = ann_video_raw[0]['task']['task_params']['record']['metadata']['additionalInfo']['videoName']
-  id_video = name_video.split('_')[-1].split('/')[0]
-  try:
-    check_ann_video(ann_video_raw)
-  except AssertionError as msg:
-    print('{}: {}'.format(id_video, msg))
-    if str(msg).startswith('[Video]'):
-      return False
-  return True
+  for anns_instance_actor in anns_instances_actor:
+    cnames = [ann_instance_actor.cname for ann_instance_actor in anns_instance_actor]
+    if len(set(cnames)) != 1:
+      errors.append(f'[actor instance] cname {set(cnames)} not unique')
 
+  for anns_instance_object in anns_instances_object:
+    cnames = [ann_instance_object.cname for ann_instance_object in anns_instance_object]
+    if len(set(cnames)) != 1:
+      errors.append(f'[object instance] cname {set(cnames)} not unique')
 
-def check_issues2(anns_raw):
-  anns_raw = [list(v) for _, v in itertools.groupby(anns_raw, lambda x: x['id'])]
-  p = Pool(processes=cpu_count()-1)
-  results = p.map(check_ann_video_catch, anns_raw)
-  print('ERR: {}/{}={}'.format(len(results)-sum(results), len(results), (len(results)-sum(results))/len(results)))
+  return errors
 
 
 def main():
-  # check_issues1(anns_raw)
-  check_issues2(anns_raw)
+  anns_video_raw = [list(v) for _, v in itertools.groupby(anns_raw, lambda x: x['id'])]
+
+  report = {}
+  for ann_video_raw in anns_video_raw:
+    record = ann_video_raw[0]['task']['task_params']['record']
+    id_video_real = record['attachment'].split('_')[-1][:-4].split('/')[0]
+    id_image_to_timestamp_real = record['metadata']['additionalInfo']['framesTimestamp']
+    num_images_real = len(ann_video_raw)
+    ids_image_real = sorted(id_image_to_timestamp_real.keys(), key=int)
+    assert ids_image_real[0] == '1' and ids_image_real[-1] == str(len(ids_image_real))
+
+    errors = check_ann_video(ann_video_raw)
+    # if len(errors) > 0:
+    #   print(f'{id_video_real}: {errors[0] if len(errors) == 1 else errors}')
+    report[id_video_real] = {}
+    report[id_video_real]['instance'] = len(errors)
+
+    for i, ann_image_raw in enumerate(ann_video_raw):
+      record = ann_image_raw['task']['task_params']['record']
+
+      id_video, timestamp = record['attachment'].split('_')[-1][:-4].split('/')
+      timestamp = float(timestamp)/1000000
+      assert id_video == id_video_real
+
+      id_image_to_timestamp = record['metadata']['additionalInfo']['framesTimestamp']
+      id_image = None
+      for key in id_image_to_timestamp:
+        if math.isclose(timestamp, id_image_to_timestamp[key], abs_tol=1e-6):
+          id_image = key
+      assert id_image_to_timestamp == id_image_to_timestamp_real
+      assert id_image is not None and id_image == str(i+1)
+
+      num_images = len(id_image_to_timestamp)
+      assert num_images == num_images_real
+
+      id_video = record['metadata']['additionalInfo']['videoName'].split('_')[-1].split('/')[0]
+      assert id_video == id_video_real
+
+      errors = check_ann_image(ann_image_raw)
+      # if len(errors) > 0:
+      #   print(f'{id_video}/{id_image}: {errors[0] if len(errors) == 1 else errors}')
+      report[id_video][id_image] = len(errors)
 
 
 if __name__ == '__main__':
@@ -293,9 +218,9 @@ if __name__ == '__main__':
   with open(os.path.join(dir_anns, 'taxonomy/cn2en.json'), 'r') as f:
     cn2en = json.load(f)
 
+  taxonomy_entity = {'actor': taxonomy_actor, 'object': taxonomy_object}
   taxonomy_binary = taxonomy_ta+taxonomy_rel
   taxonomy_unary = taxonomy_ia+taxonomy_att
-  cnames_binary = [x[0] for x in taxonomy_binary]
-  cnames_unary = [x[0] for x in taxonomy_unary]
+  taxonomy_description = {'binary description': taxonomy_binary, 'unary description': taxonomy_unary}
 
   main()
