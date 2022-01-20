@@ -1,3 +1,6 @@
+from collections import defaultdict
+
+
 class BBox:
   def __init__(self, bbox_raw):
     x_tl = round(bbox_raw['topLeft']['x'])
@@ -78,3 +81,33 @@ class Description:
     self.type = type
     self.cname = cn2en[cname]
     self.iids_associated = iids_associated
+
+
+class bidict(dict):
+  """
+  A many-to-one bidirectional dictionary
+  Reference: https://stackoverflow.com/questions/3318625/how-to-implement-an-efficient-bidirectional-hash-table
+  """
+  def __init__(self, *args, **kwargs):
+    super(bidict, self).__init__(*args, **kwargs)
+    self.inverse = {}
+    for key, value in self.items():
+      self.inverse.setdefault(value, set()).add(key)
+
+  def __setitem__(self, key, value):
+    if key in self:
+      self.inverse[self[key]].remove(key)
+    super(bidict, self).__setitem__(key, value)
+    self.inverse.setdefault(value, set()).add(key)
+
+  def __delitem__(self, key):
+    self.inverse[self[key]].remove(key)
+    if len(self.inverse[self[key]]) == 0:
+      del self.inverse[self[key]]
+    super(bidict, self).__delitem__(key)
+
+
+def defaultdict_to_dict(d):
+  if isinstance(d, defaultdict):
+    d = {k: defaultdict_to_dict(v) for k, v in d.items()}
+  return d

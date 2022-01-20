@@ -68,6 +68,12 @@ def main():
     taxonomy_att, cn2en_att = get_taxonomy(rows_att)
     taxonomy_rel, cn2en_rel = get_taxonomy(rows_rel)
 
+  # taxonomy of activities and sub-activities
+  with open(os.path.join(dir_taxonomy, 'act_sact.csv')) as f:
+    reader = csv.reader(f, delimiter=',')
+    rows = [row for row in reader][1:]
+    taxonomy_act_sact, cn2en_act_sact = get_taxonomy(rows)
+
   print('Taxonomy of actors')
   pprint(taxonomy_actor)
   print('\n\nTaxonomy of objects')
@@ -80,9 +86,11 @@ def main():
   pprint(taxonomy_att)
   print('\n\nTaxonomy of relationships')
   pprint(taxonomy_rel)
+  print('\n\nTaxonomy of activities and sub-activities')
+  pprint(taxonomy_act_sact)
 
   print('\n\n Chinese to English dictionary')
-  cn2en = cn2en|cn2en_actor|cn2en_object|cn2en_ia|cn2en_ta|cn2en_att|cn2en_rel
+  cn2en = cn2en|cn2en_actor|cn2en_object|cn2en_ia|cn2en_ta|cn2en_att|cn2en_rel|cn2en_act_sact
   pprint(cn2en)
 
   with open(os.path.join(dir_taxonomy, './actor.json'), 'w') as f:
@@ -97,6 +105,8 @@ def main():
     json.dump(taxonomy_att, f, indent=4, sort_keys=True)
   with open(os.path.join(dir_taxonomy, './relationship.json'), 'w') as f:
     json.dump(taxonomy_rel, f, indent=4, sort_keys=True)
+  with open(os.path.join(dir_taxonomy, './act_sact.json'), 'w') as f:
+    json.dump(taxonomy_act_sact, f, indent=4, sort_keys=True)
   with open(os.path.join(dir_taxonomy, './cn2en.json'), 'w') as f:
     json.dump(cn2en, f, ensure_ascii=False, indent=4, sort_keys=True)
 
