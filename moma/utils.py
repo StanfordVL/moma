@@ -23,12 +23,16 @@ def is_hms(hms):
 
 def is_actor(iid):
   # max number of actors per sub-activity == 52
-  return iid.isupper() and (len(iid) == 1 or (len(iid) == 2 and iid[0] == 'A'))
+  # return iid.isupper() and (len(iid) == 1 or (len(iid) == 2 and iid[0] == 'A'))
+  # max number of actors per sub-activity == 702
+  return iid.isupper() and (len(iid) == 1 or len(iid) == 2)
 
 
 def is_object(iid):
   # max number of objects per sub-activity == 52
-  return iid.isnumeric() and 1 <= int(iid) <= 52
+  # return iid.isnumeric() and 1 <= int(iid) <= 52
+  # max number of objects per sub-activity == 99
+  return iid.isnumeric() and 1 <= int(iid) <= 99
 
 
 def is_entity(iid):

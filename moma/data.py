@@ -1,6 +1,19 @@
 from collections import defaultdict
 
 
+def fix_cname(cname):
+  cname = cname.replace('(', '（').replace(')', '）').replace(',', '，')
+  cname = cname.replace(' ', '').replace('·', '').replace('蓝球', '篮球')
+  return cname
+
+
+def fix_iid(iid):
+  iid = iid.replace('（', '(').replace('）', ')').replace('，', ',')
+  iid = iid.replace(' ', '').replace('\n', '').upper()
+  iid = iid.replace('.', ',').replace(',,', ',')
+  return iid
+
+
 class BBox:
   def __init__(self, bbox_raw):
     x_tl = round(bbox_raw['topLeft']['x'])
@@ -32,22 +45,12 @@ class Entity:
 
     """ cname """
     cname = entity_raw['children'][0]['input']['value']
-    # FIXME: fix type error
-    if cname == '服务员':
-      type = 'actor'
-    if cname == '花洒' or cname == '飞盘' or cname == '钢琴' or cname == '足球门' or cname == '车' or cname == '纸' or \
-       cname == '剃刀' or cname == '梳子' or cname == '吹风机' or cname == '相机' or \
-       cname == '无法识别但确实和正在进行的动作相关的物体':
-      type = 'object'
-    # FIXME: fix typos
-    cname = cname.replace(',', '，').replace(' ', '').replace('·', '')\
-                 .replace('蓝球', '篮球').replace('蓝球框', '篮球框').replace('篮子', '篮球框').replace('篮筐', '篮球框')
+    cname = fix_cname(cname)
     assert cname in cn2en, '[Entity] unseen cname {}'.format(cname)
 
     """ iid """
     iid = entity_raw['children'][1]['input']['value']
-    # FIXME: fix typos
-    iid = iid.replace(' ', '').replace('\n', '').upper()
+    iid = fix_iid(iid)
 
     """ bbox """
     bbox = BBox(entity_raw['slot']['plane'])
@@ -65,18 +68,12 @@ class Description:
 
     """ cname """
     cname = description_raw['children'][0]['input']['value']
-    # FIXME: fix typos
-    cname = cname.replace('(', '（').replace(')', '）').replace(',', '，').replace(' ', '')\
-                 .replace('保持低头的姿势', '保持低头的姿势且身体没有移动')\
-                 .replace('保持蹲着的姿势', '保持蹲着的姿势且身体没有移动')\
-                 .replace('保持跪姿并且没有移动', '保持跪姿并且身体没有移动')
+    cname = fix_cname(cname)
     assert cname in cn2en, '[Description] unseen cname {}'.format(cname)
 
     """ iids_associated """
     iids_associated = description_raw['children'][1]['input']['value']
-    # FIXME: fix typos
-    iids_associated = iids_associated.replace('（', '(').replace('）', ')').replace('，', ',')\
-                                     .replace(' ', '').replace('\n', '').replace('.', ',').replace(')(', '),(')
+    iids_associated = fix_iid(iids_associated)
 
     self.type = type
     self.cname = cn2en[cname]

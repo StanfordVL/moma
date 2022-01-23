@@ -39,13 +39,13 @@ def main():
   # taxonomy of actors
   with open(os.path.join(dir_taxonomy, 'actor.csv')) as f:
     reader = csv.reader(f, delimiter=',')
-    rows = [row for row in reader][1:]
+    rows = [row[:4] for row in reader][1:]
     taxonomy_actor, cn2en_actor = get_taxonomy(rows)
 
   # taxonomy of objects
   with open(os.path.join(dir_taxonomy, 'object.csv')) as f:
     reader = csv.reader(f, delimiter=',')
-    rows = [row for row in reader][1:]
+    rows = [row[:4] for row in reader][1:]
     taxonomy_object, cn2en_object = get_taxonomy(rows)
 
   # taxonomy of atomic actions
