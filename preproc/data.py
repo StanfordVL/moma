@@ -1,3 +1,4 @@
+import itertools
 from collections import defaultdict
 
 
@@ -78,6 +79,17 @@ class Description:
     self.type = type
     self.cname = cn2en[cname]
     self.iids_associated = iids_associated
+
+  def breakdown(self):
+    if self.type == 'binary description':
+      iids_src = self.iids_associated[1:-1].split('),(')[0].split(',')
+      iids_trg = self.iids_associated[1:-1].split('),(')[1].split(',')
+      return list(itertools.product(iids_src, iids_trg, [self.cname]))
+    elif self.type == 'unary description':
+      iids_src = self.iids_associated.split(',')
+      return list(itertools.product(iids_src, [self.cname]))
+    else:
+      assert False
 
 
 class bidict(dict):

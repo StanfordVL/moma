@@ -97,10 +97,12 @@ class AnnPhase2:
     # '11065': end, 30 -> 20
     self.anns_sact_raw['11065'] = self.__trim(self.anns_sact_raw['11065'], 10, False)
 
-    iids_sact_rm = ['27', '198', '199', '653', '1535', '1536', '4024', '5729', '6178', '6478',
-                    '7074', '7076', '7350', '9713', '11570', '12697', '15225', '15403', '15579', '15616']
+    iids_sact_rm = ['27', '198', '199', '653', '1535', '1536', '3775', '4024', '5531', '5629',
+                    '5729', '6178', '6478', '7073', '7074', '7076', '7350', '9713', '10926', '10927',
+                    '11168', '11570', '12696', '12697', '15225', '15403', '15579', '15616']
     for iiid_sact_rm in iids_sact_rm:
-      self.anns_sact_raw.pop(iiid_sact_rm)
+      if iiid_sact_rm in self.anns_sact_raw:
+        self.anns_sact_raw.pop(iiid_sact_rm)
 
   @staticmethod
   def get_iid_sact(ann_sact_raw):
@@ -133,8 +135,8 @@ class AnnPhase2:
     iid_sact_real = record['attachment'].split('_')[-1][:-4].split('/')[0]
     iid_hoi_to_timestamp_real = record['metadata']['additionalInfo']['framesTimestamp']
     num_hois_real = len(ann_sact_raw)
-    ids_hoi_real = sorted(iid_hoi_to_timestamp_real.keys(), key=int)
-    assert ids_hoi_real[0] == '1' and ids_hoi_real[-1] == str(len(ids_hoi_real))
+    iids_hoi_real = sorted(iid_hoi_to_timestamp_real.keys(), key=int)
+    assert iids_hoi_real[0] == '1' and iids_hoi_real[-1] == str(len(iids_hoi_real))
 
     errors = []
     anns_sact_actor, anns_sact_object = [], []

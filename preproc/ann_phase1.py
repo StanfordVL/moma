@@ -24,6 +24,7 @@ class AnnPhase1:
     self.cn2en = cn2en
     self.dir_moma = dir_moma
     self.iid_act_to_iids_sact = {}
+    self.metadata = {}
 
     self.__fix()
 
@@ -143,8 +144,9 @@ class AnnPhase1:
     assert os.path.isfile(file_video), 'video file does not exit'
 
     # make sure fps is consistent
-    metadata_video = ffmpeg.probe(file_video)['streams'][0]
-    fps_video = round(Fraction(metadata_video['avg_frame_rate']))
+    probe = ffmpeg.probe(file_video)
+    self.metadata[iid_act] = next((stream for stream in probe['streams'] if stream['codec_type'] == 'video'), None)
+    fps_video = round(Fraction(self.metadata[iid_act]['avg_frame_rate']))
     assert ann_act['fps'] == fps_video, 'inconsistent activity fps'
     assert all([ann_sact['fps'] == fps_video for ann_sact in anns_sact]), 'inconsistent sub-activity fps'
 
@@ -155,7 +157,7 @@ class AnnPhase1:
     # make sure the activity temporal boundary is within the video and the length is positive
     start_act = hms2s(ann_act['crop_start'])  # inclusive
     end_act = hms2s(ann_act['crop_end'])  # exclusive
-    end_video = math.ceil(float(metadata_video['duration']))
+    end_video = math.ceil(float(self.metadata[iid_act]['duration']))
     assert 0 <= start_act < end_act <= end_video, \
         f'activity boundary exceeds video boundary: 0 <= {start_act} < {end_act} <= {end_video}'
 
