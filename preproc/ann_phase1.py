@@ -105,7 +105,7 @@ class AnnPhase1:
 
   def __inspect_anns_act(self):
     # check video files
-    fnames_video_all = os.listdir(os.path.join(self.dir_moma, 'videos'))
+    fnames_video_all = os.listdir(os.path.join(self.dir_moma, 'videos_all'))
     assert all([fname_video.endswith('.mp4') for fname_video in fnames_video_all])
 
     # make sure iids_sact are unique integers across different activities
@@ -140,7 +140,7 @@ class AnnPhase1:
 
     # make sure the corresponding video exist
     fname_video = anns_sact[0]['orig_vid']
-    file_video = os.path.join(self.dir_moma, 'videos', fname_video)
+    file_video = os.path.join(self.dir_moma, f'videos/all/{fname_video}')
     assert os.path.isfile(file_video), 'video file does not exit'
 
     # make sure fps is consistent

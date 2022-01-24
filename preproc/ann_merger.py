@@ -142,7 +142,7 @@ class AnnMerger:
           for ann_actor in anns_actor:
             actor.append({
               'instance_id': ann_actor.iid,
-              'class': ann_actor.cname,
+              'class_name': ann_actor.cname,
               'bbox': [ann_actor.bbox.x, ann_actor.bbox.y, ann_actor.bbox.width, ann_actor.bbox.height]
             })
           
@@ -152,7 +152,7 @@ class AnnMerger:
           for ann_object in anns_object:
             object.append({
               'instance_id': ann_object.iid,
-              'class': ann_object.cname,
+              'class_name': ann_object.cname,
               'bbox': [ann_object.bbox.x, ann_object.bbox.y, ann_object.bbox.width, ann_object.bbox.height]
             })
 
@@ -196,9 +196,10 @@ class AnnMerger:
             else:
               assert False, ann_unary.cname
 
+          record = ann_hoi['task']['task_params']['record']
           hoi.append({
-            'key': iid_hoi,
-            'time': float(iid_hoi_to_timestamp[iid_hoi]),
+            'key': f"{iid_sact}_{record['attachment'].split('_')[-1][:-4].split('/')[1]}",
+            'time': hms2s(ann_sact_phase1['start'])+float(iid_hoi_to_timestamp[iid_hoi]),
             'actors': actor,
             'objects': object,
             'attributes': att,
@@ -225,7 +226,7 @@ class AnnMerger:
 
       metadata = self.ann_phase1.metadata[iid_act]
       anns.append({
-        'file_name': anns_sact_phase1[0]['orig_vid'],
+        'file_name': anns_sact_phase1[0]['orig_vid'].split('_', 1)[1],
         'num_frames': int(metadata['nb_frames']),
         'width': int(metadata['width']),
         'height': int(metadata['height']),
