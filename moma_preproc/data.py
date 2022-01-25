@@ -8,11 +8,11 @@ def fix_cname(cname):
   return cname
 
 
-def fix_iid(iid):
-  iid = iid.replace('（', '(').replace('）', ')').replace('，', ',')
-  iid = iid.replace(' ', '').replace('\n', '').upper()
-  iid = iid.replace('.', ',').replace(',,', ',')
-  return iid
+def fix_id(id):
+  id = id.replace('（', '(').replace('）', ')').replace('，', ',')
+  id = id.replace(' ', '').replace('\n', '').upper()
+  id = id.replace('.', ',').replace(',,', ',')
+  return id
 
 
 class BBox:
@@ -41,53 +41,53 @@ class BBox:
 
 class Entity:
   def __init__(self, entity_raw, cn2en):
-    """ type """
-    type = cn2en[entity_raw['slot']['label']]
+    """ kind """
+    kind = cn2en[entity_raw['slot']['label']]
 
     """ cname """
     cname = entity_raw['children'][0]['input']['value']
     cname = fix_cname(cname)
     assert cname in cn2en, '[Entity] unseen cname {}'.format(cname)
 
-    """ iid """
-    iid = entity_raw['children'][1]['input']['value']
-    iid = fix_iid(iid)
+    """ id """
+    id = entity_raw['children'][1]['input']['value']
+    id = fix_id(id)
 
     """ bbox """
     bbox = BBox(entity_raw['slot']['plane'])
 
-    self.type = type
+    self.kind = kind
     self.cname = cn2en[cname]
-    self.iid = iid
+    self.id = id
     self.bbox = bbox
 
 
 class Description:
   def __init__(self, description_raw, cn2en):
-    """ type """
-    type = cn2en[description_raw['slot']['label']]
+    """ kind """
+    kind = cn2en[description_raw['slot']['label']]
 
     """ cname """
     cname = description_raw['children'][0]['input']['value']
     cname = fix_cname(cname)
     assert cname in cn2en, '[Description] unseen cname {}'.format(cname)
 
-    """ iids_associated """
-    iids_associated = description_raw['children'][1]['input']['value']
-    iids_associated = fix_iid(iids_associated)
+    """ ids_associated """
+    ids_associated = description_raw['children'][1]['input']['value']
+    ids_associated = fix_id(ids_associated)
 
-    self.type = type
+    self.kind = kind
     self.cname = cn2en[cname]
-    self.iids_associated = iids_associated
+    self.ids_associated = ids_associated
 
   def breakdown(self):
-    if self.type == 'binary description':
-      iids_src = self.iids_associated[1:-1].split('),(')[0].split(',')
-      iids_trg = self.iids_associated[1:-1].split('),(')[1].split(',')
-      return list(itertools.product(iids_src, iids_trg, [self.cname]))
-    elif self.type == 'unary description':
-      iids_src = self.iids_associated.split(',')
-      return list(itertools.product(iids_src, [self.cname]))
+    if self.kind == 'binary description':
+      ids_src = self.ids_associated[1:-1].split('),(')[0].split(',')
+      ids_trg = self.ids_associated[1:-1].split('),(')[1].split(',')
+      return list(itertools.product(ids_src, ids_trg, [self.cname]))
+    elif self.kind == 'unary description':
+      ids_src = self.ids_associated.split(',')
+      return list(itertools.product(ids_src, [self.cname]))
     else:
       assert False
 

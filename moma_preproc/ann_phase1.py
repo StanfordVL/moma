@@ -23,17 +23,17 @@ class AnnPhase1:
     self.taxonomy = taxonomy
     self.cn2en = cn2en
     self.dir_moma = dir_moma
-    self.iid_act_to_iids_sact = {}
+    self.id_act_to_ids_sact = {}
     self.metadata = {}
 
     self.__fix()
 
   def __fix(self):
     # remove activity instances without sub-activities
-    for iid_act in list(self.anns_act):
-      ann_sact = self.anns_act[iid_act]['subactivity']
+    for id_act in list(self.anns_act):
+      ann_sact = self.anns_act[id_act]['subactivity']
       if len(ann_sact) == 0:
-        del self.anns_act[iid_act]
+        del self.anns_act[id_act]
 
     # fix activity fps
     self.anns_act['ifAZ3iwtjik']['fps'] = 24
@@ -54,10 +54,10 @@ class AnnPhase1:
     self.anns_act['y6GNrpcXtqM']['crop_end'] = '00:09:53'
 
     lookup = {}
-    for iid_act, ann_act in self.anns_act.items():
+    for id_act, ann_act in self.anns_act.items():
       for i, ann_sact in enumerate(ann_act['subactivity']):
-        iid_sact = self.get_iid_sact(ann_sact)
-        lookup[iid_sact] = (iid_act, i)
+        id_sact = self.get_id_sact(ann_sact)
+        lookup[id_sact] = (id_act, i)
 
     # fix incorrect sub-activity boundary format
     self.anns_act[lookup['6390'][0]]['subactivity'][lookup['6390'][1]]['end'] = '00:01:00'
@@ -82,18 +82,18 @@ class AnnPhase1:
     self.anns_act[lookup['11065'][0]]['subactivity'][lookup['11065'][1]]['end'] = '00:04:20'
 
     # remove overlapping sub-activity
-    iids_sact_rm = ['27', '198', '199', '653', '1535', '1536', '3775', '4024', '5531', '5629',
+    ids_sact_rm = ['27', '198', '199', '653', '1535', '1536', '3775', '4024', '5531', '5629',
                     '5729', '6178', '6478', '7073', '7074', '7076', '7350', '9713', '10926', '10927',
                     '11168', '11570', '12696', '12697', '15225', '15403', '15579', '15616']
-    for iid_sact_rm in sorted(iids_sact_rm, key=int, reverse=True):  # remove in descending index order
-      del self.anns_act[lookup[iid_sact_rm][0]]['subactivity'][lookup[iid_sact_rm][1]]
+    for id_sact_rm in sorted(ids_sact_rm, key=int, reverse=True):  # remove in descending index order
+      del self.anns_act[lookup[id_sact_rm][0]]['subactivity'][lookup[id_sact_rm][1]]
 
   @staticmethod
-  def get_iid_act(ann_act):
+  def get_id_act(ann_act):
     return ann_act['video_id']
 
   @staticmethod
-  def get_iid_sact(ann_sact):
+  def get_id_sact(ann_sact):
     return str(ann_sact['subactivity_instance_id'])
 
   @staticmethod
@@ -108,14 +108,14 @@ class AnnPhase1:
     fnames_video_all = os.listdir(os.path.join(self.dir_moma, 'videos_all'))
     assert all([fname_video.endswith('.mp4') for fname_video in fnames_video_all])
 
-    # make sure iids_sact are unique integers across different activities
-    iids_sact = [self.get_iid_sact(ann_sact) for iid_act in self.anns_act
-                 for ann_sact in self.anns_act[iid_act]['subactivity']]
-    assert len(iids_sact) == len(set(iids_sact))
+    # make sure ids_sact are unique integers across different activities
+    ids_sact = [self.get_id_sact(ann_sact) for id_act in self.anns_act
+                 for ann_sact in self.anns_act[id_act]['subactivity']]
+    assert len(ids_sact) == len(set(ids_sact))
 
     # make sure sub-activity classes from different activity classes are mutually exclusive
     dict_cnames = {}
-    for iid_act, ann_act in self.anns_act.items():
+    for id_act, ann_act in self.anns_act.items():
       cname_act = ann_act['class']
       for ann_sact in ann_act['subactivity']:
         dict_cnames.setdefault(cname_act, set()).add(ann_sact['class'])
@@ -126,13 +126,13 @@ class AnnPhase1:
         cnames_sact_2 = dict_cnames[cnames_act[j]]
         assert len(cnames_sact_1.intersection(cnames_sact_2)) == 0
 
-  def __inspect_ann_act(self, iid_act, ann_act):
+  def __inspect_ann_act(self, id_act, ann_act):
     # make sure the class name exists
     cname_act = self.get_cname_act(ann_act)
     assert cname_act in self.taxonomy.keys(), f"unseen class name {cname_act}"
 
-    # make sure iid_act is consistent
-    assert iid_act == self.get_iid_act(ann_act), 'inconsistent iid_act'
+    # make sure id_act is consistent
+    assert id_act == self.get_id_act(ann_act), 'inconsistent id_act'
 
     # make sure there is at least one sub-activity
     anns_sact = ann_act['subactivity']
@@ -145,8 +145,8 @@ class AnnPhase1:
 
     # make sure fps is consistent
     probe = ffmpeg.probe(file_video)
-    self.metadata[iid_act] = next((stream for stream in probe['streams'] if stream['codec_type'] == 'video'), None)
-    fps_video = round(Fraction(self.metadata[iid_act]['avg_frame_rate']))
+    self.metadata[id_act] = next((stream for stream in probe['streams'] if stream['codec_type'] == 'video'), None)
+    fps_video = round(Fraction(self.metadata[id_act]['avg_frame_rate']))
     assert ann_act['fps'] == fps_video, 'inconsistent activity fps'
     assert all([ann_sact['fps'] == fps_video for ann_sact in anns_sact]), 'inconsistent sub-activity fps'
 
@@ -157,7 +157,7 @@ class AnnPhase1:
     # make sure the activity temporal boundary is within the video and the length is positive
     start_act = hms2s(ann_act['crop_start'])  # inclusive
     end_act = hms2s(ann_act['crop_end'])  # exclusive
-    end_video = math.ceil(float(self.metadata[iid_act]['duration']))
+    end_video = math.ceil(float(self.metadata[id_act]['duration']))
     assert 0 <= start_act < end_act <= end_video, \
         f'activity boundary exceeds video boundary: 0 <= {start_act} < {end_act} <= {end_video}'
 
@@ -170,7 +170,7 @@ class AnnPhase1:
       assert cname_sact in self.taxonomy[cname_act], \
           f'unseen class name {cname_sact} in {cname_act}'
 
-      iid_sact = self.get_iid_sact(ann_sact)
+      id_sact = self.get_id_sact(ann_sact)
 
       # make sure the temporal boundary is in the right format
       assert is_hms(ann_sact['start']) and is_hms(ann_sact['end']), \
@@ -181,11 +181,11 @@ class AnnPhase1:
       end_sact = hms2s(ann_sact['end'])
       if end_sact_last > start_sact:
         if end_sact_last >= end_sact:
-          errors[iid_sact].append(f'completely overlapped sub-activity boundaries '
+          errors[id_sact].append(f'completely overlapped sub-activity boundaries '
                                   f'({s2hms(start_sact_last)}, {s2hms(end_sact_last)}) and '
                                   f'({s2hms(start_sact)}, {s2hms(end_sact)})')
         else:
-          errors[iid_sact].append(f'partially overlapped sub-activity boundaries '
+          errors[id_sact].append(f'partially overlapped sub-activity boundaries '
                                   f'({s2hms(start_sact_last)}, {s2hms(end_sact_last)}) and '
                                   f'({s2hms(start_sact)}, {s2hms(end_sact)})')
       start_sact_last = start_sact
@@ -193,7 +193,7 @@ class AnnPhase1:
 
       # make sure the sub-activity temporal boundary is within the activity and the length is positive
       if not (start_act <= start_sact < end_sact <= end_act):
-        errors[iid_sact].append(f'incorrect sub-activity boundary '
+        errors[id_sact].append(f'incorrect sub-activity boundary '
                                 f'{s2hms(start_act)} <= {s2hms(start_sact)} < '
                                 f'{s2hms(end_sact)} <= {s2hms(end_act)}')
 
@@ -202,22 +202,22 @@ class AnnPhase1:
 
   def inspect(self, verbose=True):
     self.__inspect_anns_act()
-    for iid_act, ann_act in self.anns_act.items():
-      iids_sact = [self.get_iid_sact(ann_sact) for ann_sact in ann_act['subactivity']]
-      errors = self.__inspect_ann_act(iid_act, ann_act)
+    for id_act, ann_act in self.anns_act.items():
+      ids_sact = [self.get_id_sact(ann_sact) for ann_sact in ann_act['subactivity']]
+      errors = self.__inspect_ann_act(id_act, ann_act)
 
       if verbose:
-        for iid_sact, msg in errors.items():
-          print(f'Activity {iid_act} Sub-activity {iid_sact}; {msg[0] if len(msg) == 1 else msg}')
+        for id_sact, msg in errors.items():
+          print(f'Activity {id_act} Sub-activity {id_sact}; {msg[0] if len(msg) == 1 else msg}')
 
       # error-free activities and sub-activities
-      iids_sact = [iid_sact for iid_sact in iids_sact if iid_sact not in errors.keys()]
-      self.iid_act_to_iids_sact[iid_act] = iids_sact
+      ids_sact = [id_sact for id_sact in ids_sact if id_sact not in errors.keys()]
+      self.id_act_to_ids_sact[id_act] = ids_sact
 
     num_acts_before = len(self.anns_act)
     num_sacts_before = sum([len(ann_act['subactivity']) for ann_act in self.anns_act.values()])
-    num_acts_after = len(self.iid_act_to_iids_sact)
-    num_sacts_after = sum([len(iids_sact) for iids_sact in self.iid_act_to_iids_sact.values()])
+    num_acts_after = len(self.id_act_to_ids_sact)
+    num_sacts_after = sum([len(ids_sact) for ids_sact in self.id_act_to_ids_sact.values()])
 
     print('\n ---------- REPORT (Phase 1) ----------')
     print(f'Number of error-free activity instances: {num_acts_before} -> {num_acts_after}')
