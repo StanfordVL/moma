@@ -124,6 +124,7 @@ class AnnMerger:
       ...
     ]
     """
+    cn2en = self.ann_phase1.cn2en
 
     anns = []
     for id_act, ann_act, ids_sact, anns_sact_phase1, anns_sact_phase2 in self.__get_anns():
@@ -137,7 +138,7 @@ class AnnMerger:
         assert len(ids_hoi) == len(ann_sact_phase2)
         for id_hoi, ann_hoi in zip(ids_hoi, ann_sact_phase2):
           anns_actor = ann_hoi['task_result']['annotations'][0]['slotsChildren']
-          anns_actor = [Entity(ann_actor, self.ann_phase2.cn2en) for ann_actor in anns_actor]
+          anns_actor = [Entity(ann_actor, cn2en) for ann_actor in anns_actor]
           actor = []
           for ann_actor in anns_actor:
             actor.append({
@@ -147,7 +148,7 @@ class AnnMerger:
             })
           
           anns_object = ann_hoi['task_result']['annotations'][1]['slotsChildren']
-          anns_object = [Entity(ann_object, self.ann_phase2.cn2en) for ann_object in anns_object]
+          anns_object = [Entity(ann_object, cn2en) for ann_object in anns_object]
           object = []
           for ann_object in anns_object:
             object.append({
@@ -157,7 +158,7 @@ class AnnMerger:
             })
 
           anns_binary = ann_hoi['task_result']['annotations'][2]['slotsChildren']
-          anns_binary = [Description(ann_binary, self.ann_phase2.cn2en) for ann_binary in anns_binary]
+          anns_binary = [Description(ann_binary, cn2en) for ann_binary in anns_binary]
           rel, ta = [], []
           for ann_binary in anns_binary:
             if ann_binary.cname in [x[0] for x in self.ann_phase2.taxonomy_rel]:
@@ -178,7 +179,7 @@ class AnnMerger:
               assert False, ann_binary.cname
 
           anns_unary = ann_hoi['task_result']['annotations'][3]['slotsChildren']
-          anns_unary = [Description(ann_unary, self.ann_phase2.cn2en) for ann_unary in anns_unary]
+          anns_unary = [Description(ann_unary, cn2en) for ann_unary in anns_unary]
           att, ia = [], []
           for ann_unary in anns_unary:
             if ann_unary.cname in [x[0] for x in self.ann_phase2.taxonomy_att]:
@@ -198,7 +199,7 @@ class AnnMerger:
 
           record = ann_hoi['task']['task_params']['record']
           hoi.append({
-            'id': f"{id_sact}_{record['attachment'].split('_')[-1][:-4].split('/')[1]}",
+            'id': f"{id_sact.zfill(5)}_{record['attachment'].split('_')[-1][:-4].split('/')[1]}",
             'time': hms2s(ann_sact_phase1['start'])+float(id_hoi_to_timestamp[id_hoi]),
             'actors': actor,
             'objects': object,
@@ -209,8 +210,8 @@ class AnnMerger:
           })
 
         sact.append({
-          'id': id_sact,
-          'class_name': ann_sact_phase1['class'],
+          'id': id_sact.zfill(5),
+          'class_name': cn2en[ann_sact_phase1['filename'].split('_')[0]],
           'start_time': hms2s(ann_sact_phase1['start']),
           'end_time': hms2s(ann_sact_phase1['end']),
           'higher_order_interactions': hoi
@@ -218,7 +219,7 @@ class AnnMerger:
 
       act = {
         'id': id_act,
-        'class_name': ann_act['class'],
+        'class_name': cn2en[ann_act['subactivity'][0]['orig_vid'].split('_')[0]],
         'start_time': hms2s(ann_act['crop_start']),
         'end_time': hms2s(ann_act['crop_end']),
         'sub_activities': sact

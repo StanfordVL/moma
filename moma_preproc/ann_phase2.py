@@ -98,11 +98,11 @@ class AnnPhase2:
     self.anns_sact_raw['11065'] = self.__trim(self.anns_sact_raw['11065'], 10, False)
 
     ids_sact_rm = ['27', '198', '199', '653', '1535', '1536', '3775', '4024', '5531', '5629',
-                    '5729', '6178', '6478', '7073', '7074', '7076', '7350', '9713', '10926', '10927',
-                    '11168', '11570', '12696', '12697', '15225', '15403', '15579', '15616']
-    for iid_sact_rm in ids_sact_rm:
-      if iid_sact_rm in self.anns_sact_raw:
-        self.anns_sact_raw.pop(iid_sact_rm)
+                   '5729', '6178', '6478', '7073', '7074', '7076', '7350', '9713', '10926', '10927',
+                   '11168', '11570', '12696', '12697', '15225', '15403', '15579', '15616']
+    for id_sact_rm in ids_sact_rm:
+      if id_sact_rm in self.anns_sact_raw:
+        self.anns_sact_raw.pop(id_sact_rm)
 
   @staticmethod
   def get_id_sact(ann_sact_raw):
@@ -113,7 +113,7 @@ class AnnPhase2:
   @staticmethod
   def get_id_hoi(ann_hoi_raw):
     record = ann_hoi_raw['task']['task_params']['record']
-    id_sact, timestamp = record['attachment'].split('_')[-1][:-4].split('/')
+    timestamp = record['attachment'].split('_')[-1][:-4].split('/')[1]
     timestamp = float(timestamp)/1000000
     id_hoi_to_timestamp = record['metadata']['additionalInfo']['framesTimestamp']
     id_hoi = None
@@ -125,7 +125,7 @@ class AnnPhase2:
   @staticmethod
   def get_timestamp(ann_hoi_raw):
     record = ann_hoi_raw['task']['task_params']['record']
-    id_sact, timestamp = record['attachment'].split('_')[-1][:-4].split('/')
+    timestamp = record['attachment'].split('_')[-1][:-4].split('/')[1]
     timestamp = float(timestamp)/1000000
     return timestamp
 

@@ -2,6 +2,8 @@ import itertools
 import json
 import os
 
+from torchvision import io
+
 from .data import *
 
 
@@ -9,9 +11,39 @@ class MOMA:
   def __init__(self, dir_moma):
     self.dir_moma = dir_moma
     self.taxonomy = self.read_taxonomy()
-    self.anns_act, self.anns_sact, self.anns_hoi, self.id_sact_to_act, self.id_hoi_to_sact = self.read_anns()
+    self.metadata, self.anns_act, self.anns_sact, self.anns_hoi, \
+        self.id_sact_to_act, self.id_hoi_to_sact = self.read_anns()
 
-  def get_ids_act(self, cnames_act, ids_sact, ids_hoi):
+  def get_stats(self):
+    num_acts = len(self.anns_act)
+    num_sacts = len(self.anns_sact)
+    num_hois = len(self.anns_hoi)
+    num_actors = sum([len(ann_hoi.actors) for ann_hoi in self.anns_hoi.values()])
+    num_objects = sum([len(ann_hoi.objects) for ann_hoi in self.anns_hoi.values()])
+    num_instances_actor = sum([len(ann_sact.ids_actor) for ann_sact in self.anns_sact.values()])
+    num_instances_object = sum([len(ann_sact.ids_object) for ann_sact in self.anns_sact.values()])
+    num_ias = sum([len(ann_hoi.ias) for ann_hoi in self.anns_hoi.values()])
+    num_tas = sum([len(ann_hoi.tas) for ann_hoi in self.anns_hoi.values()])
+    num_atts = sum([len(ann_hoi.atts) for ann_hoi in self.anns_hoi.values()])
+    num_rels = sum([len(ann_hoi.rels) for ann_hoi in self.anns_hoi.values()])
+
+    stats = {
+      'activity instances': num_acts,
+      'sub-activity instances': num_sacts,
+      'higher-order interaction instances': num_hois,
+      'actor bboxes': num_actors,
+      'object bboxes': num_objects,
+      'actor instances': num_instances_actor,
+      'object instances': num_instances_object,
+      'intransitive action instances': num_ias,
+      'transitive action instances': num_tas,
+      'attribute instances': num_atts,
+      'relationship instances': num_rels,
+    }
+
+    return stats
+
+  def get_ids_act(self, cnames_act=None, ids_sact=None, ids_hoi=None):
     """
     same-level
      - cnames_act: get activity ids [ids_act] for given activity class names [cnames_act]
@@ -22,14 +54,13 @@ class MOMA:
     assert not all(x is None for x in [cnames_act, ids_sact, ids_hoi])
 
     ids_act_all = []
-    
+
     # cnames_act
     if cnames_act is not None:
       ids_act = []
-      for ann_act in self.anns_act:
-        cname_act = self.taxonomy['act'][ann_act.cid]
-        if cname_act in cnames_act:
-          ids_act.append(ann_act.id)
+      for id_act, ann_act in self.anns_act.items():
+        if ann_act.cname in cnames_act:
+          ids_act.append(id_act)
       ids_act_all.append(ids_act)
 
     # ids_sact
@@ -74,10 +105,9 @@ class MOMA:
     # cnames_sact
     if cnames_sact is not None:
       ids_sact = []
-      for ann_sact in self.anns_sact:
-        cname_sact = self.taxonomy['sact'][ann_sact.cid]
-        if cname_sact in cnames_sact:
-          ids_sact.append(ann_sact.id)
+      for id_sact, ann_sact in self.anns_sact.items():
+        if ann_sact.cname in cnames_sact:
+          ids_sact.append(id_sact)
       ids_sact_all.append(ids_sact)
 
     # ids_act
@@ -142,42 +172,62 @@ class MOMA:
     for var, cnames in cnames_dict.items():
       if cnames is not None:
         ids_hoi = []
-        for ann_hoi in self.anns_hoi:
+        for id_hoi, ann_hoi in self.anns_hoi.items():
           if not set(cnames).isdisjoint([x.cname for x in getattr(ann_hoi, var)]):
-            ids_hoi.append(ann_hoi.id)
+            ids_hoi.append(id_hoi)
         ids_hoi_all.append(ids_hoi)
 
     ids_hoi_all = list(set.intersection(*map(set, ids_hoi_all)))
     return ids_hoi_all
 
-  def get_id_sact(self, id_hoi):
-    """
-     - id_hoi: get sub-activity id [id_sact] for a given higher-order interaction id [id_hoi]
-    """
-    return self.id_hoi_to_sact[id_hoi]
-    # self.id_sact_to_act, self.id_hoi_to_sact
+  def get_anns_act(self, ids_act):
+    return [self.anns_act[id_act] for id_act in ids_act]
 
-  def get_id_act(self, id_sact=None, id_hoi=None):
-    """
-     - id_sact: get activity id [id_act] for a given sub-activity id [id_sact]
-     - id_hoi: get activity id [id_act] for a given higher-order interaction id [id_hoi]
-    """
-    assert (id_sact is None) != (id_hoi is None)
-    
-    if id_sact is None:
-      id_sact = self.id_hoi_to_sact[id_hoi]
-    id_act = self.id_sact_to_act[id_sact]
+  def get_anns_sact(self, ids_sact):
+    return [self.anns_sact[id_sact] for id_sact in ids_sact]
 
-    return id_act
+  def get_anns_hoi(self, ids_hoi):
+    return [self.anns_hoi[id_hoi] for id_hoi in ids_hoi]
 
-  def get_ann_act(self, id_act):
-    return self.anns_act[id_act]
+  def get_frames(self, id_act=None, id_sact=None, id_hoi=None):
+    assert sum([x is not None for x in [id_act, id_sact, id_hoi]]) == 1
 
-  def get_ann_sact(self, id_sact):
-    return self.anns_sact[id_sact]
+    if id_act is not None:
+      file = os.path.join(self.dir_moma, f'videos/activities/{id_act}.mp4')
+      if os.path.exists(file):
+        frames = io.read_video(file)
+      else:
+        fname = self.metadata[id_act].fname
+        file_raw = os.path.join(self.dir_moma, f'videos/raw/{fname}')
+        start = self.anns_act[id_act].start
+        end = self.anns_act[id_act].end
+        frames = io.read_video(file_raw, start_pts=start, end_pts=end, pts_unit='sec')
 
-  def get_ann_hoi(self, id_hoi):
-    return self.anns_hoi[id_hoi]
+    elif id_sact is not None:
+      file = os.path.join(self.dir_moma, f'videos/sub_activities/{id_sact}.mp4')
+      if os.path.exists(file):
+        frames = io.read_video(file)
+      else:
+        id_act = self.get_ids_act(ids_sact=[id_sact])[0]
+        fname = self.metadata[id_act].fname
+        file_raw = os.path.join(self.dir_moma, f'videos/raw/{fname}.mp4')
+        start = self.anns_sact[id_sact].start
+        end = self.anns_sact[id_sact].end
+        frames = io.read_video(file_raw, start_pts=start, end_pts=end, pts_unit='sec')
+
+    else:
+      file = os.path.join(self.dir_moma, f'videos/higher_order_interaction/{id_hoi}.png')
+      if os.path.exists(file):
+        frames = io.read_image(file)
+      else:
+        id_act = self.get_ids_act(ids_hoi=[id_hoi])[0]
+        fname = self.metadata[id_act].fname
+        file_raw = os.path.join(self.dir_moma, f'videos/raw/{fname}.mp4')
+        time = self.anns_hoi[id_hoi].time
+        reader = io.VideoReader(file_raw)
+        frames = reader.seek(time)
+
+    return frames
 
   def read_taxonomy(self):
     with open(os.path.join(self.dir_moma, 'anns/taxonomy/actor.json'), 'r') as f:
@@ -202,8 +252,8 @@ class MOMA:
       taxonomy_act_sact = json.load(f)
       taxonomy_act = sorted(taxonomy_act_sact.keys())
       taxonomy_sact = sorted(itertools.chain(*taxonomy_act_sact.values()))
-      taxonomy_act_sact = bidict({cname_sact: cname_act for cname_act, cnames_sact in taxonomy_act_sact.items()
-                                                        for cname_sact in cnames_sact})
+      taxonomy_sact_to_act = bidict({cname_sact: cname_act for cname_act, cnames_sact in taxonomy_act_sact.items()
+                                                           for cname_sact in cnames_sact})
 
     taxonomy = {
       'actor': taxonomy_actor,
@@ -214,7 +264,7 @@ class MOMA:
       'rel': taxonomy_rel,
       'act': taxonomy_act,
       'sact': taxonomy_sact,
-      'sact_to_act': taxonomy_act_sact
+      'sact_to_act': taxonomy_sact_to_act
     }
 
     return taxonomy
@@ -223,22 +273,28 @@ class MOMA:
     with open(os.path.join(self.dir_moma, 'anns/anns.json'), 'r') as f:
       anns_raw = json.load(f)
 
-    anns_act, anns_sact, anns_hoi = {}, {}, {}
+    metadata, anns_act, anns_sact, anns_hoi = {}, {}, {}, {}
     id_sact_to_act, id_hoi_to_sact = {}, {}
 
     for ann_raw in anns_raw:
       ann_act_raw = ann_raw['activity']
+      metadata[ann_act_raw['id']] = Metadata(ann_raw)
       anns_act[ann_act_raw['id']] = Act(ann_act_raw, self.taxonomy['act'])
       anns_sact_raw = ann_act_raw['sub_activities']
+
       for ann_sact_raw in anns_sact_raw:
         anns_sact[ann_sact_raw['id']] = SAct(ann_sact_raw, self.taxonomy['sact'])
         anns_hoi_raw = ann_sact_raw['higher_order_interactions']
         id_sact_to_act[ann_sact_raw['id']] = ann_act_raw['id']
+
         for ann_hoi_raw in anns_hoi_raw:
-          anns_hoi[ann_hoi_raw['id']] = HOI(ann_hoi_raw, self.taxonomy)
+          anns_hoi[ann_hoi_raw['id']] = HOI(ann_hoi_raw,
+                                            self.taxonomy['actor'], self.taxonomy['object'],
+                                            self.taxonomy['ia'], self.taxonomy['ta'],
+                                            self.taxonomy['att'], self.taxonomy['rel'])
           id_hoi_to_sact[ann_hoi_raw['id']] = ann_sact_raw['id']
 
     id_sact_to_act = bidict(id_sact_to_act)
     id_hoi_to_sact = bidict(id_hoi_to_sact)
 
-    return anns_act, anns_sact, anns_hoi, id_sact_to_act, id_hoi_to_sact
+    return metadata, anns_act, anns_sact, anns_hoi, id_sact_to_act, id_hoi_to_sact

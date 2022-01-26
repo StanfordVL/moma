@@ -22,54 +22,68 @@ class bidict(dict):
     super(bidict, self).__delitem__(key)
 
 
+class Metadata:
+  def __init__(self, ann):
+    self.fname = ann['file_name']
+    self.num_frames = ann['num_frames']
+    self.width = ann['width']
+    self.height = ann['height']
+    self.duration = ann['duration']
+
+  def get_fid(self, time):
+    fps = (self.num_frames-1)/self.duration
+    fid = time/fps
+    return fid
+
+  def __repr__(self):
+    return f'Metadata(fname={self.fname}, size=({self.num_frames}, {self.height}, {self.width}, 3), ' \
+           f'duration={self.duration}'
+
+
 class Act:
   def __init__(self, ann, taxonomy):
     self.id = ann['id']
-    self.cid = taxonomy.index(ann['class_name'])
+    self.cname = ann['class_name']
+    self.cid = taxonomy.index(self.cname)
     self.start = ann['start_time']
     self.end = ann['end_time']
     self.ids_sact = [x['id'] for x in ann['sub_activities']]
 
   def __repr__(self):
-    pass
+    return f'Act(id={self.id}, cname={self.cname}, time=[{self.start}, end={self.end}), num_sacts={len(self.ids_sact)}'
 
 
 class SAct:
   def __init__(self, ann, taxonomy):
     self.id = ann['id']
-    self.cid = taxonomy.index(ann['class_name'])
+    self.cname = ann['class_name']
+    self.cid = taxonomy.index(self.cname)
     self.start = ann['start_time']
     self.end = ann['end_time']
     self.ids_hoi = [x['id'] for x in ann['higher_order_interactions']]
+    self.ids_actor = sorted(set([y['id'] for x in ann['higher_order_interactions'] for y in x['actors']]))
+    self.ids_object = sorted(set([y['id'] for x in ann['higher_order_interactions'] for y in x['objects']]), key=int)
 
   def __repr__(self):
-    pass
+    return f'SAct(id={self.id}, cname={self.cname}, time=[{self.start}, end={self.end}), num_hois={len(self.ids_hoi)})'
 
 
 class HOI:
-  def __init__(self, ann, taxonomy):
+  def __init__(self, ann, taxonomy_actor, taxonomy_object, taxonomy_ia, taxonomy_ta, taxonomy_att, taxonomy_rel):
     self.id = ann['id']
     self.time = ann['time']
-    self.actors = [Entity(x, 'actors') for x in ann['actors']]
-    self.objects = [Entity(x, 'objects') for x in ann['objects']]
-    descriptions = []
-    for kind in ['intransitive_actions', 'transitive_actions', 'attributes', 'relationships']:
-      descriptions.append([Description(x, kind, taxonomy[kind]) for x in ann[kind]])
-    self.ias, self.tas, self.atts, self.rels = descriptions
+    self.actors = [Entity(x, 'actors', taxonomy_actor) for x in ann['actors']]
+    self.objects = [Entity(x, 'objects', taxonomy_object) for x in ann['objects']]
+
+    self.ias = [Description(x, 'intransitive_actions', taxonomy_ia) for x in ann['intransitive_actions']]
+    self.tas = [Description(x, 'transitive_actions', taxonomy_ta) for x in ann['transitive_actions']]
+    self.atts = [Description(x, 'attributes', taxonomy_att) for x in ann['attributes']]
+    self.rels = [Description(x, 'relationships', taxonomy_rel) for x in ann['relationships']]
 
   def __repr__(self):
-    pass
-
-
-class Entity:
-  def __init__(self, ann, kind):
-    self.id = ann['id']
-    self.kind = kind
-    self.cname = ann['class_name']
-    self.bbox = BBox(ann['bbox'])
-
-  def __repr__(self):
-    return f"{''.join(x.capitalize() for x in self.kind.split('_'))}(id={self.id}, cname={self.cname})"
+    return f'SAct(id={self.id}, time={self.time}, ' \
+           f'num_ias={len(self.ias)}, num_tas={len(self.tas)}, ' \
+           f'num_atts={len(self.atts)}, num_rels={len(self.rels)})'
 
 
 class BBox:
@@ -77,7 +91,20 @@ class BBox:
     self.x, self.y, self.width, self.height = ann
 
   def __repr__(self):
-    return f'BBox(x={self.x}, y={self.y}, width={self.width}, height={self.height})'
+    return f'BBox(x={self.x}, y={self.y}, w={self.width}, h={self.height})'
+
+
+class Entity:
+  def __init__(self, ann, kind, taxonomy):
+    self.id = ann['id']
+    self.kind = kind
+    self.cname = ann['class_name']
+    self.cid = taxonomy.index(self.cname)
+    self.bbox = BBox(ann['bbox'])
+
+  def __repr__(self):
+    name = ''.join(x.capitalize() for x in self.kind.split('_'))
+    return f"{name}(id={self.id}, cname={self.cname})"
 
 
 class Description:
@@ -85,9 +112,12 @@ class Description:
     is_binary = 'target_id' in ann
     self.kind = kind
     self.signature = {x[0]:(x[1:] if is_binary else x[1]) for x in taxonomy}[ann['class_name']]
-    self.cid = taxonomy.index(ann['class_name'])
-    self.src_iid = ann['source_id']
-    self.trg_iid = ann['target_id'] if is_binary else None
+    self.cname = ann['class_name']
+    self.cid = [x[0] for x in taxonomy].index(self.cname)
+    self.id_src = ann['source_id']
+    self.id_trg = ann['target_id'] if is_binary else None
 
   def __repr__(self):
-    return f"{''.join(x.capitalize() for x in self.kind.split('_'))}(cid={self.cid})"
+    name = ''.join(x.capitalize() for x in self.kind.split('_'))
+    id = f'{self.id_src}' if self.id_trg is None else f'{self.id_src} -> {self.id_trg}'
+    return f"{name}(id={id}, cname={self.cname})"
