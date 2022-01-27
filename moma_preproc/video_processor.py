@@ -2,6 +2,7 @@ import ffmpeg
 import json
 import os
 import shutil
+from torchvision import io
 
 
 class VideoProcessor:
@@ -32,38 +33,44 @@ class VideoProcessor:
       shutil.copyfile(path_src, path_trg)
 
   @staticmethod
-  def trim_video(file_src, file_trg, start, end):
-    ffmpeg.input(file_src) \
+  def trim_video(path_src, path_trg, start, end):
+    ffmpeg.input(path_src) \
           .video \
           .trim(start=start, end=end) \
           .setpts('PTS-STARTPTS') \
-          .output(file_trg) \
+          .output(path_trg) \
           .run()
 
   @staticmethod
-  def trim_image(file_src, file_trg, time):
-    ffmpeg.input(file_src, ss=time) \
-          .output(file_trg, vframes=1) \
+  def trim_image(path_src, path_trg, time):
+    ffmpeg.input(path_src, ss=time) \
+          .output(path_trg, vframes=1) \
           .run()
+    if not os.path.isfile(path_trg):  # strange bug: sometimes ffmpeg does not read the last frame!
+      video = io.read_video(path_src, start_pts=time-1, pts_unit='sec')
+      video = video[0][-1].permute(2, 0, 1)
+      io.write_jpeg(video, path_trg, quality=50)
 
   def trim_act(self):
     for ann in self.anns:
       ann_act = ann['activity']
-      file_src = os.path.join(self.dir_moma, 'videos/raw', ann['file_name'])
-      file_trg = os.path.join(self.dir_moma, 'videos/activity', f"{ann_act['key']}.mp4")
-      start = ann_act['start_time']
-      end = ann_act['end_time']
-      self.trim_video(file_src, file_trg, start, end)
+      path_src = os.path.join(self.dir_moma, 'videos/raw', ann['file_name'])
+      path_trg = os.path.join(self.dir_moma, 'videos/activity', f"{ann_act['key']}.mp4")
+      if not os.path.exists(path_trg):
+        start = ann_act['start_time']
+        end = ann_act['end_time']
+        self.trim_video(path_src, path_trg, start, end)
 
   def trim_sact(self):
     for ann in self.anns:
       anns_sact = ann['activity']['sub_activities']
       for ann_sact in anns_sact:
-        file_src = os.path.join(self.dir_moma, 'videos/raw', ann['file_name'])
-        file_trg = os.path.join(self.dir_moma, 'videos/sub_activity', f"{ann_sact['key']}.mp4")
-        start = ann_sact['start_time']
-        end = ann_sact['end_time']
-        self.trim_video(file_src, file_trg, start, end)
+        path_src = os.path.join(self.dir_moma, 'videos/raw', ann['file_name'])
+        path_trg = os.path.join(self.dir_moma, 'videos/sub_activity', f"{ann_sact['key']}.mp4")
+        if not os.path.exists(path_trg):
+          start = ann_sact['start_time']
+          end = ann_sact['end_time']
+          self.trim_video(path_src, path_trg, start, end)
 
   def trim_hoi(self):
     for ann in self.anns:
@@ -71,7 +78,8 @@ class VideoProcessor:
       for ann_sact in anns_sact:
         anns_hoi = ann_sact['higher_order_interactions']
         for ann_hoi in anns_hoi:
-          file_src = os.path.join(self.dir_moma, 'videos/raw', ann['file_name'])
-          file_trg = os.path.join(self.dir_moma, 'videos/hoi_jpg', f"{ann_hoi['id']}.jpg")
-          time = ann_hoi['time']
-          self.trim_image(file_src, file_trg, time)
+          path_src = os.path.join(self.dir_moma, 'videos/raw', ann['file_name'])
+          path_trg = os.path.join(self.dir_moma, 'videos/higher_order_interaction', f"{ann_hoi['id']}.jpg")
+          if not os.path.exists(path_trg):
+            time = ann_hoi['time']
+            self.trim_image(path_src, path_trg, time)

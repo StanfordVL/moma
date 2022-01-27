@@ -32,8 +32,11 @@ class Metadata:
 
   def get_fid(self, time):
     fps = (self.num_frames-1)/self.duration
-    fid = time/fps
+    fid = time*fps
     return fid
+
+  def get_time(self, fid):
+    pass
 
   def __repr__(self):
     return f'Metadata(fname={self.fname}, size=({self.num_frames}, {self.height}, {self.width}, 3), ' \
@@ -74,11 +77,18 @@ class HOI:
     self.time = ann['time']
     self.actors = [Entity(x, 'actors', taxonomy_actor) for x in ann['actors']]
     self.objects = [Entity(x, 'objects', taxonomy_object) for x in ann['objects']]
-
     self.ias = [Description(x, 'intransitive_actions', taxonomy_ia) for x in ann['intransitive_actions']]
     self.tas = [Description(x, 'transitive_actions', taxonomy_ta) for x in ann['transitive_actions']]
     self.atts = [Description(x, 'attributes', taxonomy_att) for x in ann['attributes']]
     self.rels = [Description(x, 'relationships', taxonomy_rel) for x in ann['relationships']]
+
+  @property
+  def ids_actor(self):
+    return sorted([actor.id for actor in self.actors])
+
+  @property
+  def ids_object(self):
+    return sorted([object.id for object in self.objects], key=int)
 
   def __repr__(self):
     return f'SAct(id={self.id}, time={self.time}, ' \
@@ -89,6 +99,22 @@ class HOI:
 class BBox:
   def __init__(self, ann):
     self.x, self.y, self.width, self.height = ann
+
+  @property
+  def x1(self):
+      return self.x
+
+  @property
+  def y1(self):
+      return self.y
+
+  @property
+  def x2(self):
+      return self.x+self.width
+
+  @property
+  def y2(self):
+      return self.y+self.height
 
   def __repr__(self):
     return f'BBox(x={self.x}, y={self.y}, w={self.width}, h={self.height})'

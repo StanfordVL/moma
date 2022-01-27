@@ -105,7 +105,7 @@ class AnnPhase1:
 
   def __inspect_anns_act(self):
     # check video files
-    fnames_video_all = os.listdir(os.path.join(self.dir_moma, 'videos/raw_all'))
+    fnames_video_all = os.listdir(os.path.join(self.dir_moma, 'videos/all'))
     assert all([fname_video.endswith('.mp4') for fname_video in fnames_video_all])
 
     # make sure ids_sact are unique integers across different activities
@@ -140,11 +140,11 @@ class AnnPhase1:
 
     # make sure the corresponding video exist
     fname_video = anns_sact[0]['orig_vid']
-    file_video = os.path.join(self.dir_moma, f'videos/raw_all/{fname_video}')
-    assert os.path.isfile(file_video), 'video file does not exit'
+    path_video = os.path.join(self.dir_moma, f'videos/all/{fname_video}')
+    assert os.path.isfile(path_video), f'video file does not exit: {path_video}'
 
     # make sure fps is consistent
-    probe = ffmpeg.probe(file_video)
+    probe = ffmpeg.probe(path_video)
     self.metadata[id_act] = next((stream for stream in probe['streams'] if stream['codec_type'] == 'video'), None)
     fps_video = round(Fraction(self.metadata[id_act]['avg_frame_rate']))
     assert ann_act['fps'] == fps_video, 'inconsistent activity fps'

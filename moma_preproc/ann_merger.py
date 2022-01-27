@@ -166,14 +166,14 @@ class AnnMerger:
                 rel.append({
                   'class_name': cname,
                   'source_id': id_src,
-                  'target_id': id_trg,
+                  'target_id': id_trg
                 })
             elif ann_binary.cname in [x[0] for x in self.ann_phase2.taxonomy_ta]:
               for id_src, id_trg, cname in ann_binary.breakdown():
                 ta.append({
                   'class_name': cname,
                   'source_id': id_src,
-                  'target_id': id_trg,
+                  'target_id': id_trg
                 })
             else:
               assert False, ann_binary.cname

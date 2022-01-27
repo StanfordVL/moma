@@ -2,17 +2,15 @@ import itertools
 import json
 import os
 
-from torchvision import io
-
 from .data import *
 
 
 class MOMA:
   def __init__(self, dir_moma):
     self.dir_moma = dir_moma
-    self.taxonomy = self.read_taxonomy()
+    self.taxonomy = self.__read_taxonomy()
     self.metadata, self.anns_act, self.anns_sact, self.anns_hoi, \
-        self.id_sact_to_act, self.id_hoi_to_sact = self.read_anns()
+        self.id_sact_to_act, self.id_hoi_to_sact = self.__read_anns()
 
   def get_stats(self):
     num_acts = len(self.anns_act)
@@ -38,7 +36,7 @@ class MOMA:
       'intransitive action instances': num_ias,
       'transitive action instances': num_tas,
       'attribute instances': num_atts,
-      'relationship instances': num_rels,
+      'relationship instances': num_rels
     }
 
     return stats
@@ -70,9 +68,7 @@ class MOMA:
 
     # ids_hoi
     if ids_hoi is not None:
-      ids_act = itertools.chain(*[self.id_sact_to_act[id_sact]
-                                  for id_hoi in ids_hoi
-                                  for id_sact in self.id_hoi_to_sact[id_hoi]])
+      ids_act = itertools.chain(*[self.id_sact_to_act[self.id_hoi_to_sact[id_hoi]] for id_hoi in ids_hoi])
       ids_act_all.append(ids_act)
 
     ids_act_all = list(set.intersection(*map(set, ids_act_all)))
@@ -189,47 +185,20 @@ class MOMA:
   def get_anns_hoi(self, ids_hoi):
     return [self.anns_hoi[id_hoi] for id_hoi in ids_hoi]
 
-  def get_frames(self, id_act=None, id_sact=None, id_hoi=None):
+  def get_path(self, id_act=None, id_sact=None, id_hoi=None):
     assert sum([x is not None for x in [id_act, id_sact, id_hoi]]) == 1
 
     if id_act is not None:
-      file = os.path.join(self.dir_moma, f'videos/activities/{id_act}.mp4')
-      if os.path.exists(file):
-        frames = io.read_video(file)
-      else:
-        fname = self.metadata[id_act].fname
-        file_raw = os.path.join(self.dir_moma, f'videos/raw/{fname}')
-        start = self.anns_act[id_act].start
-        end = self.anns_act[id_act].end
-        frames = io.read_video(file_raw, start_pts=start, end_pts=end, pts_unit='sec')
-
+      path = os.path.join(self.dir_moma, f'videos/activities/{id_act}.mp4')
     elif id_sact is not None:
-      file = os.path.join(self.dir_moma, f'videos/sub_activities/{id_sact}.mp4')
-      if os.path.exists(file):
-        frames = io.read_video(file)
-      else:
-        id_act = self.get_ids_act(ids_sact=[id_sact])[0]
-        fname = self.metadata[id_act].fname
-        file_raw = os.path.join(self.dir_moma, f'videos/raw/{fname}.mp4')
-        start = self.anns_sact[id_sact].start
-        end = self.anns_sact[id_sact].end
-        frames = io.read_video(file_raw, start_pts=start, end_pts=end, pts_unit='sec')
-
+      path = os.path.join(self.dir_moma, f'videos/sub_activities/{id_sact}.mp4')
     else:
-      file = os.path.join(self.dir_moma, f'videos/higher_order_interaction/{id_hoi}.png')
-      if os.path.exists(file):
-        frames = io.read_image(file)
-      else:
-        id_act = self.get_ids_act(ids_hoi=[id_hoi])[0]
-        fname = self.metadata[id_act].fname
-        file_raw = os.path.join(self.dir_moma, f'videos/raw/{fname}.mp4')
-        time = self.anns_hoi[id_hoi].time
-        reader = io.VideoReader(file_raw)
-        frames = reader.seek(time)
+      path = os.path.join(self.dir_moma, f'videos/higher_order_interaction/{id_hoi}.jpg')
 
-    return frames
+    assert os.path.exists(path)
+    return path
 
-  def read_taxonomy(self):
+  def __read_taxonomy(self):
     with open(os.path.join(self.dir_moma, 'anns/taxonomy/actor.json'), 'r') as f:
       taxonomy_actor = json.load(f)
       taxonomy_actor = sorted(itertools.chain(*taxonomy_actor.values()))
@@ -269,7 +238,7 @@ class MOMA:
 
     return taxonomy
 
-  def read_anns(self):
+  def __read_anns(self):
     with open(os.path.join(self.dir_moma, 'anns/anns.json'), 'r') as f:
       anns_raw = json.load(f)
 
