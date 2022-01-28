@@ -31,6 +31,8 @@ class Metadata:
     self.duration = ann['duration']
 
   def get_fid(self, time):
+    """ Get the frame ID given a timestamp in seconds
+    """
     fps = (self.num_frames-1)/self.duration
     fid = time*fps
     return fid
