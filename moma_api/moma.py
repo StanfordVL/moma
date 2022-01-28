@@ -1,5 +1,6 @@
 import itertools
 import json
+import numpy as np
 import os
 
 from .data import *
@@ -14,32 +15,92 @@ class MOMA:
 
   def get_stats(self):
     num_acts = len(self.anns_act)
+    num_classes_act = len(self.taxonomy['act'])
     num_sacts = len(self.anns_sact)
+    num_classes_sact = len(self.taxonomy['sact'])
     num_hois = len(self.anns_hoi)
-    num_actors = sum([len(ann_hoi.actors) for ann_hoi in self.anns_hoi.values()])
-    num_objects = sum([len(ann_hoi.objects) for ann_hoi in self.anns_hoi.values()])
-    num_instances_actor = sum([len(ann_sact.ids_actor) for ann_sact in self.anns_sact.values()])
-    num_instances_object = sum([len(ann_sact.ids_object) for ann_sact in self.anns_sact.values()])
-    num_ias = sum([len(ann_hoi.ias) for ann_hoi in self.anns_hoi.values()])
-    num_tas = sum([len(ann_hoi.tas) for ann_hoi in self.anns_hoi.values()])
-    num_atts = sum([len(ann_hoi.atts) for ann_hoi in self.anns_hoi.values()])
-    num_rels = sum([len(ann_hoi.rels) for ann_hoi in self.anns_hoi.values()])
 
-    stats = {
-      'activity instances': num_acts,
-      'sub-activity instances': num_sacts,
-      'higher-order interaction instances': num_hois,
-      'actor bboxes': num_actors,
-      'object bboxes': num_objects,
-      'actor instances': num_instances_actor,
-      'object instances': num_instances_object,
-      'intransitive action instances': num_ias,
-      'transitive action instances': num_tas,
-      'attribute instances': num_atts,
-      'relationship instances': num_rels
+    num_actors_image = sum([len(ann_hoi.actors) for ann_hoi in self.anns_hoi.values()])
+    num_actors_video = sum([len(ann_sact.ids_actor) for ann_sact in self.anns_sact.values()])
+    num_classes_actor = len(self.taxonomy['actor'])
+    num_objects_image = sum([len(ann_hoi.objects) for ann_hoi in self.anns_hoi.values()])
+    num_objects_video = sum([len(ann_sact.ids_object) for ann_sact in self.anns_sact.values()])
+    num_classes_object = len(self.taxonomy['object'])
+
+    num_ias = sum([len(ann_hoi.ias) for ann_hoi in self.anns_hoi.values()])
+    num_classes_ia = len(self.taxonomy['ia'])
+    num_tas = sum([len(ann_hoi.tas) for ann_hoi in self.anns_hoi.values()])
+    num_classes_ta = len(self.taxonomy['ta'])
+    num_atts = sum([len(ann_hoi.atts) for ann_hoi in self.anns_hoi.values()])
+    num_classes_att = len(self.taxonomy['att'])
+    num_rels = sum([len(ann_hoi.rels) for ann_hoi in self.anns_hoi.values()])
+    num_classes_rel = len(self.taxonomy['rel'])
+
+    bincount_act = np.bincount([ann_act.cid for ann_act in self.anns_act.values()]).tolist()
+    bincount_sact = np.bincount([ann_sact.cid for ann_sact in self.anns_sact.values()]).tolist()
+    bincount_actor, bincount_object, bincount_ia, bincount_ta, bincount_att, bincount_rel = [], [], [], [], [], []
+    for ann_hoi in self.anns_hoi.values():
+      bincount_actor += [actor.cid for actor in ann_hoi.actors]
+      bincount_object += [object.cid for object in ann_hoi.objects]
+      bincount_ia += [ia.cid for ia in ann_hoi.ias]
+      bincount_ta += [ta.cid for ta in ann_hoi.tas]
+      bincount_att += [att.cid for att in ann_hoi.atts]
+      bincount_rel += [rel.cid for rel in ann_hoi.rels]
+    bincount_actor = np.bincount(bincount_actor).tolist()
+    bincount_object = np.bincount(bincount_object).tolist()
+    bincount_ia = np.bincount(bincount_ia).tolist()
+    bincount_ta = np.bincount(bincount_ta).tolist()
+    bincount_att = np.bincount(bincount_att).tolist()
+    bincount_rel = np.bincount(bincount_rel).tolist()
+    
+    stats_overall = {
+      'activity': f'{num_acts} instances from {num_classes_act} classes',
+      'sub_activity': f'{num_sacts} instances from {num_classes_sact} classes',
+      'higher_order_interaction': f'{num_hois} instances',
+      'actor': f'{num_actors_image} image/{num_actors_video} video instances from {num_classes_actor} classes',
+      'object': f'{num_objects_image} image/{num_objects_video} video instances from {num_classes_object} classes',
+      'intransitive_action': f'{num_ias} instances from {num_classes_ia} classes',
+      'transitive_action': f'{num_tas} instances from {num_classes_ta} classes',
+      'attribute': f'{num_atts} instances from {num_classes_att} classes',
+      'relationship': f'{num_rels} instances from {num_classes_rel} classes'
     }
 
-    return stats
+    stats_per_class = {
+      'activity': {
+        'counts': bincount_act,
+        'class_names': self.taxonomy['act']
+      },
+      'sub_activity': {
+        'counts': bincount_sact,
+        'class_names': self.taxonomy['sact']
+      },
+      'actor': {
+        'counts': bincount_actor,
+        'class_names': self.taxonomy['actor']
+      },
+      'object': {
+        'counts': bincount_object,
+        'class_names': self.taxonomy['object']
+      },
+      'intransitive_action': {
+        'counts': bincount_ia,
+        'class_names': [x[0] for x in self.taxonomy['ia']]
+      },
+      'transitive_action': {
+        'counts': bincount_ta,
+        'class_names': [x[0] for x in self.taxonomy['ta']]
+      },
+      'attribute': {
+        'counts': bincount_att,
+        'class_names': [x[0] for x in self.taxonomy['att']]
+      },
+      'relationship': {
+        'counts': bincount_rel,
+        'class_names': [x[0] for x in self.taxonomy['rel']]
+      }
+    }
+
+    return stats_overall, stats_per_class
 
   def get_ids_act(self, cnames_act: list[str]=None, ids_sact: list[str]=None, ids_hoi: list[str]=None) -> list[str]:
     """ Get the unique IDs of activity instances that satisfy certain conditions
