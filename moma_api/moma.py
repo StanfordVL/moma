@@ -6,7 +6,7 @@ from .data import *
 
 
 class MOMA:
-  def __init__(self, dir_moma):
+  def __init__(self, dir_moma: str):
     self.dir_moma = dir_moma
     self.taxonomy = self.__read_taxonomy()
     self.metadata, self.anns_act, self.anns_sact, self.anns_hoi, \
@@ -41,17 +41,18 @@ class MOMA:
 
     return stats
 
-  def get_ids_act(self, cnames_act=None, ids_sact=None, ids_hoi=None):
-    """
+  def get_ids_act(self, cnames_act: list[str]=None, ids_sact: list[str]=None, ids_hoi: list[str]=None) -> list[str]:
+    """ Get the unique IDs of activity instances that satisfy certain conditions
     same-level
-     - cnames_act: get activity ids [ids_act] for given activity class names [cnames_act]
+     - cnames_act: get activity IDs [ids_act] for given activity class names [cnames_act]
     bottom-up
-     - ids_sact: get activity ids [ids_act] for given sub-activity ids [ids_sact]
-     - ids_hoi: get activity ids [ids_act] for given higher-order interaction ids [ids_hoi]
+     - ids_sact: get activity IDs [ids_act] for given sub-activity IDs [ids_sact]
+     - ids_hoi: get activity IDs [ids_act] for given higher-order interaction IDs [ids_hoi]
     """
-    assert not all(x is None for x in [cnames_act, ids_sact, ids_hoi])
+    if all(x is None for x in [cnames_act, ids_sact, ids_hoi]):
+      return sorted(self.anns_act.keys())
 
-    ids_act_all = []
+    ids_act_intersection = []
 
     # cnames_act
     if cnames_act is not None:
@@ -59,44 +60,45 @@ class MOMA:
       for id_act, ann_act in self.anns_act.items():
         if ann_act.cname in cnames_act:
           ids_act.append(id_act)
-      ids_act_all.append(ids_act)
+      ids_act_intersection.append(ids_act)
 
     # ids_sact
     if ids_sact is not None:
       ids_act = [self.id_sact_to_act[id_sact] for id_sact in ids_sact]
-      ids_act_all.append(ids_act)
+      ids_act_intersection.append(ids_act)
 
     # ids_hoi
     if ids_hoi is not None:
       ids_act = itertools.chain(*[self.id_sact_to_act[self.id_hoi_to_sact[id_hoi]] for id_hoi in ids_hoi])
-      ids_act_all.append(ids_act)
+      ids_act_intersection.append(ids_act)
 
-    ids_act_all = list(set.intersection(*map(set, ids_act_all)))
-    return ids_act_all
+    ids_act_intersection = sorted(set.intersection(*map(set, ids_act_intersection)))
+    return ids_act_intersection
 
   def get_ids_sact(self,
-                   cnames_sact=None, ids_act=None, ids_hoi=None,
-                   cnames_actor=None, cnames_object=None,
-                   cnames_ia=None, cnames_ta=None,
-                   cnames_att=None, cnames_rel=None):
-    """
+                   cnames_sact: list[str]=None, ids_act: list[str]=None, ids_hoi: list[str]=None,
+                   cnames_actor: list[str]=None, cnames_object: list[str]=None,
+                   cnames_ia: list[str]=None, cnames_ta: list[str]=None,
+                   cnames_att: list[str]=None, cnames_rel: list[str]=None) -> list[str]:
+    """ Get the unique IDs of sub-activity instances that satisfy certain conditions
     same-level
-     - cnames_sact: get sub-activity ids [ids_sact] for given sub-activity class names [cnames_sact]
+     - cnames_sact: get sub-activity IDs [ids_sact] for given sub-activity class names [cnames_sact]
     top-down
-     - ids_act: get sub-activity ids [ids_sact] for given activity ids [ids_act]
+     - ids_act: get sub-activity IDs [ids_sact] for given activity IDs [ids_act]
     bottom-up
-     - ids_hoi: get sub-activity ids [ids_sact] for given higher-order interaction ids [ids_hoi]
-     - cnames_actor: get sub-activity ids [ids_sact] for given actor class names [cnames_actor]
-     - cnames_object: get sub-activity ids [ids_sact] for given object class names [cnames_object]
-     - cnames_ia: get sub-activity ids [ids_sact] for given intransitive action class names [cnames_ia]
-     - cnames_ta: get sub-activity ids [ids_sact] for given transitive action class names [cnames_ta]
-     - cnames_att: get sub-activity ids [ids_sact] for given attribute class names [cnames_att]
-     - cnames_rel: get sub-activity ids [ids_sact] for given relationship class names [cnames_rel]
+     - ids_hoi: get sub-activity IDs [ids_sact] for given higher-order interaction IDs [ids_hoi]
+     - cnames_actor: get sub-activity IDs [ids_sact] for given actor class names [cnames_actor]
+     - cnames_object: get sub-activity IDs [ids_sact] for given object class names [cnames_object]
+     - cnames_ia: get sub-activity IDs [ids_sact] for given intransitive action class names [cnames_ia]
+     - cnames_ta: get sub-activity IDs [ids_sact] for given transitive action class names [cnames_ta]
+     - cnames_att: get sub-activity IDs [ids_sact] for given attribute class names [cnames_att]
+     - cnames_rel: get sub-activity IDs [ids_sact] for given relationship class names [cnames_rel]
     """
-    assert not all(x is None for x in [cnames_sact, ids_act, ids_hoi,
-                                       cnames_actor, cnames_object, cnames_ia, cnames_ta, cnames_att, cnames_rel])
+    if all(x is None for x in [cnames_sact, ids_act, ids_hoi, cnames_actor, cnames_object,
+                               cnames_ia, cnames_ta, cnames_att, cnames_rel]):
+      return sorted(self.anns_sact.keys())
 
-    ids_sact_all = []
+    ids_sact_intersection = []
 
     # cnames_sact
     if cnames_sact is not None:
@@ -104,17 +106,17 @@ class MOMA:
       for id_sact, ann_sact in self.anns_sact.items():
         if ann_sact.cname in cnames_sact:
           ids_sact.append(id_sact)
-      ids_sact_all.append(ids_sact)
+      ids_sact_intersection.append(ids_sact)
 
     # ids_act
     if ids_act is not None:
       ids_sact = itertools.chain(*[self.id_sact_to_act.inverse[id_act] for id_act in ids_act])
-      ids_sact_all.append(ids_sact)
+      ids_sact_intersection.append(ids_sact)
 
     # ids_hoi
     if ids_hoi is not None:
       ids_sact = [self.id_hoi_to_sact[id_hoi] for id_hoi in ids_hoi]
-      ids_sact_all.append(ids_sact)
+      ids_sact_intersection.append(ids_sact)
 
     # cnames_actor, cnames_object, cnames_ia, cnames_ta, cnames_att, cnames_rel
     if not all(x is None for x in [cnames_actor, cnames_object, cnames_ia, cnames_ta, cnames_att, cnames_rel]):
@@ -122,44 +124,45 @@ class MOMA:
                 'cnames_ia': cnames_ia, 'cnames_ta': cnames_ta,
                 'cnames_att': cnames_att, 'cnames_rel': cnames_rel}
       ids_sact = [self.id_hoi_to_sact[id_hoi] for id_hoi in self.get_ids_hoi(**kwargs)]
-      ids_sact_all.append(ids_sact)
+      ids_sact_intersection.append(ids_sact)
 
-    ids_sact_all = list(set.intersection(*map(set, ids_sact_all)))
-    return ids_sact_all
+    ids_sact_intersection = sorted(set.intersection(*map(set, ids_sact_intersection)))
+    return ids_sact_intersection
 
   def get_ids_hoi(self,
-                  ids_act=None, ids_sact=None,
-                  cnames_actor=None, cnames_object=None,
-                  cnames_ia=None, cnames_ta=None,
-                  cnames_att=None, cnames_rel=None):
-    """
-    top-down
-     - ids_act: get higher-order interaction ids [ids_hoi] for given activity ids [ids_act]
-     - ids_sact: get higher-order interaction ids [ids_hoi] for given sub-activity ids [ids_sact]
+                  ids_act: list[str]=None, ids_sact: list[str]=None,
+                  cnames_actor: list[str]=None, cnames_object: list[str]=None,
+                  cnames_ia: list[str]=None, cnames_ta: list[str]=None,
+                  cnames_att: list[str]=None, cnames_rel: list[str]=None) -> list[str]:
+    """ Get the unique IDs of higher-order interaction instances that satisfy certain conditions
+     top-down
+     - ids_act: get higher-order interaction IDs [ids_hoi] for given activity IDs [ids_act]
+     - ids_sact: get higher-order interaction IDs [ids_hoi] for given sub-activity IDs [ids_sact]
     bottom-up
-     - cnames_actor: get higher-order interaction ids [ids_hoi] for given actor class names [cnames_actor]
-     - cnames_object: get higher-order interaction ids [ids_hoi] for given object class names [cnames_object]
-     - cnames_ia: get higher-order interaction ids [ids_hoi] for given intransitive action class names [cnames_ia]
-     - cnames_ta: get higher-order interaction ids [ids_hoi] for given transitive action class names [cnames_ta]
-     - cnames_att: get higher-order interaction ids [ids_hoi] for given attribute class names [cnames_att]
-     - cnames_rel: get higher-order interaction ids [ids_hoi] for given relationship class names [cnames_rel]
+     - cnames_actor: get higher-order interaction IDs [ids_hoi] for given actor class names [cnames_actor]
+     - cnames_object: get higher-order interaction IDs [ids_hoi] for given object class names [cnames_object]
+     - cnames_ia: get higher-order interaction IDs [ids_hoi] for given intransitive action class names [cnames_ia]
+     - cnames_ta: get higher-order interaction IDs [ids_hoi] for given transitive action class names [cnames_ta]
+     - cnames_att: get higher-order interaction IDs [ids_hoi] for given attribute class names [cnames_att]
+     - cnames_rel: get higher-order interaction IDs [ids_hoi] for given relationship class names [cnames_rel]
     """
-    assert not all(x is None for x in [ids_act, ids_sact,
-                                       cnames_actor, cnames_object, cnames_ia, cnames_ta, cnames_att, cnames_rel])
+    if all(x is None for x in [ids_act, ids_sact, cnames_actor, cnames_object,
+                               cnames_ia, cnames_ta, cnames_att, cnames_rel]):
+      return sorted(self.anns_hoi.keys())
 
-    ids_hoi_all = []
+    ids_hoi_interaction = []
 
     # ids_act
     if ids_act is not None:
       ids_hoi = itertools.chain(*[self.id_hoi_to_sact.inverse[id_sact]
                                   for id_act in ids_act
                                   for id_sact in self.id_sact_to_act.inverse[id_act]])
-      ids_hoi_all.append(ids_hoi)
+      ids_hoi_interaction.append(ids_hoi)
 
     # ids_sact
     if ids_sact is not None:
       ids_hoi = itertools.chain(*[self.id_hoi_to_sact.inverse[id_sact] for id_sact in ids_sact])
-      ids_hoi_all.append(ids_hoi)
+      ids_hoi_interaction.append(ids_hoi)
 
     # cnames_actor, cnames_object, cnames_ia, cnames_ta, cnames_att, cnames_rel
     cnames_dict = {'actors': cnames_actor, 'objects': cnames_object,
@@ -171,27 +174,36 @@ class MOMA:
         for id_hoi, ann_hoi in self.anns_hoi.items():
           if not set(cnames).isdisjoint([x.cname for x in getattr(ann_hoi, var)]):
             ids_hoi.append(id_hoi)
-        ids_hoi_all.append(ids_hoi)
+        ids_hoi_interaction.append(ids_hoi)
 
-    ids_hoi_all = list(set.intersection(*map(set, ids_hoi_all)))
-    return ids_hoi_all
+    ids_hoi_interaction = sorted(set.intersection(*map(set, ids_hoi_interaction)))
+    return ids_hoi_interaction
 
-  def get_anns_act(self, ids_act):
+  def get_ann_act(self, id_act: str) -> Act:
+    return self.anns_act[id_act]
+
+  def get_ann_sact(self, id_sact: str) -> SAct:
+    return self.anns_sact[id_sact]
+
+  def get_ann_hoi(self, id_hoi: str) -> HOI:
+    return self.anns_hoi[id_hoi]
+
+  def get_anns_act(self, ids_act: list[str]) -> list[Act]:
     return [self.anns_act[id_act] for id_act in ids_act]
 
-  def get_anns_sact(self, ids_sact):
+  def get_anns_sact(self, ids_sact: list[str]) -> list[SAct]:
     return [self.anns_sact[id_sact] for id_sact in ids_sact]
 
-  def get_anns_hoi(self, ids_hoi):
+  def get_anns_hoi(self, ids_hoi: list[str]) -> list[HOI]:
     return [self.anns_hoi[id_hoi] for id_hoi in ids_hoi]
 
-  def get_path(self, id_act=None, id_sact=None, id_hoi=None):
+  def get_path(self, id_act: str=None, id_sact: str=None, id_hoi: str=None) -> str:
     assert sum([x is not None for x in [id_act, id_sact, id_hoi]]) == 1
 
     if id_act is not None:
-      path = os.path.join(self.dir_moma, f'videos/activities/{id_act}.mp4')
+      path = os.path.join(self.dir_moma, f'videos/activity/{id_act}.mp4')
     elif id_sact is not None:
-      path = os.path.join(self.dir_moma, f'videos/sub_activities/{id_sact}.mp4')
+      path = os.path.join(self.dir_moma, f'videos/sub_activity/{id_sact}.mp4')
     else:
       path = os.path.join(self.dir_moma, f'videos/higher_order_interaction/{id_hoi}.jpg')
 
