@@ -9,21 +9,21 @@ MOMA is a dataset dedicated to multi-object, multi-actor activity recognition.
 - [distinctipy](https://github.com/alan-turing-institute/distinctipy): For data visualization. Install by running `pip install distinctipy`.
 
 ## Hierarchy
-| Level | Concept                                            | Representation                                                 |
-|-------|----------------------------------------------------|----------------------------------------------------------------|
-| 1     | Activity                                           | Semantic label                                                 |
-| 2     | Sub-activity                                       | Temporal boundary and semantic label                           |
-| 3     | Higher-order interaction                           | Spatial-temporal scene graph                                   |
-|       | ┗&emsp;Entity                                      | Graph node w/ bounding box, instance label, and semantic label |
-|       | &emsp;&emsp;┣&emsp;Actor                           | -                                                              |
-|       | &emsp;&emsp;┗&emsp;Object                          | -                                                              |
-|       | ┗&emsp;Description                                 | Graph edge w/ semantic label                                   |
-|       | &emsp;&emsp;┗&emsp;State                           | -                                                              |
-|       | &emsp;&emsp;&emsp;&emsp;┣&emsp;Attribute           | Loop                                                           |
-|       | &emsp;&emsp;&emsp;&emsp;┗&emsp;Relationship        | Directed edge                                                  |
-|       | &emsp;&emsp;┗&emsp;Atomic action                   | -                                                              |
-|       | &emsp;&emsp;&emsp;&emsp;┣&emsp;Intransitive action | Loop                                                           |
-|       | &emsp;&emsp;&emsp;&emsp;┗&emsp;Transitive action   | Directed edge                                                  |
+| Level | Concept                                              | Representation                                                 |
+|-------|------------------------------------------------------|----------------------------------------------------------------|
+| 1     | Activity                                             | Semantic label                                                 |
+| 2     | Sub-activity                                         | Temporal boundary and semantic label                           |
+| 3     | Higher-order interaction                             | Spatial-temporal scene graph                                   |
+|       | └─&emsp;Entity                                       | Graph node w/ bounding box, instance label, and semantic label |
+|       | &emsp;&emsp;├─&emsp;Actor                            | -                                                              |
+|       | &emsp;&emsp;└─&emsp;Object                           | -                                                              |
+|       | └─&emsp;Description                                  | Graph edge w/ semantic label                                   |
+|       | &emsp;&emsp;└─&emsp;State                            | -                                                              |
+|       | &emsp;&emsp;&emsp;&emsp;├─&emsp;Attribute            | Loop                                                           |
+|       | &emsp;&emsp;&emsp;&emsp;└─&emsp;Relationship         | Directed edge                                                  |
+|       | &emsp;&emsp;└─&emsp;Atomic action                    | -                                                              |
+|       | &emsp;&emsp;&emsp;&emsp;├─&emsp;Intransitive action  | Loop                                                           |
+|       | &emsp;&emsp;&emsp;&emsp;└─&emsp;Transitive action    | Directed edge                                                  |
 
 
 ## Annotations
@@ -39,82 +39,90 @@ In this version, we include:
 - 951,543 relationship instances
 
 Below, we show the syntax of the MOMA annotations.
-```json
+```json5
 [
   {
-    file_name: str,
-    num_frames: int,
-    width: int,
-    height: int,
-    duration: float,
+    "file_name": str,
+    "num_frames": int,
+    "width": int,
+    "height": int,
+    "duration": float,
 
-    # an activity
-    activity: {
-      id: str,
-      class_name: str,
-      start_time: int,
-      end_time: int,
-      sub_activities: [
-        # a sub-activity
+    // an activity
+    "activity": {
+      "id": str,
+      "class_name": str,
+      "start_time": int,
+      "end_time": int,
+      
+      "sub_activities": [
+        // a sub-activity
         {
-          id: str,
-          class_name: str,
-          start_time: int,
-          end_time: int,
-          higher_order_interactions: [
-            # a higher-order interaction
+          "id": str,
+          "class_name": str,
+          "start_time": int,
+          "end_time": int,
+          
+          "higher_order_interactions": [
+            // a higher-order interaction
             {
-              id: str,
-              time: int,
-              actors: [
-                # an actor
+              "id": str,
+              "time": int,
+              
+              "actors": [
+                // an actor
                 {
-                  id,
-                  class_name: str,
-                  bbox: [x, y, width, height]
+                  "id": str,
+                  "class_name": str,
+                  "bbox": [x, y, width, height]
                 },
                 ...
               ],
-              objects: [
-                # an object
+              
+              "objects": [
+                // an object
                 {
-                  id: str,
-                  class_name: str,
-                  bbox: [x, y, width, height]
+                  "id": str,
+                  "class_name": str,
+                  "bbox": [x, y, width, height]
                 },
                 ...
               ],
-              relationships: [
-                # a relationship
+              
+              "relationships": [
+                // a relationship
                 {
-                  class_name: str,
-                  source_id: str,
-                  target_id: str
+                  "class_name": str,
+                  "source_id": str,
+                  "target_id": str
                 },
                 ...
               ],
-              attributes: [
-                # an attribute
+              
+              "attributes": [
+                // an attribute
                 {
-                  class_name: str,
-                  source_id: str
+                  "class_name": str,
+                  "source_id": str
                 },
                 ...
               ],
-              transitive_actions: [
-                # a transitive action
+              
+              "transitive_actions": [
+                // a transitive action
                 {
-                  class_name: str,
-                  source_id: str,
-                  target_id: str
+                  "class_name": str,
+                  "source_id": str,
+                  "target_id": str
                 },
                 ...
               ],
-              intransitive_actions: [
-                # an intransitive action
+              
+              "intransitive_actions": [
+                // an intransitive action
                 {
-                  class_name: str,
-                  source_id: str
+                  "class_name": str,
+                  "source_id": str
                 },
                 ...
               ]
