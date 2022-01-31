@@ -66,8 +66,14 @@ class SAct:
     self.start = ann['start_time']
     self.end = ann['end_time']
     self.ids_hoi = [x['id'] for x in ann['higher_order_interactions']]
-    self.ids_actor = sorted(set([y['id'] for x in ann['higher_order_interactions'] for y in x['actors']]))
-    self.ids_object = sorted(set([y['id'] for x in ann['higher_order_interactions'] for y in x['objects']]), key=int)
+
+    # unique entity instances in this sub-activity
+    info_actor = set([(y['id'], y['class_name']) for x in ann['higher_order_interactions'] for y in x['actors']])
+    info_actor = sorted(info_actor, key=lambda x: x[0])
+    self.ids_actor, self.cnames_actor = map(list, zip(*info_actor)) if len(info_actor) > 0 else ([], [])
+    info_object = set([(y['id'], y['class_name']) for x in ann['higher_order_interactions'] for y in x['objects']])
+    info_object = sorted(info_object, key=lambda x: int(x[0]))
+    self.ids_object, self.cnames_object = map(list, zip(*info_object)) if len(info_object) > 0 else ([], [])
 
   def __repr__(self):
     return f'SAct(id={self.id}, cname={self.cname}, time=[{self.start}, end={self.end}), num_hois={len(self.ids_hoi)})'
@@ -93,7 +99,8 @@ class HOI:
     return sorted([object.id for object in self.objects], key=int)
 
   def __repr__(self):
-    return f'SAct(id={self.id}, time={self.time}, ' \
+    return f'HOI(id={self.id}, time={self.time}, ' \
+           f'num_actors={len(self.actors)}, num_objects={len(self.objects)}, ' \
            f'num_ias={len(self.ias)}, num_tas={len(self.tas)}, ' \
            f'num_atts={len(self.atts)}, num_rels={len(self.rels)})'
 
