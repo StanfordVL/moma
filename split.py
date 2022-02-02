@@ -1,32 +1,32 @@
-import matplotlib.pyplot as plt
 from pprint import pprint
-import seaborn as sns
+import random
+from sklearn.metrics.pairwise import cosine_similarity
 
 from moma_api import MOMA
+
+
+def get_similarity(stats_per_class_train, stats_per_class_val):
+  for key in stats_per_class_train:
+    counts_train = stats_per_class_train[key]['counts']
+    counts_val = stats_per_class_val[key]['counts']
+    assert len(counts_train) == len(counts_val)
 
 
 def main():
   dir_moma = '/home/alan/ssd/moma'
   moma = MOMA(dir_moma)
+  ids_act = list(moma.anns_act.keys()).copy()
 
-  stats_overall, stats_per_class = moma.get_stats()
-  pprint(stats_overall, sort_dicts=False)
+  random.shuffle(ids_act)
 
-  for key in stats_per_class:
-    print(key)
-    counts = stats_per_class[key]['counts']
-    cnames = stats_per_class[key]['class_names']
-    assert len(counts) == len(cnames), f'{key}: {len(counts)} vs {len(cnames)}'
+  ids_act_train = ids_act[:1100]
+  ids_act_val = ids_act[1100:]
 
-    sns.set(style='darkgrid')
-    width = max(20, int(0.25*len(counts)))
-    height = int(0.5*width)
-    fig, ax = plt.subplots(figsize=(width, height))
-    sns.barplot(x=cnames, y=counts, ci=None, ax=ax, log=True, color='seagreen')
-    ax.set(xlabel='class', ylabel='count')
-    ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha='right')
-    plt.tight_layout()
-    plt.savefig(f'./figures/{key}.png')
+  stats_overall_train, stats_per_class_train = moma.get_stats(ids_act_train)
+  stats_overall_val, stats_per_class_val = moma.get_stats(ids_act_val)
+
+  pprint(stats_overall_train)
+  pprint(stats_overall_val)
 
 
 if __name__ == '__main__':

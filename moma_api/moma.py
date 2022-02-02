@@ -2,6 +2,7 @@ import itertools
 import json
 import numpy as np
 import os
+import random
 
 from .data import *
 
@@ -13,56 +14,95 @@ class MOMA:
     self.metadata, self.anns_act, self.anns_sact, self.anns_hoi, \
         self.id_sact_to_act, self.id_hoi_to_sact = self.__read_anns()
 
-  def get_stats(self):
-    num_acts = len(self.anns_act)
+  def get_stats(self, ids_act=None):
+    if ids_act is None:
+      anns_act = self.anns_act
+      anns_sact = self.anns_sact
+      anns_hoi = self.anns_hoi
+    else:
+      anns_act = dict(zip(ids_act, self.get_anns_act(ids_act=ids_act)))
+      ids_sact = self.get_ids_sact(ids_act=ids_act)
+      anns_sact = dict(zip(ids_sact, self.get_anns_sact(ids_sact=ids_sact)))
+      ids_hoi = self.get_ids_hoi(ids_sact=ids_sact)
+      anns_hoi = dict(zip(ids_hoi, self.get_anns_hoi(ids_hoi=ids_hoi)))
+    
+    num_acts = len(anns_act)
     num_classes_act = len(self.taxonomy['act'])
-    num_sacts = len(self.anns_sact)
+    num_sacts = len(anns_sact)
     num_classes_sact = len(self.taxonomy['sact'])
-    num_hois = len(self.anns_hoi)
+    num_hois = len(anns_hoi)
 
-    num_actors_image = sum([len(ann_hoi.actors) for ann_hoi in self.anns_hoi.values()])
-    num_actors_video = sum([len(ann_sact.ids_actor) for ann_sact in self.anns_sact.values()])
+    num_actors_image = sum([len(ann_hoi.actors) for ann_hoi in anns_hoi.values()])
+    num_actors_video = sum([len(ann_sact.ids_actor) for ann_sact in anns_sact.values()])
     num_classes_actor = len(self.taxonomy['actor'])
-    num_objects_image = sum([len(ann_hoi.objects) for ann_hoi in self.anns_hoi.values()])
-    num_objects_video = sum([len(ann_sact.ids_object) for ann_sact in self.anns_sact.values()])
+    num_objects_image = sum([len(ann_hoi.objects) for ann_hoi in anns_hoi.values()])
+    num_objects_video = sum([len(ann_sact.ids_object) for ann_sact in anns_sact.values()])
     num_classes_object = len(self.taxonomy['object'])
 
-    num_ias = sum([len(ann_hoi.ias) for ann_hoi in self.anns_hoi.values()])
+    num_ias = sum([len(ann_hoi.ias) for ann_hoi in anns_hoi.values()])
     num_classes_ia = len(self.taxonomy['ia'])
-    num_tas = sum([len(ann_hoi.tas) for ann_hoi in self.anns_hoi.values()])
+    num_tas = sum([len(ann_hoi.tas) for ann_hoi in anns_hoi.values()])
     num_classes_ta = len(self.taxonomy['ta'])
-    num_atts = sum([len(ann_hoi.atts) for ann_hoi in self.anns_hoi.values()])
+    num_atts = sum([len(ann_hoi.atts) for ann_hoi in anns_hoi.values()])
     num_classes_att = len(self.taxonomy['att'])
-    num_rels = sum([len(ann_hoi.rels) for ann_hoi in self.anns_hoi.values()])
+    num_rels = sum([len(ann_hoi.rels) for ann_hoi in anns_hoi.values()])
     num_classes_rel = len(self.taxonomy['rel'])
 
-    bincount_act = np.bincount([ann_act.cid for ann_act in self.anns_act.values()]).tolist()
-    bincount_sact = np.bincount([ann_sact.cid for ann_sact in self.anns_sact.values()]).tolist()
+    bincount_act = np.bincount([ann_act.cid for ann_act in anns_act.values()], minlength=num_classes_act).tolist()
+    bincount_sact = np.bincount([ann_sact.cid for ann_sact in anns_sact.values()], minlength=num_classes_sact).tolist()
     bincount_actor, bincount_object, bincount_ia, bincount_ta, bincount_att, bincount_rel = [], [], [], [], [], []
-    for ann_hoi in self.anns_hoi.values():
+    for ann_hoi in anns_hoi.values():
       bincount_actor += [actor.cid for actor in ann_hoi.actors]
       bincount_object += [object.cid for object in ann_hoi.objects]
       bincount_ia += [ia.cid for ia in ann_hoi.ias]
       bincount_ta += [ta.cid for ta in ann_hoi.tas]
       bincount_att += [att.cid for att in ann_hoi.atts]
       bincount_rel += [rel.cid for rel in ann_hoi.rels]
-    bincount_actor = np.bincount(bincount_actor).tolist()
-    bincount_object = np.bincount(bincount_object).tolist()
-    bincount_ia = np.bincount(bincount_ia).tolist()
-    bincount_ta = np.bincount(bincount_ta).tolist()
-    bincount_att = np.bincount(bincount_att).tolist()
-    bincount_rel = np.bincount(bincount_rel).tolist()
-    
+    bincount_actor = np.bincount(bincount_actor, minlength=num_classes_actor).tolist()
+    bincount_object = np.bincount(bincount_object, minlength=num_classes_object).tolist()
+    bincount_ia = np.bincount(bincount_ia, minlength=num_classes_ia).tolist()
+    bincount_ta = np.bincount(bincount_ta, minlength=num_classes_ta).tolist()
+    bincount_att = np.bincount(bincount_att, minlength=num_classes_att).tolist()
+    bincount_rel = np.bincount(bincount_rel, minlength=num_classes_rel).tolist()
+
     stats_overall = {
-      'activity': f'{num_acts} instances from {num_classes_act} classes',
-      'sub_activity': f'{num_sacts} instances from {num_classes_sact} classes',
-      'higher_order_interaction': f'{num_hois} instances',
-      'actor': f'{num_actors_image} image/{num_actors_video} video instances from {num_classes_actor} classes',
-      'object': f'{num_objects_image} image/{num_objects_video} video instances from {num_classes_object} classes',
-      'intransitive_action': f'{num_ias} instances from {num_classes_ia} classes',
-      'transitive_action': f'{num_tas} instances from {num_classes_ta} classes',
-      'attribute': f'{num_atts} instances from {num_classes_att} classes',
-      'relationship': f'{num_rels} instances from {num_classes_rel} classes'
+      'activity': {
+        'num_instances': num_acts,
+        'num_classes': num_classes_act
+      },
+      'sub_activity': {
+        'num_instances': num_sacts,
+        'num_classes': num_classes_sact
+      },
+      'higher_order_interaction': {
+        'num_instances': num_hois,
+      },
+      'actor': {
+        'num_instances_image': num_actors_image,
+        'num_instances_video': num_actors_video,
+        'num_classes': num_classes_actor
+      },
+      'object': {
+        'num_instances_image': num_objects_image,
+        'num_instances_video': num_objects_video,
+        'num_classes': num_classes_object
+      },
+      'intransitive_action': {
+        'num_instances': num_ias,
+        'num_classes': num_classes_ia
+      },
+      'transitive_action': {
+        'num_instances': num_tas,
+        'num_classes': num_classes_ta
+      },
+      'attribute': {
+        'num_instances': num_atts,
+        'num_classes': num_classes_att
+      },
+      'relationship': {
+        'num_instances': num_rels,
+        'num_classes': num_classes_rel
+      },
     }
 
     stats_per_class = {
@@ -268,7 +308,7 @@ class MOMA:
     else:
       path = os.path.join(self.dir_moma, f'videos/higher_order_interaction/{id_hoi}.jpg')
 
-    assert os.path.exists(path)
+    assert os.path.exists(path), path
     return path
 
   def __read_taxonomy(self):
@@ -340,3 +380,23 @@ class MOMA:
     id_hoi_to_sact = bidict(id_hoi_to_sact)
 
     return metadata, anns_act, anns_sact, anns_hoi, id_sact_to_act, id_hoi_to_sact
+
+  def __read_split(self, size_train=1100):
+    path_split = os.path.join(self.dir_moma, 'anns/split.json')
+
+    if os.path.isfile(path_split):
+      with open(path_split, 'r') as f:
+        split = json.load(f)
+
+    else:
+      ids_act = list(self.anns_act.keys()).copy()
+      random.shuffle(ids_act)
+      ids_act_train = ids_act[:size_train]
+      ids_act_val = ids_act[size_train:]
+
+      split = {'train': ids_act_train, 'val': ids_act_val}
+
+      with open(path_split, 'w') as f:
+        json.dump(split, f, indent=4, sort_keys=False)
+
+    return split['train'], split['val']

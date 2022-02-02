@@ -102,7 +102,8 @@ class HOI:
     return f'HOI(id={self.id}, time={self.time}, ' \
            f'num_actors={len(self.actors)}, num_objects={len(self.objects)}, ' \
            f'num_ias={len(self.ias)}, num_tas={len(self.tas)}, ' \
-           f'num_atts={len(self.atts)}, num_rels={len(self.rels)})'
+           f'num_atts={len(self.atts)}, num_rels={len(self.rels)}, ' \
+           f'ids_actor={self.ids_actor}, ids_object={self.ids_object})'
 
 
 class BBox:

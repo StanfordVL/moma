@@ -29,7 +29,7 @@ class BBox:
     assert x_tl == x_bl and x_tr == x_br and y_tl == y_tr and y_bl == y_br, \
         '[BBox] inconsistent coordinates {}'.format(bbox_raw)
 
-    # FIXME: fix negative size error
+    # ignore negative size errors
     self.x = min(x_tl, x_tr)
     self.y = min(y_tl, y_bl)
     self.width = abs(x_tr-x_tl)

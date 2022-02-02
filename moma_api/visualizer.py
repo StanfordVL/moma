@@ -7,13 +7,17 @@ import os
 import PIL.Image as Image
 import PIL.ImageDraw as ImageDraw
 import PIL.ImageFont as ImageFont
+from pprint import pprint
 import pygraphviz as pgv
+import seaborn as sns
+import shutil
 from torchvision import io
 
 
-class Visualizer:
-  def __init__(self, moma):
+class AnnVisualizer:
+  def __init__(self, moma, dir_vis):
     self.moma = moma
+    self.dir_vis = dir_vis
 
   @staticmethod
   def get_palette(ids):
@@ -48,18 +52,68 @@ class Visualizer:
     image = self.draw_entities(image, ann_hoi.objects, palette)
     return image
 
-  def show_hoi(self, id_hoi):
+  def show_hoi(self, id_hoi, vstack=True):
+    os.makedirs(os.path.join(self.dir_vis, id_hoi), exist_ok=True)
+
     ann_hoi = self.moma.get_anns_hoi(ids_hoi=[id_hoi])[0]
     palette = self.get_palette(ann_hoi.ids_actor+ann_hoi.ids_object)
-    image = self.draw_image(ann_hoi, palette)
 
-    plt.figure(figsize=(16, 9))
-    plt.axis('off')
-    plt.imshow(image)
-    plt.show()
+    """ bbox """
+    image = self.draw_image(ann_hoi, palette)
+    path_bbox = os.path.join(self.dir_vis, f'{id_hoi}/bbox.png')
+    image.save(path_bbox)
+
+    """ graph """
+    G = pgv.AGraph(directed=True, strict=True)
+
+    for actor in ann_hoi.actors:
+      G.add_node(actor.id, label=actor.id, xlabel=actor.cname, fontcolor='steelblue', color='steelblue', shape='circle')
+    for object in ann_hoi.objects:
+      G.add_node(object.id, label=object.id, xlabel=object.cname, fontcolor='salmon3', color='salmon3', shape='circle')
+    for description in ann_hoi.tas+ann_hoi.rels:
+      G.add_edge((description.id_src, description.id_trg), label=description.cname,
+                 color='slategray', fontcolor='slategray', fontsize='10', len=2)
+    for description in ann_hoi.ias+ann_hoi.atts:
+      G.add_edge((description.id_src, description.id_src), label=description.cname,
+                 color='slategray', fontcolor='slategray', fontsize='10', len=2)
+
+    G.layout('neato')
+    path_graph = os.path.join(self.dir_vis, f'{id_hoi}/graph.eps')
+    G.draw(path_graph)
+
+    """ save """
+    image_bbox = Image.open(path_bbox)
+    image_graph = Image.open(path_graph)
+
+    width_bbox, height_bbox = image_bbox.size
+    width_graph, height_graph = image_graph.size
+
+    if vstack:
+      scale = math.ceil(width_bbox/width_graph)
+      image_graph.load(scale=scale)
+      image_graph = image_graph.resize((width_bbox, round(width_bbox*height_graph/width_graph)))
+
+      image = Image.new('RGB', (image_bbox.width, image_bbox.height+image_graph.height))
+      image.paste(image_bbox, (0, 0))
+      image.paste(image_graph, (0, image_bbox.height))
+
+    else:  # hstack
+      scale = math.ceil(height_bbox/height_graph)
+      image_graph.load(scale=scale)
+      image_graph = image_graph.resize((round(height_bbox*width_graph/height_graph), height_bbox))
+
+      image = Image.new('RGB', (image_bbox.width+image_graph.width, image_bbox.height))
+      image.paste(image_bbox, (0, 0))
+      image.paste(image_graph, (image_bbox.width, 0))
+
+    image.save(os.path.join(self.dir_vis, f'{id_hoi}.png'))
+    shutil.rmtree(os.path.join(self.dir_vis, id_hoi))
 
   def show_sact(self, id_sact, vstack=True):
-    os.makedirs(f'./figures/{id_sact}', exist_ok=True)
+    if os.path.isfile(os.path.join(self.dir_vis, f'{id_sact}.gif')):
+      return
+
+    os.makedirs(os.path.join(self.dir_vis, id_sact), exist_ok=True)
 
     ann_sact = self.moma.get_anns_sact(ids_sact=[id_sact])[0]
     ids_hoi = self.moma.get_ids_hoi(ids_sact=[id_sact])
@@ -70,7 +124,7 @@ class Visualizer:
     for i, id_hoi in enumerate(ids_hoi):
       ann_hoi = self.moma.get_anns_hoi(ids_hoi=[id_hoi])[0]
       image = self.draw_image(ann_hoi, palette)
-      image.save(f'./figures/{id_sact}/bbox_{str(i).zfill(2)}.png')
+      image.save(os.path.join(self.dir_vis, f'{id_sact}/bbox_{str(i).zfill(2)}.png'))
 
     """ graph """
     # get node & edge positions
@@ -96,7 +150,6 @@ class Visualizer:
     for node_src, node_trg, label in info_edges:
       G.add_edge((node_src, node_trg), label=label, color='slategray', fontcolor='slategray', fontsize='10', len=2)
     G.layout('neato')
-    # G.draw('figures/graphs/tmp.png')
 
     pos_node = {node:node.attr['pos'] for node in G.nodes()}
     pos_edge = {(*edge, edge.attr['label']):edge.attr['pos'] for edge in G.edges()}
@@ -139,46 +192,68 @@ class Visualizer:
         pos = pos_edge[(node_src, node_trg, label)]
         G.add_edge((node_src, node_trg), label=label, pos=pos, color=color, fontcolor=color, fontsize='10', len=2)
 
-      G.draw(f'./figures/{id_sact}/graph_{str(i).zfill(2)}.eps')
+      G.draw(os.path.join(self.dir_vis, f'{id_sact}/graph_{str(i).zfill(2)}.eps'))
       G.remove_nodes_from([info_node[0] for info_node in info_nodes])
 
-    """ gif """
-    paths_bbox = sorted(glob.glob(f'./figures/{id_sact}/bbox_*.png'))
-    paths_graph = sorted(glob.glob(f'./figures/{id_sact}/graph_*.eps'))
+    """ save """
+    paths_bbox = sorted(glob.glob(os.path.join(self.dir_vis, f'{id_sact}/bbox_*.png')))
+    paths_graph = sorted(glob.glob(os.path.join(self.dir_vis, f'{id_sact}/graph_*.eps')))
 
     images_bbox = [Image.open(path_bbox) for path_bbox in paths_bbox]
     images_graph = [Image.open(path_graph) for path_graph in paths_graph]
 
-    assert (all(image_bbox.size == images_bbox[0].size for image_bbox in images_bbox))
-    assert (all(image_graph.size == images_graph[0].size for image_graph in images_graph))
+    assert all(image_bbox.size == images_bbox[0].size for image_bbox in images_bbox)
+    assert all(image_graph.size == images_graph[0].size for image_graph in images_graph)
 
     width_bbox, height_bbox = images_bbox[0].size
     width_graph, height_graph = images_graph[0].size
 
-    images_graph_resize = []
+    images = []
     if vstack:
       scale = math.ceil(width_bbox/width_graph)
-      for image_graph in images_graph:
+      for image_bbox, image_graph in zip(images_bbox, images_graph):
         image_graph.load(scale=scale)
-        images_graph_resize.append(image_graph.resize((width_bbox, round(width_bbox*height_graph/width_graph))))
-    else:  # hstack
-      scale = math.ceil(height_bbox/height_graph)
-      for image_graph in images_graph:
-        image_graph.load(scale=scale)
-        images_graph_resize.append(image_graph.resize((round(height_bbox*width_graph/height_graph), height_bbox)))
-    images_graph = images_graph_resize
-
-    images = []
-    for image_bbox, image_graph in zip(images_bbox, images_graph):
-      if vstack:
+        image_graph = image_graph.resize((width_bbox, round(width_bbox*height_graph/width_graph)))
         image = Image.new('RGB', (image_bbox.width, image_bbox.height+image_graph.height))
         image.paste(image_bbox, (0, 0))
         image.paste(image_graph, (0, image_bbox.height))
-      else:  # hstack
+        images.append(image)
+
+    else:  # hstack
+      scale = math.ceil(height_bbox/height_graph)
+      for image_bbox, image_graph in zip(images_bbox, images_graph):
+        image_graph.load(scale=scale)
+        image_graph = image_graph.resize((round(height_bbox*width_graph/height_graph), height_bbox))
         image = Image.new('RGB', (image_bbox.width+image_graph.width, image_bbox.height))
         image.paste(image_bbox, (0, 0))
         image.paste(image_graph, (image_bbox.width, 0))
-      images.append(image)
+        images.append(image)
 
     image = images[0]
-    image.save(f'./figures/{id_sact}.gif', format='GIF', append_images=images[1:], save_all=True, duration=250, loop=0)
+    image.save(os.path.join(self.dir_vis, f'{id_sact}.gif'),
+               format='GIF', append_images=images[1:], save_all=True, duration=250, loop=0)
+    shutil.rmtree(os.path.join(self.dir_vis, id_sact))
+
+
+class StatVisualizer:
+  def __int__(self, moma, dir_vis):
+    self.moma = moma
+    self.dir_vis = dir_vis
+
+  def show(self):
+    stats_overall, stats_per_class = self.moma.get_stats()
+    pprint(stats_overall, sort_dicts=False)
+    for key in stats_per_class:
+      counts = stats_per_class[key]['counts']
+      cnames = stats_per_class[key]['class_names']
+      assert len(counts) == len(cnames), f'{key}: {len(counts)} vs {len(cnames)}'
+
+      sns.set(style='darkgrid')
+      width = max(20, int(0.25*len(counts)))
+      height = int(0.5*width)
+      fig, ax = plt.subplots(figsize=(width, height))
+      sns.barplot(x=cnames, y=counts, ci=None, ax=ax, log=True, color='seagreen')
+      ax.set(xlabel='class', ylabel='count')
+      ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha='right')
+      plt.tight_layout()
+      plt.savefig(os.path.join(self.dir_vis, f'{key}.png'))

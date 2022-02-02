@@ -1,2 +1,2 @@
 from .moma import MOMA
-from .visualizer import Visualizer
+from .visualizer import AnnVisualizer, StatVisualizer
