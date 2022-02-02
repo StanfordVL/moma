@@ -10,6 +10,8 @@ MOMA is a dataset dedicated to multi-object, multi-actor activity recognition.
 - [distinctipy](https://github.com/alan-turing-institute/distinctipy): For data visualization. Install by running `pip install distinctipy`.
 - NetworkX: Install by running `pip install networkx`.
 - Graphvis: Install by running `sudo apt-get install graphviz graphviz-dev` and `pip install pygraphviz`.
+- seaborn: Install by running `pip install seaborn`.
+
 ## Hierarchy
 | Level | Concept                                              | Representation                                                 |
 |-------|------------------------------------------------------|----------------------------------------------------------------|
@@ -34,7 +36,7 @@ $ tree dir_moma
 ├── anns
 │    ├── anns.json
 │    ├── split.json
-│    ├── taxonomy
+│    └── taxonomy
 └── videos
      ├── all
      ├── raw
@@ -159,7 +161,7 @@ Below, we show the syntax of the MOMA annotations.
 ]
 ```
 
-## Class distribution
+## Class distributions
 ### Activity
 ![activity](figures/activity.png)
 ### Sub-activity
