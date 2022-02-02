@@ -85,7 +85,7 @@ class AnnPhase1:
     ids_sact_rm = ['27', '198', '199', '653', '1535', '1536', '3775', '4024', '5531', '5629',
                     '5729', '6178', '6478', '7073', '7074', '7076', '7350', '9713', '10926', '10927',
                     '11168', '11570', '12696', '12697', '15225', '15403', '15579', '15616']
-    for id_sact_rm in sorted(ids_sact_rm, key=int, reverse=True):  # remove in descending index order
+    for id_sact_rm in sorted(ids_sact_rm, key=int, reverse=True):  # make sure to remove in descending index order
       del self.anns_act[lookup[id_sact_rm][0]]['subactivity'][lookup[id_sact_rm][1]]
 
   @staticmethod

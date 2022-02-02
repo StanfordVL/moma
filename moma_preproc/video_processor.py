@@ -1,4 +1,5 @@
 import ffmpeg
+import glob
 import json
 import os
 import shutil
@@ -20,17 +21,26 @@ class VideoProcessor:
     self.dir_moma = dir_moma
     self.anns = anns
 
-  def select(self):
+  def select(self, overwrite=False):
     fnames_raw = [ann['file_name'] for ann in self.anns]
     fnames_all_cn = os.listdir(os.path.join(self.dir_moma, 'videos/all'))
     fnames_all = [fname.split('_', 1)[1] for fname in fnames_all_cn]
     assert all([fname in fnames_all for fname in fnames_raw])
     fnames_raw_cn = [fnames_all_cn[fnames_all.index(fname)] for fname in fnames_raw]
 
+    paths_trg = []
     for fname_raw_cn, fname_raw in zip(fnames_raw_cn, fnames_raw):
       path_src = os.path.join(self.dir_moma, f'videos/all/{fname_raw_cn}')
       path_trg = os.path.join(self.dir_moma, f'videos/raw/{fname_raw}')
-      shutil.copyfile(path_src, path_trg)
+      assert os.path.exists(path_src)
+      if not os.path.exists(path_trg) or overwrite:
+        shutil.copyfile(path_src, path_trg)
+      paths_trg.append(path_trg)
+
+    paths_exist = glob.glob(os.path.join(self.dir_moma, 'videos/raw/*.mp4'))
+    for path_exist in paths_exist:
+      if path_exist not in paths_trg:
+        os.remove(path_exist)
 
   @staticmethod
   def trim_video(path_src, path_trg, start, end):
@@ -51,28 +61,45 @@ class VideoProcessor:
       video = video[0][-1].permute(2, 0, 1)
       io.write_jpeg(video, path_trg, quality=50)
 
-  def trim_act(self):
+  def trim_act(self, overwrite=False):
+    paths_trg = []
     for ann in self.anns:
       ann_act = ann['activity']
       path_src = os.path.join(self.dir_moma, 'videos/raw', ann['file_name'])
-      path_trg = os.path.join(self.dir_moma, 'videos/activity', f"{ann_act['key']}.mp4")
-      if not os.path.exists(path_trg):
+      path_trg = os.path.join(self.dir_moma, 'videos/activity', f"{ann_act['id']}.mp4")
+      assert os.path.exists(path_src)
+      if not os.path.exists(path_trg) or overwrite:
         start = ann_act['start_time']
         end = ann_act['end_time']
         self.trim_video(path_src, path_trg, start, end)
+      paths_trg.append(path_trg)
 
-  def trim_sact(self):
+    paths_exist = glob.glob(os.path.join(self.dir_moma, 'videos/activity/*.mp4'))
+    for path_exist in paths_exist:
+      if path_exist not in paths_trg:
+        os.remove(path_exist)
+
+  def trim_sact(self, overwrite=False):
+    paths_trg = []
     for ann in self.anns:
       anns_sact = ann['activity']['sub_activities']
       for ann_sact in anns_sact:
         path_src = os.path.join(self.dir_moma, 'videos/raw', ann['file_name'])
-        path_trg = os.path.join(self.dir_moma, 'videos/sub_activity', f"{ann_sact['key']}.mp4")
-        if not os.path.exists(path_trg):
+        path_trg = os.path.join(self.dir_moma, 'videos/sub_activity', f"{ann_sact['id']}.mp4")
+        assert os.path.exists(path_src)
+        if not os.path.exists(path_trg) or overwrite:
           start = ann_sact['start_time']
           end = ann_sact['end_time']
           self.trim_video(path_src, path_trg, start, end)
+        paths_trg.append(path_trg)
 
-  def trim_hoi(self):
+    paths_exist = glob.glob(os.path.join(self.dir_moma, 'videos/sub_activity/*.mp4'))
+    for path_exist in paths_exist:
+      if path_exist not in paths_trg:
+        os.remove(path_exist)
+
+  def trim_hoi(self, overwrite=False):
+    paths_trg = []
     for ann in self.anns:
       anns_sact = ann['activity']['sub_activities']
       for ann_sact in anns_sact:
@@ -80,6 +107,13 @@ class VideoProcessor:
         for ann_hoi in anns_hoi:
           path_src = os.path.join(self.dir_moma, 'videos/raw', ann['file_name'])
           path_trg = os.path.join(self.dir_moma, 'videos/higher_order_interaction', f"{ann_hoi['id']}.jpg")
-          if not os.path.exists(path_trg):
+          assert os.path.exists(path_src)
+          if not os.path.exists(path_trg) or overwrite:
             time = ann_hoi['time']
             self.trim_image(path_src, path_trg, time)
+          paths_trg.append(path_trg)
+
+    paths_exist = glob.glob(os.path.join(self.dir_moma, 'videos/higher_order_interaction/*.jpg'))
+    for path_exist in paths_exist:
+      if path_exist not in paths_trg:
+        os.remove(path_exist)

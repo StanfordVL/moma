@@ -26,9 +26,9 @@ def proc_videos(dir_moma):
 def main():
   dir_moma = '/home/alan/ssd/moma'
   fname_ann_phase1 = 'video_anns_phase1_processed.json'
-  fname_ann_phase2 = 'MOMA-videos-0121-all.jsonl'
+  fname_ann_phase2 = 'MOMA-videos-0131-all.jsonl'
 
-  proc_anns(dir_moma, fname_ann_phase1, fname_ann_phase2)
+  # proc_anns(dir_moma, fname_ann_phase1, fname_ann_phase2)
   proc_videos(dir_moma)
 
 

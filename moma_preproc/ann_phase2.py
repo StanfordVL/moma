@@ -1,3 +1,4 @@
+import collections
 import itertools
 import json
 import math
@@ -40,6 +41,7 @@ class AnnPhase2:
       taxonomy_rel = [tuple(x) for x in taxonomy_rel]
     with open(os.path.join(dir_moma, 'anns/taxonomy/cn2en.json'), 'r') as f:
       cn2en = json.load(f)
+      en2cn = {value:key for key, value in cn2en.items()}
 
     taxonomy_unary = taxonomy_ia+taxonomy_att
     taxonomy_binary = taxonomy_ta+taxonomy_rel
@@ -54,6 +56,7 @@ class AnnPhase2:
     self.taxonomy_unary = taxonomy_unary
     self.taxonomy_binary = taxonomy_binary
     self.cn2en = cn2en
+    self.en2cn = en2cn
     self.ids_sact = []
 
     self.__fix()
@@ -130,6 +133,8 @@ class AnnPhase2:
     return timestamp
 
   def __inspect_ann_sact(self, ann_sact_raw):
+    errors = []
+
     # get id_sact, ids_hoi, and num_hois
     record = ann_sact_raw[0]['task']['task_params']['record']
     id_sact_real = record['attachment'].split('_')[-1][:-4].split('/')[0]
@@ -138,7 +143,6 @@ class AnnPhase2:
     ids_hoi_real = sorted(id_hoi_to_timestamp_real.keys(), key=int)
     assert ids_hoi_real[0] == '1' and ids_hoi_real[-1] == str(len(ids_hoi_real))
 
-    errors = []
     anns_sact_actor, anns_sact_object = [], []
     for i, ann_hoi_raw in enumerate(ann_sact_raw):
       # actor
@@ -174,26 +178,38 @@ class AnnPhase2:
 
     ids_sact_actor = sort(set([ann_sact_actor.id for ann_sact_actor in anns_sact_actor]))
     ids_sact_object = sort(set([ann_sact_object.id for ann_sact_object in anns_sact_object]))
+    anns_sact_actor = sorted(anns_sact_actor, key=lambda x: x.id)
     anns_instances_actor = [list(v) for _, v in itertools.groupby(anns_sact_actor, lambda x: x.id)]
+    anns_sact_object = sorted(anns_sact_object, key=lambda x: x.id)
     anns_instances_object = [list(v) for _, v in itertools.groupby(anns_sact_object, lambda x: x.id)]
 
-    # if not is_consecutive(ids_sact_actor):
-    #   errors.append(f'[actor instance] ids not consecutive {ids_sact_actor}')
+    # assert is_consecutive(ids_sact_actor), \
+    #     f'[actor instance] ids not consecutive {ids_sact_actor}'
 
-    # if not is_consecutive(ids_sact_object):
-    #   errors.append(f'[object instance] ids not consecutive {ids_sact_object}')
+    # assert is_consecutive(ids_sact_object), \
+    #     f'[object instance] ids not consecutive {ids_sact_object}'
 
     for anns_instance_actor in anns_instances_actor:
       cnames = [ann_instance_actor.cname for ann_instance_actor in anns_instance_actor]
       if len(set(cnames)) != 1:
-        errors.append(f'[actor instance] id {anns_instance_actor[0].id} '
-                      f'corresponds to more than one cname {set(cnames)}')
+        # errors.append(f'[actor instance] id {anns_instance_actor[0].id} '
+        #               f'corresponds to more than one cname {set(cnames)}')
+        # fixme: Chinese
+        cnames = [self.en2cn[cname] for cname in cnames]
+        errors.append(f'人物;{list(set(cnames))};-;'
+                      f'本视频中{list(set(cnames))}两种不同人物类型用了相同的描述[{anns_instance_actor[0].id}]')
+        pass
 
     for anns_instance_object in anns_instances_object:
       cnames = [ann_instance_object.cname for ann_instance_object in anns_instance_object]
       if len(set(cnames)) != 1:
-        errors.append(f'[object instance] id {anns_instance_object[0].id} '
-                      f'corresponds to more than one cname {set(cnames)}')
+        # errors.append(f'[object instance] id {anns_instance_object[0].id} '
+        #               f'corresponds to more than one cname {set(cnames)}')
+        # fixme: Chinese
+        cnames = [self.en2cn[cname] for cname in cnames]
+        errors.append(f'物体;{list(set(cnames))};-;'
+                      f'本视频中{list(set(cnames))}两种不同物体类型用了相同的描述[{anns_instance_object[0].id}]')
+        pass
 
     return errors
 
@@ -201,6 +217,8 @@ class AnnPhase2:
     errors = []
 
     assert len(ann_hoi_raw['task_result']['annotations']) == 4
+    width_image = ann_hoi_raw['task']['task_params']['record']['metadata']['size']['width']
+    height_image = ann_hoi_raw['task']['task_params']['record']['metadata']['size']['height']
 
     """ actor & object """
     ids = []
@@ -218,18 +236,37 @@ class AnnPhase2:
         assert ann_entity.cname in taxonomy, f'[{kind}] unseen cname {ann_entity.cname}'
 
         # check id
-        if not ((kind == 'actor' and is_actor(ann_entity.id)) or kind == 'object' and is_object(ann_entity.id)):
-          errors.append(f'[{kind}] wrong id format {ann_entity.id}'.encode('unicode_escape').decode('utf-8'))
+        assert (kind == 'actor' and is_actor(ann_entity.id)) or kind == 'object' and is_object(ann_entity.id), \
+            f'[{kind}] wrong id format {ann_entity.id}'.encode('unicode_escape').decode('utf-8')
 
         # check bbox
-        if ann_entity.bbox.x < 0 or ann_entity.bbox.y < 0 or ann_entity.bbox.width <= 0 or ann_entity.bbox.height <= 0:
-          errors.append(f'[{kind}] wrong bbox size {ann_entity.bbox}')
+        if ann_entity.bbox.width <= 0 or ann_entity.bbox.height <= 0:
+          # errors.append(f'[{kind}] wrong bbox size {ann_entity.bbox}')
+          # fixme: Chinese
+          errors.append(f'人物/物体词对象检测;{self.en2cn[ann_entity.cname]} {ann_entity.id}: '
+                        f'W={ann_entity.bbox.width}, H={ann_entity.bbox.height};-;对象检测标注面积为0')
+          pass
+
+        if ann_entity.bbox.x < 0 or \
+           ann_entity.bbox.y < 0 or \
+           ann_entity.bbox.x+ann_entity.bbox.width > width_image or \
+           ann_entity.bbox.y+ann_entity.bbox.height > height_image:
+          # errors.append(f'[{kind}] bbox exceeds image {ann_entity.bbox} vs [W={width_image}, H={height_image}]')
+          # fixme: Chinese
+          errors.append(f'人物/物体词对象检测;{self.en2cn[ann_entity.cname]} {ann_entity.id}: '
+                        f'对象检测框=[x1={ann_entity.bbox.x}, x2={ann_entity.bbox.x+ann_entity.bbox.width}, '
+                        f'y1={ann_entity.bbox.y}, y2={ann_entity.bbox.y+ann_entity.bbox.height}], '
+                        f'图片={width_image}x{height_image};;对象检测框超出原始图片')
 
       ids += [ann_entity.id for ann_entity in anns_entity]
 
     # check duplicate ids
     if len(set(ids)) != len(ids):
-      errors.append(f'[actor/object] duplicate ids {ids}')
+      # errors.append(f'[actor/object] duplicate ids {ids}')
+      # fixme: Chinese
+      ids_dup = [item for item, count in collections.Counter(ids).items() if count > 1]
+      errors.append(f'人物/物体词描述;{ids};;同一帧中的人物/物体描述存在重复:{ids_dup}')
+      pass
 
     """ binary description & unary description """
     for i, kind in enumerate(['binary description', 'unary description']):
@@ -240,62 +277,66 @@ class AnnPhase2:
 
       for ann_description in anns_description:
         # check kind
-        if ann_description.kind != kind:
-          errors.append(f'[{kind}] wrong kind {ann_description.kind}')
+        assert ann_description.kind == kind, f'[{kind}] wrong kind {ann_description.kind}'
 
         # check cname
         taxonomy = self.taxonomy_binary if kind == 'binary description' else self.taxonomy_unary
-        if ann_description.cname not in [x[0] for x in taxonomy]:
-          errors.append(f'[{kind}] unseen cname {ann_description.cname}')
+        assert ann_description.cname in [x[0] for x in taxonomy], f'[{kind}] unseen cname {ann_description.cname}'
 
         # check ids_associated
         if kind == 'binary description':
-          if ann_description.ids_associated[0] != '(' or \
-             ann_description.ids_associated[-1] != ')' or \
-             len(ann_description.ids_associated[1:-1].split('),(')) != 2:
-            errors.append(f'[{kind}] wrong ids_associated format {ann_description.ids_associated}')
-            continue
+          assert ann_description.ids_associated[0] == '(' and ann_description.ids_associated[-1] == ')' and \
+              len(ann_description.ids_associated[1:-1].split('),(')) == 2, \
+              f'[{kind}] wrong ids_associated format {ann_description.ids_associated}'
 
           ids_src = ann_description.ids_associated[1:-1].split('),(')[0].split(',')
           ids_trg = ann_description.ids_associated[1:-1].split('),(')[1].split(',')
           if not are_entities(ids_src+ids_trg):
-            errors.append(f'[{kind}] wrong ids_associated format {ids_src} -> {ids_trg}')
-            continue
+            # errors.append(f'[{kind}] wrong ids_associated format {ids_src} -> {ids_trg}')
+            # fixme: Chinese
+            errors.append(f'关系词;{self.en2cn[ann_description.cname]};{ann_description.ids_associated};关系词描述格式错误')
+            pass
 
           if not set(ids_src+ids_trg).issubset(ids):
-            errors.append(f'[{kind}] unseen ids_associated {set(ids_src+ids_trg)} in {ids}')
+            # errors.append(f'[{kind}] unseen ids_associated {set(ids_src+ids_trg)} in {ids}')
+            # fixme: Chinese
+            ids_unseen = list(set(ids_src+ids_trg)-set(ids))
+            errors.append(f'关系词;{self.en2cn[ann_description.cname]};{ann_description.ids_associated};'
+                          f'关系词中出现的人物/物体{ids_unseen}没有在此帧被标注')
             continue
 
           cnames_binary = [x[0] for x in self.taxonomy_binary]
-          if ann_description.cname not in cnames_binary:  # unseen cname
-            continue
+          assert ann_description.cname in cnames_binary
+
           index = cnames_binary.index(ann_description.cname)
           kind_src, kind_trg = self.taxonomy_binary[index][1:]
-          if (kind_src == 'actor' and not are_actors(ids_src)) or \
-             (kind_src == 'object' and not are_objects(ids_src)) or \
-             (kind_src == 'actor/object' and not are_entities(ids_src)) or \
-             (kind_trg == 'actor' and not are_actors(ids_trg)) or \
-             (kind_trg == 'object' and not are_objects(ids_trg)) or \
-             (kind_trg == 'actor/object' and not are_entities(ids_trg)):
-            errors.append(f'[{kind}] wrong ids_associated {ann_description.ids_associated} '
-                          f'for kinds {kind_src} -> {kind_trg}')
+          assert ((kind_src == 'actor' and are_actors(ids_src)) or
+                  (kind_src == 'object' and are_objects(ids_src)) or
+                  (kind_src == 'actor/object' and are_entities(ids_src))) and \
+                 ((kind_trg == 'actor' and are_actors(ids_trg)) or
+                  (kind_trg == 'object' and are_objects(ids_trg)) or
+                  (kind_trg == 'actor/object' and are_entities(ids_trg))), \
+              f'[{kind}] wrong ids_associated {ann_description.ids_associated} for kinds {kind_src} -> {kind_trg}'
 
         elif kind == 'unary description':
           ids_src = ann_description.ids_associated.split(',')
-          if not are_actors(ids_src):
-            errors.append(f'[{kind}] wrong ids_associated format {ann_description.ids_associated}')
-            continue
+          assert are_actors(ids_src), f'[{kind}] wrong ids_associated format {ann_description.ids_associated}'
 
           if not set(ids_src).issubset(ids):
-            errors.append(f'[{kind}] unseen ids_associated {set(ids_src)} in {ids}')
+            # errors.append(f'[{kind}] unseen ids_associated {set(ids_src)} in {ids}')
+            # fixme: Chinese
+            ids_unseen = list(set(ids_src)-set(ids))
+            errors.append(f'元动作;{self.en2cn[ann_description.cname]};{ann_description.ids_associated};'
+                          f'元动作中出现的人物/物体{ids_unseen}没有在此帧被标注')
+            pass
 
           cnames_unary = [x[0] for x in self.taxonomy_unary]
           index = cnames_unary.index(ann_description.cname)
           kind_src = self.taxonomy_unary[index][1]
-          if (kind_src == 'actor' and not are_actors(ids_src)) or \
-             (kind_src == 'object' and not are_objects(ids_src)) or \
-             (kind_src == 'actor/object' and not are_entities(ids_src)):
-            errors.append(f'[{kind}] wrong ids_associated {ann_description.ids_associated} for kinds {kind_src}')
+          assert (kind_src == 'actor' and are_actors(ids_src)) or \
+                 (kind_src == 'object' and are_objects(ids_src)) or \
+                 (kind_src == 'actor/object' and are_entities(ids_src)), \
+              f'[{kind}] wrong ids_associated {ann_description.ids_associated} for kinds {kind_src}'
 
     return errors
 
@@ -304,22 +345,26 @@ class AnnPhase2:
     for id_sact, ann_sact_raw in self.anns_sact_raw.items():
       errors_sact = self.__inspect_ann_sact(ann_sact_raw)
       if verbose and len(errors_sact) > 0:
-        msg = errors_sact[0] if len(errors_sact) == 1 else '; '.join(errors_sact)
-        print(f'Video {id_sact}; {msg}')
+        for error_sact in errors_sact:
+          print(f'{id_sact};;{error_sact}')
 
-      errors_hoi = []
       for ann_hoi_raw in ann_sact_raw:
         id_hoi = self.get_id_hoi(ann_hoi_raw)
-        errors_hoi += self.__inspect_ann_hoi(ann_hoi_raw)
+        errors_hoi = self.__inspect_ann_hoi(ann_hoi_raw)
+        errors_sact += errors_hoi
         if verbose and len(errors_hoi) > 0:
-          msg = errors_hoi[0] if len(errors_hoi) == 1 else '; '.join(errors_hoi)
-          print(f'Video {id_sact} Image {id_hoi}; {msg}')
+          # msg = errors_hoi[0] if len(errors_hoi) == 1 else '; '.join(errors_hoi)
+          # print(f'Video {id_sact} Image {id_hoi}; {msg}')
+          # fixme: Chinese
+          for error_hoi in errors_hoi:
+            ts = int(ann_hoi_raw['task']['task_params']['record']['attachment'].split('/')[-1].split('.')[0])/1000000
+            print(f'{id_sact};{ts};{error_hoi}')
 
       # error-free sub-activities
-      if len(errors_sact) == 0 and len(errors_hoi) == 0:
+      if len(errors_sact) == 0:
         self.ids_sact.append(id_sact)
       else:
-        errors += errors_sact+errors_hoi
+        errors += errors_sact
 
     print('\n ---------- REPORT (Phase 2) ----------')
     print(f'Number of error-free sub-activity instances: {len(self.anns_sact_raw)} -> {len(self.ids_sact)}')
