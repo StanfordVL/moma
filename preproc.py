@@ -26,10 +26,9 @@ def proc_videos(dir_moma):
   video_processor.trim_hoi()
 
 
-def generate_splits(dir_moma, dir_vis):
+def generate_splits(dir_moma):
   moma = moma_api.MOMA(dir_moma)
-  # visualizer = moma_api.StatVisualizer(moma, dir_vis)
-  moma.ids_act_train, moma.ids_act_val = moma_api.split_ids_act(moma.get_ids_act())
+  moma.write_splits(*moma_api.split_ids_act(moma.get_ids_act()))
 
   stats_overall_train, stats_per_class_train = moma.get_stats('train')
   stats_overall_val, stats_per_class_val = moma.get_stats('val')
@@ -43,13 +42,12 @@ def generate_splits(dir_moma, dir_vis):
 
 def main():
   dir_moma = '/home/alan/ssd/moma'
-  dir_vis = '/home/alan/ssd/moma/vis'
   fname_ann_phase1 = 'video_anns_phase1_processed.json'
   fname_ann_phase2 = 'MOMA-videos-0131-all.jsonl'
 
-  # proc_anns(dir_moma, fname_ann_phase1, fname_ann_phase2)
-  # proc_videos(dir_moma)
-  generate_splits(dir_moma, dir_vis)
+  proc_anns(dir_moma, fname_ann_phase1, fname_ann_phase2)
+  proc_videos(dir_moma)
+  generate_splits(dir_moma)
 
 
 if __name__ == '__main__':

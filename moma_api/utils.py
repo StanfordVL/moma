@@ -35,10 +35,10 @@ def get_dist_overall(stats_overall_train, stats_overall_val):
   return dists
 
 
-def split_ids_act(ids_act, ratio_train=0.75):
+def split_ids_act(ids_act, ratio_train=0.80):
   random.shuffle(ids_act)
 
-  size_train = round(len(ids_act)*0.75)
+  size_train = round(len(ids_act)*ratio_train)
   ids_act_train = ids_act[:size_train]
   ids_act_val = ids_act[size_train:]
 

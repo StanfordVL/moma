@@ -429,3 +429,11 @@ class MOMA:
 
     ids_act_train, ids_act_val = ids_act_splits['train'], ids_act_splits['val']
     return ids_act_train, ids_act_val
+
+  def write_splits(self, ids_act_train, ids_act_val):
+    self.ids_act_train = ids_act_train
+    self.ids_act_val = ids_act_val
+
+    path_split = os.path.join(self.dir_moma, 'anns/split.json')
+    with open(path_split, 'w') as f:
+      json.dump({'train': self.ids_act_train, 'val': self.ids_act_val}, f, indent=4, sort_keys=True)

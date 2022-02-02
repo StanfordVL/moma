@@ -1,10 +1,9 @@
 import random
 
-from moma_api import MOMA, AnnVisualizer
+from moma_api import MOMA, AnnVisualizer, StatVisualizer
 
 
-def main(dir_moma='/home/alan/ssd/moma', dir_vis='/home/alan/ssd/moma/vis'):
-  moma = MOMA(dir_moma)
+def visualize_anns(moma, dir_vis):
   visualizer = AnnVisualizer(moma, dir_vis)
 
   """ visualize 10 random sub-activities """
@@ -17,6 +16,22 @@ def main(dir_moma='/home/alan/ssd/moma', dir_vis='/home/alan/ssd/moma/vis'):
   ids_hoi = moma.get_ids_hoi(cnames_object=['basket'])
   id_hoi = random.choice(ids_hoi)
   visualizer.show_hoi(id_hoi)
+
+
+def visualize_stats(moma, dir_vis):
+  visualizer = StatVisualizer(moma, dir_vis)
+  visualizer.show(with_split=False)
+  visualizer.show(with_split=True)
+
+
+def main():
+  dir_moma = '/home/alan/ssd/moma'
+  dir_vis = '/home/alan/ssd/moma/vis'
+
+  moma = MOMA(dir_moma)
+
+  visualize_anns(moma, dir_vis)
+  visualize_stats(moma, dir_vis)
 
 
 if __name__ == '__main__':
