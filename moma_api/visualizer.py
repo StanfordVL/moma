@@ -236,7 +236,7 @@ class AnnVisualizer:
 
 
 class StatVisualizer:
-  def __int__(self, moma, dir_vis):
+  def __init__(self, moma, dir_vis):
     self.moma = moma
     self.dir_vis = dir_vis
 
