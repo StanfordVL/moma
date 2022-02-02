@@ -27,12 +27,32 @@ MOMA is a dataset dedicated to multi-object, multi-actor activity recognition.
 |       | &emsp;&emsp;&emsp;&emsp;┣━&emsp;Intransitive action  | Loop                                                           |
 |       | &emsp;&emsp;&emsp;&emsp;┗━&emsp;Transitive action    | Directed edge                                                  |
 
+## Dataset directory layout
+```
+$ tree dir_moma
+.
+├── anns
+│    ├── anns.json
+│    ├── split.json
+│    ├── taxonomy
+└── videos
+     ├── all
+     ├── raw
+     ├── activity
+     ├── sub_activity
+     └── higher_order_interaction
+```
+
+## Scripts
+``preproc.py``: Pre-process the dataset. Don't run this script since the dataset has been pre-processed.
+
+``visualize.py``: Visualize annotations and dataset statistics.
 
 ## Annotations
 In this version, we include:
-- 1,411 **activity** instances from [20 activity classes](https://raw.githubusercontent.com/d1ngn1gefe1/momatools/main/figures/activity.png?token=GHSAT0AAAAAABQHYNY25PBBGA4AIBT52DAAYPUG5AQ).
-- 15,436 **sub-activity** instances from [97 sub-activity classes](https://raw.githubusercontent.com/d1ngn1gefe1/momatools/main/figures/sub_activity.png?token=GHSAT0AAAAAABQHYNY2CEGAIBK5KOSZLLPWYPUG6EQ).
-- 156,790 **higher-order interaction** instances.
+- 1,412 **activity** instances from [20 activity classes](https://raw.githubusercontent.com/d1ngn1gefe1/momatools/main/figures/activity.png?token=GHSAT0AAAAAABQHYNY25PBBGA4AIBT52DAAYPUG5AQ).
+- 15,616 **sub-activity** instances from [97 sub-activity classes](https://raw.githubusercontent.com/d1ngn1gefe1/momatools/main/figures/sub_activity.png?token=GHSAT0AAAAAABQHYNY2CEGAIBK5KOSZLLPWYPUG6EQ).
+- 158,530 **higher-order interaction** instances.
 - 599,843 image **actor** instances and 98,325 video **actor** instances from [27 classes](https://raw.githubusercontent.com/d1ngn1gefe1/momatools/main/figures/actor.png?token=GHSAT0AAAAAABQHYNY3YODQHWF6ZEIKXHVGYPUG6WQ).
 - 338,990 image **object** instances and 46,034 video **object** instances from [269 classes](https://raw.githubusercontent.com/d1ngn1gefe1/momatools/main/figures/object.png?token=GHSAT0AAAAAABQHYNY2S2BOY2KXIIHDBSPIYPUG6YA).
 - 951,543 **relationship** instances from [22 classes](https://raw.githubusercontent.com/d1ngn1gefe1/momatools/main/figures/relationship.png?token=GHSAT0AAAAAABQHYNY3YR77CAOVI5JQBNZCYPUG7MA).
