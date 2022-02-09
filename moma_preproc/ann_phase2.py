@@ -133,8 +133,6 @@ class AnnPhase2:
     return timestamp
 
   def __inspect_ann_sact(self, ann_sact_raw):
-    errors = []
-
     # get id_sact, ids_hoi, and num_hois
     record = ann_sact_raw[0]['task']['task_params']['record']
     id_sact_real = record['attachment'].split('_')[-1][:-4].split('/')[0]
@@ -191,27 +189,11 @@ class AnnPhase2:
 
     for anns_instance_actor in anns_instances_actor:
       cnames = [ann_instance_actor.cname for ann_instance_actor in anns_instance_actor]
-      if len(set(cnames)) != 1:
-        # errors.append(f'[actor instance] id {anns_instance_actor[0].id} '
-        #               f'corresponds to more than one cname {set(cnames)}')
-        # fixme: Chinese
-        cnames = [self.en2cn[cname] for cname in cnames]
-        errors.append(f'人物;{list(set(cnames))};-;'
-                      f'本视频中{list(set(cnames))}两种不同人物类型用了相同的描述[{anns_instance_actor[0].id}]')
-        pass
+      assert len(set(cnames)) == 1
 
     for anns_instance_object in anns_instances_object:
       cnames = [ann_instance_object.cname for ann_instance_object in anns_instance_object]
-      if len(set(cnames)) != 1:
-        # errors.append(f'[object instance] id {anns_instance_object[0].id} '
-        #               f'corresponds to more than one cname {set(cnames)}')
-        # fixme: Chinese
-        cnames = [self.en2cn[cname] for cname in cnames]
-        errors.append(f'物体;{list(set(cnames))};-;'
-                      f'本视频中{list(set(cnames))}两种不同物体类型用了相同的描述[{anns_instance_object[0].id}]')
-        pass
-
-    return errors
+      assert len(set(cnames)) == 1
 
   def __inspect_ann_hoi(self, ann_hoi_raw):
     errors = []
@@ -240,12 +222,7 @@ class AnnPhase2:
             f'[{kind}] wrong id format {ann_entity.id}'.encode('unicode_escape').decode('utf-8')
 
         # check bbox
-        if ann_entity.bbox.width <= 0 or ann_entity.bbox.height <= 0:
-          # errors.append(f'[{kind}] wrong bbox size {ann_entity.bbox}')
-          # fixme: Chinese
-          errors.append(f'人物/物体词对象检测;{self.en2cn[ann_entity.cname]} {ann_entity.id}: '
-                        f'W={ann_entity.bbox.width}, H={ann_entity.bbox.height};-;对象检测标注面积为0')
-          pass
+        assert ann_entity.bbox.width > 0 and ann_entity.bbox.height > 0
 
         if ann_entity.bbox.x < 0 or \
            ann_entity.bbox.y < 0 or \
@@ -291,11 +268,7 @@ class AnnPhase2:
 
           ids_src = ann_description.ids_associated[1:-1].split('),(')[0].split(',')
           ids_trg = ann_description.ids_associated[1:-1].split('),(')[1].split(',')
-          if not are_entities(ids_src+ids_trg):
-            # errors.append(f'[{kind}] wrong ids_associated format {ids_src} -> {ids_trg}')
-            # fixme: Chinese
-            errors.append(f'关系词;{self.en2cn[ann_description.cname]};{ann_description.ids_associated};关系词描述格式错误')
-            pass
+          assert are_entities(ids_src+ids_trg)
 
           if not set(ids_src+ids_trg).issubset(ids):
             # errors.append(f'[{kind}] unseen ids_associated {set(ids_src+ids_trg)} in {ids}')
@@ -343,11 +316,9 @@ class AnnPhase2:
   def inspect(self, verbose=True):
     errors = []
     for id_sact, ann_sact_raw in self.anns_sact_raw.items():
-      errors_sact = self.__inspect_ann_sact(ann_sact_raw)
-      if verbose and len(errors_sact) > 0:
-        for error_sact in errors_sact:
-          print(f'{id_sact};;{error_sact}')
+      self.__inspect_ann_sact(ann_sact_raw)
 
+      errors_sact = []
       for ann_hoi_raw in ann_sact_raw:
         id_hoi = self.get_id_hoi(ann_hoi_raw)
         errors_hoi = self.__inspect_ann_hoi(ann_hoi_raw)
