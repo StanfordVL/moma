@@ -7,6 +7,18 @@ from .data import *
 
 
 class MOMA:
+  """ The only functions you will be using:
+   - get_stats: Get dataset statistics
+   - get_ids_act: Get the unique sub-activity instance IDs that satisfy certain conditions
+   - get_ids_sact: Get the unique sub-activity instance IDs that satisfy certain conditions
+   - get_ids_hoi: Get the unique higher-order interaction instance IDs that satisfy certain conditions
+   - get_anns_act: Given activity instance IDs, return their annotations
+   - get_anns_sact: Given sub-activity instance IDs, return their annotations
+   - get_anns_hoi: Given higher-order interaction instance IDs, return their annotations
+   - get_metadata: Given activity instance IDs, return the metadata of the associated raw videos
+   - get_path: Given an instance ID, return its data path
+  """
+
   def __init__(self, dir_moma: str):
     self.dir_moma = dir_moma
     self.taxonomy = self.__read_taxonomy()
@@ -147,7 +159,7 @@ class MOMA:
 
   def get_ids_act(self, split: str=None, cnames_act: list[str]=None,
                   ids_sact: list[str]=None, ids_hoi: list[str]=None) -> list[str]:
-    """ Get the unique IDs of activity instances that satisfy certain conditions
+    """ Get the unique activity instance IDs that satisfy certain conditions
     dataset split
      - split: get activity IDs [ids_act] that belong to the given dataset split [split='train' or 'val]
     same-level
@@ -195,7 +207,7 @@ class MOMA:
                    cnames_actor: list[str]=None, cnames_object: list[str]=None,
                    cnames_ia: list[str]=None, cnames_ta: list[str]=None,
                    cnames_att: list[str]=None, cnames_rel: list[str]=None) -> list[str]:
-    """ Get the unique IDs of sub-activity instances that satisfy certain conditions
+    """ Get the unique sub-activity instance IDs that satisfy certain conditions
     dataset split
      - split: get sub-activity IDs [ids_sact] that belong to the given dataset split [split='train' or 'val]
     same-level
@@ -260,7 +272,7 @@ class MOMA:
                   cnames_actor: list[str]=None, cnames_object: list[str]=None,
                   cnames_ia: list[str]=None, cnames_ta: list[str]=None,
                   cnames_att: list[str]=None, cnames_rel: list[str]=None) -> list[str]:
-    """ Get the unique IDs of higher-order interaction instances that satisfy certain conditions
+    """ Get the unique higher-order interaction instance IDs that satisfy certain conditions
     dataset split
      - split: get higher-order interaction IDs [ids_hoi] that belong to the given dataset split [split='train' or 'val]
     top-down
@@ -316,15 +328,6 @@ class MOMA:
     ids_hoi_interaction = sorted(set.intersection(*map(set, ids_hoi_interaction)))
     return ids_hoi_interaction
 
-  def get_ann_act(self, id_act: str) -> Act:
-    return self.id_act_to_ann_act[id_act]
-
-  def get_ann_sact(self, id_sact: str) -> SAct:
-    return self.id_sact_to_ann_sact[id_sact]
-
-  def get_ann_hoi(self, id_hoi: str) -> HOI:
-    return self.id_hoi_to_ann_hoi[id_hoi]
-
   def get_anns_act(self, ids_act: list[str]) -> list[Act]:
     return [self.id_act_to_ann_act[id_act] for id_act in ids_act]
 
@@ -333,6 +336,9 @@ class MOMA:
 
   def get_anns_hoi(self, ids_hoi: list[str]) -> list[HOI]:
     return [self.id_hoi_to_ann_hoi[id_hoi] for id_hoi in ids_hoi]
+
+  def get_metadata(self, ids_act: list[str]) -> list[Metadatum]:
+    return [self.metadata[id_act] for id_act in ids_act]
 
   def get_path(self, id_act: str=None, id_sact: str=None, id_hoi: str=None) -> str:
     assert sum([x is not None for x in [id_act, id_sact, id_hoi]]) == 1
@@ -396,7 +402,7 @@ class MOMA:
 
     for ann_raw in anns_raw:
       ann_act_raw = ann_raw['activity']
-      metadata[ann_act_raw['id']] = Metadata(ann_raw)
+      metadata[ann_act_raw['id']] = Metadatum(ann_raw)
       id_act_to_ann_act[ann_act_raw['id']] = Act(ann_act_raw, self.taxonomy['act'])
       anns_sact_raw = ann_act_raw['sub_activities']
 

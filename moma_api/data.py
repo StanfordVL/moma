@@ -22,7 +22,7 @@ class bidict(dict):
     super(bidict, self).__delitem__(key)
 
 
-class Metadata:
+class Metadatum:
   def __init__(self, ann):
     self.fname = ann['file_name']
     self.num_frames = ann['num_frames']
@@ -38,10 +38,10 @@ class Metadata:
     return fid
 
   def get_time(self, fid):
-    pass
+    raise NotImplementedError
 
   def __repr__(self):
-    return f'Metadata(fname={self.fname}, size=({self.num_frames}, {self.height}, {self.width}, 3), ' \
+    return f'Metadatum(fname={self.fname}, size=({self.num_frames}, {self.height}, {self.width}, 3), ' \
            f'duration={self.duration}'
 
 
