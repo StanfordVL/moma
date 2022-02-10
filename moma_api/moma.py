@@ -168,7 +168,7 @@ class MOMA:
      - ids_sact: get activity IDs [ids_act] for given sub-activity IDs [ids_sact]
      - ids_hoi: get activity IDs [ids_act] for given higher-order interaction IDs [ids_hoi]
     """
-    if all(x is None for x in [cnames_act, ids_sact, ids_hoi]):
+    if all(x is None for x in [split, cnames_act, ids_sact, ids_hoi]):
       return sorted(self.id_act_to_ann_act.keys())
 
     ids_act_intersection = []
@@ -223,7 +223,7 @@ class MOMA:
      - cnames_att: get sub-activity IDs [ids_sact] for given attribute class names [cnames_att]
      - cnames_rel: get sub-activity IDs [ids_sact] for given relationship class names [cnames_rel]
     """
-    if all(x is None for x in [cnames_sact, ids_act, ids_hoi, cnames_actor, cnames_object,
+    if all(x is None for x in [split, cnames_sact, ids_act, ids_hoi, cnames_actor, cnames_object,
                                cnames_ia, cnames_ta, cnames_att, cnames_rel]):
       return sorted(self.id_sact_to_ann_sact.keys())
 
@@ -286,7 +286,7 @@ class MOMA:
      - cnames_att: get higher-order interaction IDs [ids_hoi] for given attribute class names [cnames_att]
      - cnames_rel: get higher-order interaction IDs [ids_hoi] for given relationship class names [cnames_rel]
     """
-    if all(x is None for x in [ids_act, ids_sact, cnames_actor, cnames_object,
+    if all(x is None for x in [split, ids_act, ids_sact, cnames_actor, cnames_object,
                                cnames_ia, cnames_ta, cnames_att, cnames_rel]):
       return sorted(self.id_hoi_to_ann_hoi.keys())
 
