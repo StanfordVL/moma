@@ -9,7 +9,7 @@ from .data import *
 class MOMA:
   """ The only functions you will be using:
    - get_stats: Get dataset statistics
-   - get_ids_act: Get the unique sub-activity instance IDs that satisfy certain conditions
+   - get_ids_act: Get the unique activity instance IDs that satisfy certain conditions
    - get_ids_sact: Get the unique sub-activity instance IDs that satisfy certain conditions
    - get_ids_hoi: Get the unique higher-order interaction instance IDs that satisfy certain conditions
    - get_anns_act: Given activity instance IDs, return their annotations
