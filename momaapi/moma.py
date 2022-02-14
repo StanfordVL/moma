@@ -426,7 +426,7 @@ class MOMA:
   def __read_splits(self):
     path_split = os.path.join(self.dir_moma, 'anns/split.json')
 
-    # dataset split file deos not exist, please run preproc.py
+    # dataset split file deos not exist, please run run_preproc.py
     if not os.path.isfile(path_split):
       return None, None
 

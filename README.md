@@ -2,15 +2,24 @@
 MOMA is a dataset dedicated to multi-object, multi-actor activity recognition. 
 ![activity](figures/moma.gif)
 
-## Requirements
+## Installation
+```
+git clone https://github.com/d1ngn1gefe1/momatools
+cd momatools
+pip install -e .
+```
 
-- Python 3.9+.
-- ffmpeg: For data processing.
-- Torchvision 0.11.0+: For data loading and visualization.
-- [distinctipy](https://github.com/alan-turing-institute/distinctipy): For data visualization. Install by running `pip install distinctipy`.
-- NetworkX: Install by running `pip install networkx`.
-- Graphvis: Install by running `sudo apt-get install graphviz graphviz-dev` and `pip install pygraphviz`.
-- seaborn: Install by running `pip install seaborn`.
+#### Requirements: core library
+- Python 3.9+
+- ffmpeg
+
+#### Requirements: visualization
+
+- [distinctipy](https://github.com/alan-turing-institute/distinctipy): a lightweight package for generating visually distinct colors
+- Matplotlib: a data visualization library
+- PyGraphviz: a Python interface to the Graphviz graph layout and visualization package
+- seaborn: a data visualization library based on matplotlib
+- Torchvision
 
 ## Hierarchy
 | Level | Concept                                              | Representation                                                 |

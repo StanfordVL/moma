@@ -1,6 +1,6 @@
 import random
 
-from moma_api import MOMA, AnnVisualizer, StatVisualizer
+from momaapi import MOMA, AnnVisualizer, StatVisualizer
 
 
 def visualize_anns(moma, dir_vis):
