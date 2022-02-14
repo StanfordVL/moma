@@ -45,7 +45,7 @@ class AnnVisualizer:
     return image
 
   def draw_image(self, ann_hoi, palette):
-    path_image = self.moma.get_path(id_hoi=ann_hoi.id)
+    path_image = self.moma.get_paths(ids_hoi=[ann_hoi.id])[0]
     image = io.read_image(path_image).permute(1, 2, 0).numpy()
     image = Image.fromarray(image).convert('RGB')
     image = self.draw_entities(image, ann_hoi.actors, palette)

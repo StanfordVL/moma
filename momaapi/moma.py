@@ -16,7 +16,7 @@ class MOMA:
    - get_anns_sact: Given sub-activity instance IDs, return their annotations
    - get_anns_hoi: Given higher-order interaction instance IDs, return their annotations
    - get_metadata: Given activity instance IDs, return the metadata of the associated raw videos
-   - get_path: Given an instance ID, return its data path
+   - get_paths: Given instance IDs, return data paths
   """
 
   def __init__(self, dir_moma: str):
@@ -340,18 +340,18 @@ class MOMA:
   def get_metadata(self, ids_act: list[str]) -> list[Metadatum]:
     return [self.metadata[id_act] for id_act in ids_act]
 
-  def get_path(self, id_act: str=None, id_sact: str=None, id_hoi: str=None) -> str:
-    assert sum([x is not None for x in [id_act, id_sact, id_hoi]]) == 1
+  def get_paths(self, ids_act: list[str]=None, ids_sact: list[str]=None, ids_hoi: list[str]=None) -> list[str]:
+    assert sum([x is not None for x in [ids_act, ids_sact, ids_hoi]]) == 1
 
-    if id_act is not None:
-      path = os.path.join(self.dir_moma, f'videos/activity/{id_act}.mp4')
-    elif id_sact is not None:
-      path = os.path.join(self.dir_moma, f'videos/sub_activity/{id_sact}.mp4')
+    if ids_act is not None:
+      paths = [os.path.join(self.dir_moma, f'videos/activity/{id_act}.mp4') for id_act in ids_act]
+    elif ids_sact is not None:
+      paths = [os.path.join(self.dir_moma, f'videos/sub_activity/{id_sact}.mp4') for id_sact in ids_sact]
     else:
-      path = os.path.join(self.dir_moma, f'videos/higher_order_interaction/{id_hoi}.jpg')
+      paths = [os.path.join(self.dir_moma, f'videos/higher_order_interaction/{id_hoi}.jpg') for id_hoi in ids_hoi]
 
-    assert os.path.exists(path), path
-    return path
+    assert all(os.path.exists(path) for path in paths)
+    return paths
 
   def __read_taxonomy(self):
     with open(os.path.join(self.dir_moma, 'anns/taxonomy/actor.json'), 'r') as f:
