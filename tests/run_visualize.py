@@ -1,6 +1,8 @@
+import os
+from pathlib import Path
 import random
 
-from momaapi import MOMA, AnnVisualizer, StatVisualizer
+from momaapi import MOMAAPI, AnnVisualizer, StatVisualizer
 
 
 def visualize_anns(moma, dir_vis):
@@ -25,10 +27,10 @@ def visualize_stats(moma, dir_vis):
 
 
 def main():
-  dir_moma = '/home/alan/ssd/moma'
-  dir_vis = '/home/alan/ssd/moma/vis'
+  dir_moma = os.path.join(Path.home(), 'data/moma')
+  dir_vis = os.path.join(Path.home(), 'data/moma/vis')
 
-  moma = MOMA(dir_moma)
+  moma = MOMAAPI(dir_moma)
 
   visualize_anns(moma, dir_vis)
   visualize_stats(moma, dir_vis)

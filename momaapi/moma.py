@@ -5,22 +5,39 @@ import os
 
 from .data import *
 
+''' 
+The following functions are defined:
+ - get_stats: Get dataset statistics
+ - get_ids_act: Get the unique activity instance IDs that satisfy certain conditions
+ - get_ids_sact: Get the unique sub-activity instance IDs that satisfy certain conditions
+ - get_ids_hoi: Get the unique higher-order interaction instance IDs that satisfy certain conditions
+ - get_anns_act: Given activity instance IDs, return their annotations
+ - get_anns_sact: Given sub-activity instance IDs, return their annotations
+ - get_anns_hoi: Given higher-order interaction instance IDs, return their annotations
+ - get_metadata: Given activity instance IDs, return the metadata of the associated raw videos
+ - get_paths: Given instance IDs, return data paths
+ 
+Acronyms:
+ - act: activity
+ - sact: sub-activity
+ - hoi: higher-order interaction
+ - ia: intransitive action
+ - ta: transitive action
+ - att: attribute
+ - rel: relationship
+ - ann: annotation
+ - id: instance ID
+ - cname: class name
+ - cid: class ID
+'''
 
-class MOMA:
-  """ The only functions you will be using:
-   - get_stats: Get dataset statistics
-   - get_ids_act: Get the unique activity instance IDs that satisfy certain conditions
-   - get_ids_sact: Get the unique sub-activity instance IDs that satisfy certain conditions
-   - get_ids_hoi: Get the unique higher-order interaction instance IDs that satisfy certain conditions
-   - get_anns_act: Given activity instance IDs, return their annotations
-   - get_anns_sact: Given sub-activity instance IDs, return their annotations
-   - get_anns_hoi: Given higher-order interaction instance IDs, return their annotations
-   - get_metadata: Given activity instance IDs, return the metadata of the associated raw videos
-   - get_paths: Given instance IDs, return data paths
-  """
 
-  def __init__(self, dir_moma: str):
+class MOMAAPI:
+  def __init__(self, dir_moma: str, toy: bool=False):
+    assert os.path.isdir(os.path.join(dir_moma, 'anns')) and os.path.isdir(os.path.join(dir_moma, 'videos'))
+
     self.dir_moma = dir_moma
+    self.toy = toy
     self.taxonomy = self.__read_taxonomy()
     self.metadata, self.id_act_to_ann_act, self.id_sact_to_ann_sact, self.id_hoi_to_ann_hoi, \
         self.id_sact_to_id_act, self.id_hoi_to_id_sact = self.__read_anns()
@@ -62,6 +79,13 @@ class MOMA:
     num_classes_att = len(self.taxonomy['att'])
     num_rels = sum([len(ann_hoi.rels) for ann_hoi in anns_hoi])
     num_classes_rel = len(self.taxonomy['rel'])
+    
+    duration_avg_act = sum(ann_act.end-ann_act.start for ann_act in anns_act)
+    duration_min_act = min(ann_act.end-ann_act.start for ann_act in anns_act)
+    duration_max_act = max(ann_act.end-ann_act.start for ann_act in anns_act)
+    duration_avg_sact = sum(ann_sact.end-ann_sact.start for ann_sact in anns_sact)
+    duration_min_sact = min(ann_sact.end-ann_sact.start for ann_sact in anns_sact)
+    duration_max_sact = max(ann_sact.end-ann_sact.start for ann_sact in anns_sact)
 
     bincount_act = np.bincount([ann_act.cid for ann_act in anns_act], minlength=num_classes_act).tolist()
     bincount_sact = np.bincount([ann_sact.cid for ann_sact in anns_sact], minlength=num_classes_sact).tolist()
@@ -83,11 +107,17 @@ class MOMA:
     stats_overall = {
       'activity': {
         'num_instances': num_acts,
-        'num_classes': num_classes_act
+        'num_classes': num_classes_act,
+        'duration_avg': duration_avg_act, 
+        'duration_min': duration_min_act,
+        'duration_max': duration_max_act
       },
       'sub_activity': {
         'num_instances': num_sacts,
-        'num_classes': num_classes_sact
+        'num_classes': num_classes_sact,
+        'duration_avg': duration_avg_sact, 
+        'duration_min': duration_min_sact,
+        'duration_max': duration_max_sact
       },
       'higher_order_interaction': {
         'num_instances': num_hois,
@@ -159,7 +189,7 @@ class MOMA:
 
   def get_ids_act(self, split: str=None, cnames_act: list[str]=None,
                   ids_sact: list[str]=None, ids_hoi: list[str]=None) -> list[str]:
-    """ Get the unique activity instance IDs that satisfy certain conditions
+    ''' Get the unique activity instance IDs that satisfy certain conditions
     dataset split
      - split: get activity IDs [ids_act] that belong to the given dataset split [split='train' or 'val]
     same-level
@@ -167,7 +197,7 @@ class MOMA:
     bottom-up
      - ids_sact: get activity IDs [ids_act] for given sub-activity IDs [ids_sact]
      - ids_hoi: get activity IDs [ids_act] for given higher-order interaction IDs [ids_hoi]
-    """
+    '''
     if all(x is None for x in [split, cnames_act, ids_sact, ids_hoi]):
       return sorted(self.id_act_to_ann_act.keys())
 
@@ -207,7 +237,7 @@ class MOMA:
                    cnames_actor: list[str]=None, cnames_object: list[str]=None,
                    cnames_ia: list[str]=None, cnames_ta: list[str]=None,
                    cnames_att: list[str]=None, cnames_rel: list[str]=None) -> list[str]:
-    """ Get the unique sub-activity instance IDs that satisfy certain conditions
+    ''' Get the unique sub-activity instance IDs that satisfy certain conditions
     dataset split
      - split: get sub-activity IDs [ids_sact] that belong to the given dataset split [split='train' or 'val]
     same-level
@@ -222,7 +252,7 @@ class MOMA:
      - cnames_ta: get sub-activity IDs [ids_sact] for given transitive action class names [cnames_ta]
      - cnames_att: get sub-activity IDs [ids_sact] for given attribute class names [cnames_att]
      - cnames_rel: get sub-activity IDs [ids_sact] for given relationship class names [cnames_rel]
-    """
+    '''
     if all(x is None for x in [split, cnames_sact, ids_act, ids_hoi, cnames_actor, cnames_object,
                                cnames_ia, cnames_ta, cnames_att, cnames_rel]):
       return sorted(self.id_sact_to_ann_sact.keys())
@@ -272,7 +302,7 @@ class MOMA:
                   cnames_actor: list[str]=None, cnames_object: list[str]=None,
                   cnames_ia: list[str]=None, cnames_ta: list[str]=None,
                   cnames_att: list[str]=None, cnames_rel: list[str]=None) -> list[str]:
-    """ Get the unique higher-order interaction instance IDs that satisfy certain conditions
+    ''' Get the unique higher-order interaction instance IDs that satisfy certain conditions
     dataset split
      - split: get higher-order interaction IDs [ids_hoi] that belong to the given dataset split [split='train' or 'val]
     top-down
@@ -285,7 +315,7 @@ class MOMA:
      - cnames_ta: get higher-order interaction IDs [ids_hoi] for given transitive action class names [cnames_ta]
      - cnames_att: get higher-order interaction IDs [ids_hoi] for given attribute class names [cnames_att]
      - cnames_rel: get higher-order interaction IDs [ids_hoi] for given relationship class names [cnames_rel]
-    """
+    '''
     if all(x is None for x in [split, ids_act, ids_sact, cnames_actor, cnames_object,
                                cnames_ia, cnames_ta, cnames_att, cnames_rel]):
       return sorted(self.id_hoi_to_ann_hoi.keys())
@@ -394,7 +424,8 @@ class MOMA:
     return taxonomy
 
   def __read_anns(self):
-    with open(os.path.join(self.dir_moma, 'anns/anns.json'), 'r') as f:
+    fname = 'anns_toy.json' if self.toy else 'anns.json'
+    with open(os.path.join(self.dir_moma, f'anns/{fname}'), 'r') as f:
       anns_raw = json.load(f)
 
     metadata, id_act_to_ann_act, id_sact_to_ann_sact, id_hoi_to_ann_hoi = {}, {}, {}, {}
@@ -434,6 +465,13 @@ class MOMA:
       ids_act_splits = json.load(f)
 
     ids_act_train, ids_act_val = ids_act_splits['train'], ids_act_splits['val']
+
+    if self.toy:
+      ids_act_train = list(set(self.get_ids_act())-set(ids_act_val))
+      ids_act_val = list(set(self.get_ids_act())-set(ids_act_train))
+    else:
+      assert set(self.get_ids_act()) == set(ids_act_train+ids_act_val)
+
     return ids_act_train, ids_act_val
 
   def write_splits(self, ids_act_train, ids_act_val):

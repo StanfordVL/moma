@@ -69,11 +69,15 @@ class SAct:
 
     # unique entity instances in this sub-activity
     info_actor = set([(y['id'], y['class_name']) for x in ann['higher_order_interactions'] for y in x['actors']])
-    info_actor = sorted(info_actor, key=lambda x: x[0])
-    self.ids_actor, self.cnames_actor = map(list, zip(*info_actor)) if len(info_actor) > 0 else ([], [])
     info_object = set([(y['id'], y['class_name']) for x in ann['higher_order_interactions'] for y in x['objects']])
-    info_object = sorted(info_object, key=lambda x: int(x[0]))
-    self.ids_object, self.cnames_object = map(list, zip(*info_object)) if len(info_object) > 0 else ([], [])
+    id_actor_to_cname_actor = dict(info_actor)
+    id_object_to_cname_object = dict(info_object)
+    self.ids_actor = sorted(id_actor_to_cname_actor.keys())
+    self.ids_object = sorted(id_object_to_cname_object.keys(), key=int)
+    self.__id_entity_to_cname_entity = id_actor_to_cname_actor|id_object_to_cname_object
+
+  def get_cname_entity(self, id_entity):
+    return self.__id_entity_to_cname_entity[id_entity]
 
   def __repr__(self):
     return f'SAct(id={self.id}, cname={self.cname}, time=[{self.start}, end={self.end}), num_hois={len(self.ids_hoi)})'
@@ -140,7 +144,7 @@ class Entity:
 
   def __repr__(self):
     name = ''.join(x.capitalize() for x in self.kind.split('_'))
-    return f"{name}(id={self.id}, cname={self.cname})"
+    return f'{name}(id={self.id}, cname={self.cname})'
 
 
 class Description:
@@ -156,4 +160,4 @@ class Description:
   def __repr__(self):
     name = ''.join(x.capitalize() for x in self.kind.split('_'))
     id = f'{self.id_src}' if self.id_trg is None else f'{self.id_src} -> {self.id_trg}'
-    return f"{name}(id={id}, cname={self.cname})"
+    return f'{name}(id={id}, cname={self.cname})'

@@ -2,6 +2,7 @@ from collections import defaultdict
 from distinctipy import distinctipy
 import glob
 import math
+from matplotlib import font_manager
 import matplotlib.pyplot as plt
 import os
 import PIL.Image as Image
@@ -31,13 +32,16 @@ class AnnVisualizer:
 
   @staticmethod
   def draw_entities(image, entities, palette):
-    for entity in entities:
-      draw = ImageDraw.Draw(image)
-      y1, x1, y2, x2 = entity.bbox.y1, entity.bbox.x1, entity.bbox.y2, entity.bbox.x2
-      width_line = int(max(image.size)*0.003)
-      font = ImageFont.truetype('Ubuntu-R.ttf', int(max(image.size)*0.02))
-      width_text, height_text = font.getsize(entity.cname)
+    draw = ImageDraw.Draw(image)
+    width_line = int(max(image.size)*0.003)
 
+    font = font_manager.FontProperties(family='sans-serif', stretch='extra-condensed', weight='light')
+    path_font = font_manager.findfont(font)
+    font = ImageFont.truetype(path_font, int(max(image.size)*0.02))
+
+    for entity in entities:
+      y1, x1, y2, x2 = entity.bbox.y1, entity.bbox.x1, entity.bbox.y2, entity.bbox.x2
+      width_text, height_text = font.getsize(entity.cname)
       draw.rectangle(((x1, y1), (x2, y2)), width=width_line, outline=palette[entity.id][0])
       draw.rectangle(((x1, y1), (x1+width_text+2*width_line, y1+height_text+2*width_line)), fill=palette[entity.id][0])
       draw.text((x1+width_line, y1+width_line), entity.cname, fill=palette[entity.id][1], font=font)
@@ -53,14 +57,17 @@ class AnnVisualizer:
     return image
 
   def show_hoi(self, id_hoi, vstack=True):
-    os.makedirs(os.path.join(self.dir_vis, id_hoi), exist_ok=True)
+    if os.path.isfile(os.path.join(self.dir_vis, f'hoi/{id_hoi}.png')):
+      return
+
+    os.makedirs(os.path.join(self.dir_vis, 'hoi'), exist_ok=True)
 
     ann_hoi = self.moma.get_anns_hoi(ids_hoi=[id_hoi])[0]
     palette = self.get_palette(ann_hoi.ids_actor+ann_hoi.ids_object)
 
     """ bbox """
     image = self.draw_image(ann_hoi, palette)
-    path_bbox = os.path.join(self.dir_vis, f'{id_hoi}/bbox.png')
+    path_bbox = os.path.join(self.dir_vis, f'hoi/bbox_{id_hoi}.png')
     image.save(path_bbox)
 
     """ graph """
@@ -78,7 +85,9 @@ class AnnVisualizer:
                  color='slategray', fontcolor='slategray', fontsize='10', len=2)
 
     G.layout('neato')
-    path_graph = os.path.join(self.dir_vis, f'{id_hoi}/graph.eps')
+    G.node_attr['fontname'] = 'Arial'
+    G.edge_attr['fontname'] = 'Arial'
+    path_graph = os.path.join(self.dir_vis, f'hoi/graph_{id_hoi}.eps')
     G.draw(path_graph)
 
     """ save """
@@ -106,14 +115,15 @@ class AnnVisualizer:
       image.paste(image_bbox, (0, 0))
       image.paste(image_graph, (image_bbox.width, 0))
 
-    image.save(os.path.join(self.dir_vis, f'{id_hoi}.png'))
-    shutil.rmtree(os.path.join(self.dir_vis, id_hoi))
+    image.save(os.path.join(self.dir_vis, f'hoi/{id_hoi}.png'))
+    os.remove(path_bbox)
+    os.remove(path_graph)
 
   def show_sact(self, id_sact, vstack=True):
-    if os.path.isfile(os.path.join(self.dir_vis, f'{id_sact}.gif')):
+    if os.path.isfile(os.path.join(self.dir_vis, f'sact/{id_sact}.gif')):
       return
 
-    os.makedirs(os.path.join(self.dir_vis, id_sact), exist_ok=True)
+    os.makedirs(os.path.join(self.dir_vis, 'sact', id_sact), exist_ok=True)
 
     ann_sact = self.moma.get_anns_sact(ids_sact=[id_sact])[0]
     ids_hoi = self.moma.get_ids_hoi(ids_sact=[id_sact])
@@ -124,13 +134,13 @@ class AnnVisualizer:
     for i, id_hoi in enumerate(ids_hoi):
       ann_hoi = self.moma.get_anns_hoi(ids_hoi=[id_hoi])[0]
       image = self.draw_image(ann_hoi, palette)
-      image.save(os.path.join(self.dir_vis, f'{id_sact}/bbox_{str(i).zfill(2)}.png'))
+      image.save(os.path.join(self.dir_vis, f'sact/{id_sact}/bbox_{str(i).zfill(2)}.png'))
 
     """ graph """
     # get node & edge positions
     info_nodes = []
-    for id_entity, cname_entity in zip(ann_sact.ids_actor+ann_sact.ids_object,
-                                       ann_sact.cnames_actor+ann_sact.cnames_object):
+    for id_entity in ann_sact.ids_actor+ann_sact.ids_object:
+      cname_entity = ann_sact.get_cname_entity(id_entity)
       info_nodes.append((id_entity, cname_entity))
 
     info_edges = []
@@ -150,6 +160,8 @@ class AnnVisualizer:
     for node_src, node_trg, label in info_edges:
       G.add_edge((node_src, node_trg), label=label, color='slategray', fontcolor='slategray', fontsize='10', len=2)
     G.layout('neato')
+    G.node_attr['fontname'] = 'Arial'
+    G.edge_attr['fontname'] = 'Arial'
 
     pos_node = {node:node.attr['pos'] for node in G.nodes()}
     pos_edge = {(*edge, edge.attr['label']):edge.attr['pos'] for edge in G.edges()}
@@ -192,12 +204,12 @@ class AnnVisualizer:
         pos = pos_edge[(node_src, node_trg, label)]
         G.add_edge((node_src, node_trg), label=label, pos=pos, color=color, fontcolor=color, fontsize='10', len=2)
 
-      G.draw(os.path.join(self.dir_vis, f'{id_sact}/graph_{str(i).zfill(2)}.eps'))
+      G.draw(os.path.join(self.dir_vis, f'sact/{id_sact}/graph_{str(i).zfill(2)}.eps'))
       G.remove_nodes_from([info_node[0] for info_node in info_nodes])
 
     """ save """
-    paths_bbox = sorted(glob.glob(os.path.join(self.dir_vis, f'{id_sact}/bbox_*.png')))
-    paths_graph = sorted(glob.glob(os.path.join(self.dir_vis, f'{id_sact}/graph_*.eps')))
+    paths_bbox = sorted(glob.glob(os.path.join(self.dir_vis, f'sact/{id_sact}/bbox_*.png')))
+    paths_graph = sorted(glob.glob(os.path.join(self.dir_vis, f'sact/{id_sact}/graph_*.eps')))
 
     images_bbox = [Image.open(path_bbox) for path_bbox in paths_bbox]
     images_graph = [Image.open(path_graph) for path_graph in paths_graph]
@@ -230,9 +242,9 @@ class AnnVisualizer:
         images.append(image)
 
     image = images[0]
-    image.save(os.path.join(self.dir_vis, f'{id_sact}.gif'),
-               format='GIF', append_images=images[1:], save_all=True, duration=250, loop=0)
-    shutil.rmtree(os.path.join(self.dir_vis, id_sact))
+    image.save(os.path.join(self.dir_vis, f'sact/{id_sact}.gif'), format='GIF', append_images=images[1:], save_all=True,
+               duration=250, loop=0)
+    shutil.rmtree(os.path.join(self.dir_vis, 'sact', id_sact))
 
 
 class StatVisualizer:
@@ -241,6 +253,8 @@ class StatVisualizer:
     self.dir_vis = dir_vis
 
   def show(self, with_split):
+    os.makedirs(os.path.join(self.dir_vis, 'stats'), exist_ok=True)
+
     if with_split:
       stats_overall_train, stats_per_class_train = self.moma.get_stats('train')
       stats_overall_val, stats_per_class_val = self.moma.get_stats('val')
@@ -274,4 +288,4 @@ class StatVisualizer:
       ax.set(xlabel='class', ylabel='count')
       ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha='right')
       plt.tight_layout()
-      plt.savefig(os.path.join(self.dir_vis, fname))
+      plt.savefig(os.path.join(self.dir_vis, 'stats', fname))

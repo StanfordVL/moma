@@ -1,3 +1,5 @@
+import os
+from pathlib import Path
 from pprint import pprint
 
 import momaapi
@@ -27,7 +29,7 @@ def proc_videos(dir_moma):
 
 
 def generate_splits(dir_moma):
-  moma = momaapi.MOMA(dir_moma)
+  moma = momaapi.MOMAAPI(dir_moma)
   moma.write_splits(*momaapi.split_ids_act(moma.get_ids_act()))
 
   stats_overall_train, stats_per_class_train = moma.get_stats('train')
@@ -41,7 +43,7 @@ def generate_splits(dir_moma):
 
 
 def main():
-  dir_moma = '/home/alan/ssd/moma'
+  dir_moma = os.path.join(Path.home(), 'data/moma')
   fname_ann_phase1 = 'video_anns_phase1_processed.json'
   fname_ann_phase2 = 'MOMA-videos-0209-all.jsonl'
 
