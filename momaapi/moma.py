@@ -312,8 +312,7 @@ class MOMA:
     path_split = os.path.join(self.dir_moma, 'anns/split.json')
 
     # dataset split file deos not exist, please run run_preproc.py
-    if not os.path.isfile(path_split):
-      return None, None
+    assert os.path.isfile(path_split)
 
     with open(path_split, 'r') as f:
       ids_act_splits = json.load(f)
