@@ -6,7 +6,7 @@ MOMA is a dataset dedicated to multi-object, multi-actor activity recognition.
 ```
 git clone https://github.com/d1ngn1gefe1/momatools
 cd momatools
-pip install -e .
+pip install .
 ```
 
 #### Requirements: core library

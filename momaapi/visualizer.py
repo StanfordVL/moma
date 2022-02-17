@@ -14,6 +14,8 @@ import seaborn as sns
 import shutil
 from torchvision import io
 
+from .utils import get_stats
+
 
 class AnnVisualizer:
   def __init__(self, moma, dir_vis):
@@ -256,8 +258,8 @@ class StatVisualizer:
     os.makedirs(os.path.join(self.dir_vis, 'stats'), exist_ok=True)
 
     if with_split:
-      stats_overall_train, stats_per_class_train = self.moma.get_stats('train')
-      stats_overall_val, stats_per_class_val = self.moma.get_stats('val')
+      stats_overall_train, stats_per_class_train = get_stats(self.moma, 'train')
+      stats_overall_val, stats_per_class_val = get_stats(self.moma, 'val')
       stats_per_class = {}
       for key in stats_per_class_train:
         stats_per_class[key] = {
@@ -269,7 +271,7 @@ class StatVisualizer:
       pprint(stats_overall_val, sort_dicts=False)
 
     else:
-      stats_overall, stats_per_class = self.moma.get_stats()
+      stats_overall, stats_per_class = get_stats(self.moma)
       pprint(stats_overall, sort_dicts=False)
 
     for key in stats_per_class:

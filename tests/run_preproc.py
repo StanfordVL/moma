@@ -1,8 +1,11 @@
 import os
 from pathlib import Path
 from pprint import pprint
+import sys
 
 import momaapi
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 import preproc
 
 

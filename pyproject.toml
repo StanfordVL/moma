@@ -1,0 +1,13 @@
+[build-system]
+requires = [
+    'setuptools',
+    'wheel',
+    'distinctipy',
+    'matplotlib',
+    'numpy',
+    'pygraphviz',
+    'scipy',
+    'seaborn',
+    'torchvision'
+]
+build-backend = 'setuptools.build_meta'
