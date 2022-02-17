@@ -29,15 +29,16 @@ def proc_videos(dir_moma):
 
 
 def generate_splits(dir_moma):
-  moma = momaapi.MOMAAPI(dir_moma)
+  moma = momaapi.MOMA(dir_moma)
   moma.write_splits(*momaapi.split_ids_act(moma.get_ids_act()))
 
-  stats_overall_train, stats_per_class_train = moma.get_stats('train')
-  stats_overall_val, stats_per_class_val = moma.get_stats('val')
+  stats_overall_train, stats_per_class_train = momaapi.get_stats(moma, 'train')
+  stats_overall_val, stats_per_class_val = momaapi.get_stats(moma, 'val')
 
   dists_overall = momaapi.get_dist_overall(stats_overall_train, stats_overall_val)
   dists_per_class = momaapi.get_dist_per_class(stats_per_class_train, stats_per_class_val)
 
+  print('The quality of our split (cosine distance b/w train & val, the smaller the better):')
   pprint(dists_overall)
   pprint(dists_per_class)
 

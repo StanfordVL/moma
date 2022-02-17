@@ -25,25 +25,25 @@ class TaxonomyParser:
       rows = [row[:4] for row in reader][1:]
       taxonomy_object, cn2en_object = self.__get_taxonomy(rows)
 
-    # taxonomy of atomic actions
-    with open(os.path.join(dir_moma, 'anns/taxonomy/atomic_action.csv')) as f:
+    # taxonomy of attributes and intransitive actions
+    with open(os.path.join(dir_moma, 'anns/taxonomy/attribute.csv')) as f:
       reader = csv.reader(f, delimiter=',')
-      rows = [row for row in reader][2:]
-      rows_ia = [row[:5] for row in rows]
-      rows_ta = [row[5:] for row in rows]
-
-      taxonomy_ia, cn2en_ia = self.__get_taxonomy(rows_ia)
-      taxonomy_ta, cn2en_ta = self.__get_taxonomy(rows_ta)
-
-    # taxonomy of states
-    with open(os.path.join(dir_moma, 'anns/taxonomy/state.csv')) as f:
-      reader = csv.reader(f, delimiter=',')
-      rows = [row for row in reader][2:]
-      rows_att = [row[:5] for row in rows]
-      rows_rel = [row[5:] for row in rows]
+      rows = [row[:5] for row in reader]
+      rows_att = [row for row in rows[1:5]]
+      rows_ia = [row for row in rows[6:17]]
 
       taxonomy_att, cn2en_att = self.__get_taxonomy(rows_att)
+      taxonomy_ia, cn2en_ia = self.__get_taxonomy(rows_ia)
+
+    # taxonomy of relationships and transitive actions
+    with open(os.path.join(dir_moma, 'anns/taxonomy/relationship.csv')) as f:
+      reader = csv.reader(f, delimiter=',')
+      rows = [row[:6] for row in reader]
+      rows_rel = [row for row in rows[1:23]]
+      rows_ta = [row for row in rows[24:63]]
+
       taxonomy_rel, cn2en_rel = self.__get_taxonomy(rows_rel)
+      taxonomy_ta, cn2en_ta = self.__get_taxonomy(rows_ta)
 
     # taxonomy of activities and sub-activities
     with open(os.path.join(dir_moma, 'anns/taxonomy/act_sact.csv')) as f:
@@ -104,21 +104,22 @@ class TaxonomyParser:
     taxonomy, cn2en, key, value = {}, {}, '', []
 
     for i in range(len(rows)):
+      # new superclass or activity
       if rows[i][0] != '':
         key = rows[i][0]
         value = []
         cn2en[rows[i][1]] = rows[i][0]
 
-      if len(rows[i]) == 4:  # entity
-        value.append(rows[i][2])
-      else:  # description
-        assert len(rows[i]) == 5 or len(rows[i]) == 6
-        value.append(tuple([rows[i][2]]+rows[i][4:]))
+      if rows[i][2] != '[delete]':
+        if len(rows[i]) == 4:
+          value.append(rows[i][2])
+        else:  # description
+          assert len(rows[i]) == 5 or len(rows[i]) == 6
+          value.append(tuple([rows[i][2]]+rows[i][4:]))
       cn2en[rows[i][3]] = rows[i][2]
 
-      if i == len(rows)-1 or rows[i+1][0] != '' or all([col == '' for col in rows[i+1]]):
-        taxonomy[key] = sorted(value)
-      if i < len(rows)-1 and all([col == '' for col in rows[i+1]]):
-        break
+      # end of superclass or activity
+      if key != '[delete]' and (i == len(rows)-1 or rows[i+1][0] != ''):
+        taxonomy[key] = sorted(set(value))
 
     return taxonomy, cn2en

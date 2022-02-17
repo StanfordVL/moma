@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 import random
 
-from momaapi import MOMAAPI, AnnVisualizer, StatVisualizer
+from momaapi import MOMA, AnnVisualizer, StatVisualizer
 
 
 def visualize_anns(moma, dir_vis):
@@ -30,7 +30,7 @@ def main():
   dir_moma = os.path.join(Path.home(), 'data/moma')
   dir_vis = os.path.join(Path.home(), 'data/moma/vis')
 
-  moma = MOMAAPI(dir_moma)
+  moma = MOMA(dir_moma)
 
   visualize_anns(moma, dir_vis)
   visualize_stats(moma, dir_vis)

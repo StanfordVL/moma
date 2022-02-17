@@ -96,9 +96,8 @@ class AnnPhase1:
   def get_id_sact(ann_sact):
     return str(ann_sact['subactivity_instance_id'])
 
-  @staticmethod
-  def get_cname_act(ann_act):
-    return ann_act['class']
+  def get_cname_act(self, ann_act):
+    return self.cn2en[ann_act['subactivity'][0]['orig_vid'].split('_')[0]]
 
   def get_cname_sact(self, ann_sact):
     return self.cn2en[ann_sact['filename'].split('_')[0]]
@@ -129,7 +128,7 @@ class AnnPhase1:
   def __inspect_ann_act(self, id_act, ann_act):
     # make sure the class name exists
     cname_act = self.get_cname_act(ann_act)
-    assert cname_act in self.taxonomy.keys(), f"unseen class name {cname_act}"
+    assert cname_act in self.taxonomy.keys(), f'unseen class name {cname_act}'
 
     # make sure id_act is consistent
     assert id_act == self.get_id_act(ann_act), 'inconsistent id_act'
