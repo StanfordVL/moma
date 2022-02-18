@@ -4,11 +4,13 @@ from scipy.spatial import distance
 
 def get_stats(moma, split=None):
   if split is None:
+    metadata = moma.metadata.values()
     anns_act = moma.id_act_to_ann_act.values()
     anns_sact = moma.id_sact_to_ann_sact.values()
     anns_hoi = moma.id_hoi_to_ann_hoi.values()
   elif split == 'train' or split == 'val':
     ids_act = moma.ids_act_train if split == 'train' else moma.ids_act_val
+    metadata = moma.get_metadata(ids_act=ids_act)
     anns_act = moma.get_anns_act(ids_act=ids_act)
     ids_sact = moma.get_ids_sact(ids_act=ids_act)
     anns_sact = moma.get_anns_sact(ids_sact=ids_sact)
@@ -39,10 +41,15 @@ def get_stats(moma, split=None):
   num_rels = sum([len(ann_hoi.rels) for ann_hoi in anns_hoi])
   num_classes_rel = len(moma.taxonomy['rel'])
 
-  duration_avg_act = sum(ann_act.end-ann_act.start for ann_act in anns_act)/len(anns_act)
+  duration_total_raw = sum(metadatum.duration for metadatum in metadata)
+
+  duration_total_act = sum(ann_act.end-ann_act.start for ann_act in anns_act)
+  duration_avg_act = duration_total_act/len(anns_act)
   duration_min_act = min(ann_act.end-ann_act.start for ann_act in anns_act)
   duration_max_act = max(ann_act.end-ann_act.start for ann_act in anns_act)
-  duration_avg_sact = sum(ann_sact.end-ann_sact.start for ann_sact in anns_sact)/len(anns_act)
+
+  duration_total_sact = sum(ann_sact.end-ann_sact.start for ann_sact in anns_sact)
+  duration_avg_sact = duration_total_sact/len(anns_act)
   duration_min_sact = min(ann_sact.end-ann_sact.start for ann_sact in anns_sact)
   duration_max_sact = max(ann_sact.end-ann_sact.start for ann_sact in anns_sact)
 
@@ -64,19 +71,24 @@ def get_stats(moma, split=None):
   bincount_rel = np.bincount(bincount_rel, minlength=num_classes_rel).tolist()
 
   stats_overall = {
+    'raw': {
+      'duration': duration_total_raw
+    },
     'activity': {
       'num_instances': num_acts,
       'num_classes': num_classes_act,
       'duration_avg': duration_avg_act,
       'duration_min': duration_min_act,
-      'duration_max': duration_max_act
+      'duration_max': duration_max_act,
+      'duration': duration_total_act
     },
     'sub_activity': {
       'num_instances': num_sacts,
       'num_classes': num_classes_sact,
       'duration_avg': duration_avg_sact,
       'duration_min': duration_min_sact,
-      'duration_max': duration_max_sact
+      'duration_max': duration_max_sact,
+      'duration': duration_total_sact
     },
     'higher_order_interaction': {
       'num_instances': num_hois,

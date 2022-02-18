@@ -17,10 +17,19 @@ def analyze_split(moma):
   pprint(dists_per_class)
 
 
+def analyze_stats(moma):
+  stats_overall, stats_per_class = momaapi.get_stats(moma)
+  pprint(stats_overall)
+  pprint(stats_per_class)
+
+
 def main():
   dir_moma = os.path.join(Path.home(), 'data/moma')
+
   moma = momaapi.MOMA(dir_moma)
+
   analyze_split(moma)
+  analyze_stats(moma)
 
 
 if __name__ == '__main__':

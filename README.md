@@ -61,6 +61,7 @@ $ tree dir_moma
 
 ## Annotations
 In this version, we include:
+- 148 hours of videos
 - 1,412 **activity** instances from [20 activity classes](https://raw.githubusercontent.com/d1ngn1gefe1/momatools/main/figures/activity.png?token=GHSAT0AAAAAABQHYNY25PBBGA4AIBT52DAAYPUG5AQ).
 - 15,842 **sub-activity** instances from [97 sub-activity classes](https://raw.githubusercontent.com/d1ngn1gefe1/momatools/main/figures/sub_activity.png?token=GHSAT0AAAAAABQHYNY2CEGAIBK5KOSZLLPWYPUG6EQ).
 - 161,265 **higher-order interaction** instances.

@@ -20,6 +20,13 @@ def visualize_anns(moma, dir_vis):
   visualizer.show_hoi(id_hoi)
 
 
+def visualize_anns_all(moma, dir_vis):
+  visualizer = AnnVisualizer(moma, dir_vis)
+  ids_sact = moma.get_ids_sact()
+  for id_sact in ids_sact:
+    visualizer.show_sact(id_sact, vstack=False)
+
+
 def visualize_stats(moma, dir_vis):
   visualizer = StatVisualizer(moma, dir_vis)
   visualizer.show(with_split=False)
@@ -45,11 +52,12 @@ def main():
   dir_moma = os.path.join(Path.home(), 'data/moma')
   dir_vis = os.path.join(Path.home(), 'data/moma/vis')
 
-  moma = MOMA(dir_moma, toy=True)
+  moma = MOMA(dir_moma)
 
   visualize_anns(moma, dir_vis)
   visualize_stats(moma, dir_vis)
   visualize_timeline(moma, dir_vis)
+  visualize_anns_all(moma, dir_vis)
 
 
 if __name__ == '__main__':
