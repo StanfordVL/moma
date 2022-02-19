@@ -52,7 +52,7 @@ def main():
   dir_moma = os.path.join(Path.home(), 'data/moma')
   dir_vis = os.path.join(Path.home(), 'data/moma/vis')
 
-  moma = MOMA(dir_moma)
+  moma = MOMA(dir_moma, toy=True)
 
   visualize_anns(moma, dir_vis)
   visualize_stats(moma, dir_vis)

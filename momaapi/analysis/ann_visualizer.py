@@ -21,40 +21,41 @@ class AnnVisualizer:
     self.dir_vis = dir_vis
 
   @staticmethod
-  def get_palette(ids):
+  def get_palette(ids, alpha=255):
+    # distinctipy's representation
     colors_box = distinctipy.get_colors(len(ids))
     colors_text = [distinctipy.get_text_color(color_box) for color_box in colors_box]
-    colors_box = [tuple(int(x*255) for x in color_box) for color_box in colors_box]
-    colors_text = [tuple(int(x*255) for x in color_text) for color_text in colors_text]
+
+    # PIL's representation
+    colors_box = [tuple([int(x*255) for x in color_box]+[alpha]) for color_box in colors_box]
+    colors_text = [tuple([int(x*255) for x in color_text]+[alpha]) for color_text in colors_text]
 
     palette = {id: (color_box, color_text) for id, color_box, color_text in zip(ids, colors_box, colors_text)}
     return palette
 
-  @staticmethod
-  def draw_entities(image, entities, palette):
-    draw = ImageDraw.Draw(image)
+  def draw_bbox(self, ann_hoi, palette):
+    path_image = self.moma.get_paths(ids_hoi=[ann_hoi.id])[0]
+    image = io.read_image(path_image).permute(1, 2, 0).numpy()
+    image = Image.fromarray(image).convert('RGBA')
+
+    overlay = Image.new('RGBA', image.size, (0, 0, 0, 0))
+    draw = ImageDraw.Draw(overlay, 'RGBA')
     width_line = int(max(image.size)*0.003)
 
     font = font_manager.FontProperties(family='sans-serif', stretch='extra-condensed', weight='light')
     path_font = font_manager.findfont(font)
     font = ImageFont.truetype(path_font, int(max(image.size)*0.02))
 
-    for entity in entities:
+    for entity in ann_hoi.actors+ann_hoi.objects:
       y1, x1, y2, x2 = entity.bbox.y1, entity.bbox.x1, entity.bbox.y2, entity.bbox.x2
       width_text, height_text = font.getsize(entity.cname)
       draw.rectangle(((x1, y1), (x2, y2)), width=width_line, outline=palette[entity.id][0])
       draw.rectangle(((x1, y1), (x1+width_text+2*width_line, y1+height_text+2*width_line)), fill=palette[entity.id][0])
       draw.text((x1+width_line, y1+width_line), entity.cname, fill=palette[entity.id][1], font=font)
 
-    return image
+    image.paste(Image.alpha_composite(image, overlay))
 
-  def draw_image(self, ann_hoi, palette):
-    path_image = self.moma.get_paths(ids_hoi=[ann_hoi.id])[0]
-    image = io.read_image(path_image).permute(1, 2, 0).numpy()
-    image = Image.fromarray(image).convert('RGB')
-    image = self.draw_entities(image, ann_hoi.actors, palette)
-    image = self.draw_entities(image, ann_hoi.objects, palette)
-    return image
+    return image.convert('RGB')
 
   def show_hoi(self, id_hoi, vstack=True):
     if os.path.isfile(os.path.join(self.dir_vis, f'hoi/{id_hoi}.png')):
@@ -63,10 +64,10 @@ class AnnVisualizer:
     os.makedirs(os.path.join(self.dir_vis, 'hoi'), exist_ok=True)
 
     ann_hoi = self.moma.get_anns_hoi(ids_hoi=[id_hoi])[0]
-    palette = self.get_palette(ann_hoi.ids_actor+ann_hoi.ids_object)
+    palette = self.get_palette(ann_hoi.ids_actor+ann_hoi.ids_object, alpha=150)
 
     """ bbox """
-    image = self.draw_image(ann_hoi, palette)
+    image = self.draw_bbox(ann_hoi, palette)
     path_bbox = os.path.join(self.dir_vis, f'hoi/bbox_{id_hoi}.png')
     image.save(path_bbox)
 
@@ -116,8 +117,12 @@ class AnnVisualizer:
       image.paste(image_graph, (image_bbox.width, 0))
 
     image.save(os.path.join(self.dir_vis, f'hoi/{id_hoi}.png'))
+
+    # cleanup
     os.remove(path_bbox)
     os.remove(path_graph)
+    image_bbox.close()
+    image_graph.close()
 
   def show_sact(self, id_sact, vstack=True):
     if os.path.isfile(os.path.join(self.dir_vis, f'sact/{id_sact}.gif')):
@@ -128,12 +133,12 @@ class AnnVisualizer:
     ann_sact = self.moma.get_anns_sact(ids_sact=[id_sact])[0]
     ids_hoi = self.moma.get_ids_hoi(ids_sact=[id_sact])
     anns_hoi = self.moma.get_anns_hoi(ids_hoi=ids_hoi)
-    palette = self.get_palette(ann_sact.ids_actor+ann_sact.ids_object)
+    palette = self.get_palette(ann_sact.ids_actor+ann_sact.ids_object, alpha=200)
 
     """ bbox """
     for i, id_hoi in enumerate(ids_hoi):
       ann_hoi = self.moma.get_anns_hoi(ids_hoi=[id_hoi])[0]
-      image = self.draw_image(ann_hoi, palette)
+      image = self.draw_bbox(ann_hoi, palette)
       image.save(os.path.join(self.dir_vis, f'sact/{id_sact}/bbox_{str(i).zfill(2)}.png'))
 
     """ graph """
@@ -260,7 +265,11 @@ class AnnVisualizer:
         image.paste(image_timeline, (0, image_bbox.height))
         images.append(image)
 
-    image = images[0]
-    image.save(os.path.join(self.dir_vis, f'sact/{id_sact}.gif'), format='GIF', append_images=images[1:], save_all=True,
-               duration=250, loop=0)
+    images[0].save(os.path.join(self.dir_vis, f'sact/{id_sact}.gif'), format='GIF', append_images=images[1:],
+                   save_all=True, duration=250, loop=0)
+
+    # cleanup
     shutil.rmtree(os.path.join(self.dir_vis, 'sact', id_sact))
+    [image_bbox.close() for image_bbox in images_bbox]
+    [image_graph.close() for image_graph in images_graph]
+    [image_timeline.close() for image_timeline in images_timeline]
