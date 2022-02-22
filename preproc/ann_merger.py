@@ -51,25 +51,33 @@ class AnnMerger:
         ids_hoi = sorted(id_hoi_to_timestamp.keys(), key=int)
         assert len(ids_hoi) == len(ann_sact_phase2)
         for id_hoi, ann_hoi in zip(ids_hoi, ann_sact_phase2):
+          id_entity_remove = []
+
           anns_actor = ann_hoi['task_result']['annotations'][0]['slotsChildren']
           anns_actor = [Entity(ann_actor, cn2en) for ann_actor in anns_actor]
           actor = []
           for ann_actor in anns_actor:
-            actor.append({
-              'id': ann_actor.id,
-              'class_name': ann_actor.cname,
-              'bbox': [ann_actor.bbox.x, ann_actor.bbox.y, ann_actor.bbox.width, ann_actor.bbox.height]
-            })
+            if ann_actor.cname == 'REMOVE':
+              id_entity_remove.append(ann_actor.id)
+            else:
+              actor.append({
+                'id': ann_actor.id,
+                'class_name': ann_actor.cname,
+                'bbox': [ann_actor.bbox.x, ann_actor.bbox.y, ann_actor.bbox.width, ann_actor.bbox.height]
+              })
           
           anns_object = ann_hoi['task_result']['annotations'][1]['slotsChildren']
           anns_object = [Entity(ann_object, cn2en) for ann_object in anns_object]
           object = []
           for ann_object in anns_object:
-            object.append({
-              'id': ann_object.id,
-              'class_name': ann_object.cname,
-              'bbox': [ann_object.bbox.x, ann_object.bbox.y, ann_object.bbox.width, ann_object.bbox.height]
-            })
+            if ann_object.cname == 'REMOVE':
+              id_entity_remove.append(ann_object.id)
+            else:
+              object.append({
+                'id': ann_object.id,
+                'class_name': ann_object.cname,
+                'bbox': [ann_object.bbox.x, ann_object.bbox.y, ann_object.bbox.width, ann_object.bbox.height]
+              })
 
           anns_binary = ann_hoi['task_result']['annotations'][2]['slotsChildren']
           anns_binary = [Description(ann_binary, cn2en) for ann_binary in anns_binary]
@@ -77,18 +85,20 @@ class AnnMerger:
           for ann_binary in anns_binary:
             if ann_binary.cname in [x[0] for x in self.ann_phase2.taxonomy_rel]:
               for id_src, id_trg, cname in ann_binary.breakdown():
-                rel.append({
-                  'class_name': cname,
-                  'source_id': id_src,
-                  'target_id': id_trg
-                })
+                if id_src not in id_entity_remove and id_trg not in id_entity_remove:
+                  rel.append({
+                    'class_name': cname,
+                    'source_id': id_src,
+                    'target_id': id_trg
+                  })
             elif ann_binary.cname in [x[0] for x in self.ann_phase2.taxonomy_ta]:
               for id_src, id_trg, cname in ann_binary.breakdown():
-                ta.append({
-                  'class_name': cname,
-                  'source_id': id_src,
-                  'target_id': id_trg
-                })
+                if id_src not in id_entity_remove and id_trg not in id_entity_remove:
+                  ta.append({
+                    'class_name': cname,
+                    'source_id': id_src,
+                    'target_id': id_trg
+                  })
             else:
               assert False, ann_binary.cname
 
@@ -98,16 +108,18 @@ class AnnMerger:
           for ann_unary in anns_unary:
             if ann_unary.cname in [x[0] for x in self.ann_phase2.taxonomy_att]:
               for id_src, cname in ann_unary.breakdown():
-                att.append({
-                  'class_name': cname,
-                  'source_id': id_src
-                })
+                if id_src not in id_entity_remove:
+                  att.append({
+                    'class_name': cname,
+                    'source_id': id_src
+                  })
             elif ann_unary.cname in [x[0] for x in self.ann_phase2.taxonomy_ia]:
               for id_src, cname in ann_unary.breakdown():
-                ia.append({
-                  'class_name': cname,
-                  'source_id': id_src
-                })
+                if id_src not in id_entity_remove:
+                  ia.append({
+                    'class_name': cname,
+                    'source_id': id_src
+                  })
             else:
               assert False, ann_unary.cname
 
