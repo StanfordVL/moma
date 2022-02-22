@@ -12,7 +12,14 @@ pip install .
 #### Requirements:
 - Python 3.9+
 - ffmpeg
+
+
+#### Requirements: visualization
+- [distinctipy](https://github.com/alan-turing-institute/distinctipy): a lightweight package for generating visually distinct colors
 - Graphviz: ```sudo apt-get install graphviz graphviz-dev```
+- PyGraphviz: a Python interface to the Graphviz graph layout and visualization package
+- seaborn: a data visualization library based on matplotlib
+- Torchvision
 
 ## Hierarchy
 | Level | Concept                                              | Representation                                                 |
