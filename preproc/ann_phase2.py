@@ -215,7 +215,7 @@ class AnnPhase2:
 
         # check cname
         taxonomy = self.taxonomy_actor if kind == 'actor' else self.taxonomy_object
-        assert ann_entity.cname in taxonomy, f'[{kind}] unseen cname {ann_entity.cname}'
+        assert ann_entity.cname in taxonomy+['REMOVE'], f'[{kind}] unseen cname {ann_entity.cname}'
 
         # check id
         assert (kind == 'actor' and is_actor(ann_entity.id)) or kind == 'object' and is_object(ann_entity.id), \

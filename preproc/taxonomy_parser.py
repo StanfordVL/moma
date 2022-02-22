@@ -110,7 +110,7 @@ class TaxonomyParser:
         value = []
         cn2en[rows[i][1]] = rows[i][0]
 
-      if rows[i][2] != '[delete]':
+      if rows[i][2] != 'REMOVE':
         if len(rows[i]) == 4:
           value.append(rows[i][2])
         else:  # description
@@ -119,7 +119,7 @@ class TaxonomyParser:
       cn2en[rows[i][3]] = rows[i][2]
 
       # end of superclass or activity
-      if key != '[delete]' and (i == len(rows)-1 or rows[i+1][0] != ''):
+      if key != 'REMOVE' and (i == len(rows)-1 or rows[i+1][0] != ''):
         taxonomy[key] = sorted(set(value))
 
     return taxonomy, cn2en
