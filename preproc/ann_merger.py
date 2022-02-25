@@ -80,48 +80,44 @@ class AnnMerger:
               })
 
           anns_binary = ann_hoi['task_result']['annotations'][2]['slotsChildren']
-          anns_binary = [Description(ann_binary, cn2en) for ann_binary in anns_binary]
+          anns_binary = [Predicate(ann_binary, cn2en) for ann_binary in anns_binary]
           rel, ta = [], []
           for ann_binary in anns_binary:
-            if ann_binary.cname in [x[0] for x in self.ann_phase2.taxonomy_rel]:
-              for id_src, id_trg, cname in ann_binary.breakdown():
-                if id_src not in id_entity_remove and id_trg not in id_entity_remove:
+            for id_src, id_trg, cname in ann_binary.breakdown():
+              if not (id_src in id_entity_remove or id_trg in id_entity_remove or cname == 'REMOVE'):
+                if ann_binary.cname in [x[0] for x in self.ann_phase2.taxonomy_rel]:
                   rel.append({
                     'class_name': cname,
                     'source_id': id_src,
                     'target_id': id_trg
                   })
-            elif ann_binary.cname in [x[0] for x in self.ann_phase2.taxonomy_ta]:
-              for id_src, id_trg, cname in ann_binary.breakdown():
-                if id_src not in id_entity_remove and id_trg not in id_entity_remove:
+                elif ann_binary.cname in [x[0] for x in self.ann_phase2.taxonomy_ta]:
                   ta.append({
                     'class_name': cname,
                     'source_id': id_src,
                     'target_id': id_trg
                   })
-            else:
-              assert False, ann_binary.cname
+                else:
+                  assert False, ann_binary.cname
 
           anns_unary = ann_hoi['task_result']['annotations'][3]['slotsChildren']
-          anns_unary = [Description(ann_unary, cn2en) for ann_unary in anns_unary]
+          anns_unary = [Predicate(ann_unary, cn2en) for ann_unary in anns_unary]
           att, ia = [], []
           for ann_unary in anns_unary:
-            if ann_unary.cname in [x[0] for x in self.ann_phase2.taxonomy_att]:
-              for id_src, cname in ann_unary.breakdown():
-                if id_src not in id_entity_remove:
+            for id_src, cname in ann_unary.breakdown():
+              if not (id_src in id_entity_remove or cname == 'REMOVE'):
+                if ann_unary.cname in [x[0] for x in self.ann_phase2.taxonomy_att]:
                   att.append({
                     'class_name': cname,
                     'source_id': id_src
                   })
-            elif ann_unary.cname in [x[0] for x in self.ann_phase2.taxonomy_ia]:
-              for id_src, cname in ann_unary.breakdown():
-                if id_src not in id_entity_remove:
+                elif ann_unary.cname in [x[0] for x in self.ann_phase2.taxonomy_ia]:
                   ia.append({
                     'class_name': cname,
                     'source_id': id_src
                   })
-            else:
-              assert False, ann_unary.cname
+                else:
+                  assert False, ann_unary.cname
 
           record = ann_hoi['task']['task_params']['record']
           hoi.append({

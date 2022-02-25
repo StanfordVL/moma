@@ -78,11 +78,11 @@ class AnnVisualizer:
       G.add_node(actor.id, label=actor.id, xlabel=actor.cname, fontcolor='steelblue', color='steelblue', shape='circle')
     for object in ann_hoi.objects:
       G.add_node(object.id, label=object.id, xlabel=object.cname, fontcolor='salmon3', color='salmon3', shape='circle')
-    for description in ann_hoi.tas+ann_hoi.rels:
-      G.add_edge((description.id_src, description.id_trg), label=description.cname,
+    for predicate in ann_hoi.tas+ann_hoi.rels:
+      G.add_edge((predicate.id_src, predicate.id_trg), label=predicate.cname,
                  color='slategray', fontcolor='slategray', fontsize='10', len=2)
-    for description in ann_hoi.ias+ann_hoi.atts:
-      G.add_edge((description.id_src, description.id_src), label=description.cname,
+    for predicate in ann_hoi.ias+ann_hoi.atts:
+      G.add_edge((predicate.id_src, predicate.id_src), label=predicate.cname,
                  color='slategray', fontcolor='slategray', fontsize='10', len=2)
 
     G.layout('neato')
@@ -151,10 +151,10 @@ class AnnVisualizer:
     info_edges = []
     for ann_hoi in anns_hoi:
       edge_to_labels = defaultdict(list)
-      for description in ann_hoi.tas+ann_hoi.rels:
-        edge_to_labels[(description.id_src, description.id_trg)].append(description.cname)
-      for description in ann_hoi.ias+ann_hoi.atts:
-        edge_to_labels[(description.id_src, description.id_src)].append(description.cname)
+      for predicate in ann_hoi.tas+ann_hoi.rels:
+        edge_to_labels[(predicate.id_src, predicate.id_trg)].append(predicate.cname)
+      for predicate in ann_hoi.ias+ann_hoi.atts:
+        edge_to_labels[(predicate.id_src, predicate.id_src)].append(predicate.cname)
       for edge, labels in edge_to_labels.items():
         info_edges.append((*edge, '\n'.join(labels)))
     info_edges = list(set(info_edges))
@@ -192,10 +192,10 @@ class AnnVisualizer:
 
       # draw edges
       edge_to_labels = defaultdict(list)
-      for description in ann_hoi.tas+ann_hoi.rels:
-        edge_to_labels[(description.id_src, description.id_trg)].append(description.cname)
-      for description in ann_hoi.ias+ann_hoi.atts:
-        edge_to_labels[(description.id_src, description.id_src)].append(description.cname)
+      for predicate in ann_hoi.tas+ann_hoi.rels:
+        edge_to_labels[(predicate.id_src, predicate.id_trg)].append(predicate.cname)
+      for predicate in ann_hoi.ias+ann_hoi.atts:
+        edge_to_labels[(predicate.id_src, predicate.id_src)].append(predicate.cname)
       edge_to_label = {edge:'\n'.join(labels) for edge, labels in edge_to_labels.items()}
 
       data_edge = []

@@ -9,8 +9,8 @@ class TaxonomyParser:
     cn2en = {
       '人物类型': 'actor',
       '物体类型': 'object',
-      '关系词': 'binary description',
-      '元动作、互动': 'unary description'
+      '关系词': 'binary predicate',
+      '元动作、互动': 'unary predicate'
     }
 
     # taxonomy of actors
@@ -25,25 +25,29 @@ class TaxonomyParser:
       rows = [row[:4] for row in reader][1:]
       taxonomy_object, cn2en_object = self.__get_taxonomy(rows)
 
-    # taxonomy of attributes and intransitive actions
+    # taxonomy of attributes
     with open(os.path.join(dir_moma, 'anns/taxonomy/attribute.csv')) as f:
       reader = csv.reader(f, delimiter=',')
-      rows = [row[:5] for row in reader]
-      rows_att = [row for row in rows[1:5]]
-      rows_ia = [row for row in rows[6:17]]
+      rows = [row[:5] for row in reader][1:]
+      taxonomy_att, cn2en_att = self.__get_taxonomy(rows)
 
-      taxonomy_att, cn2en_att = self.__get_taxonomy(rows_att)
-      taxonomy_ia, cn2en_ia = self.__get_taxonomy(rows_ia)
-
-    # taxonomy of relationships and transitive actions
+    # taxonomy of relationships
     with open(os.path.join(dir_moma, 'anns/taxonomy/relationship.csv')) as f:
       reader = csv.reader(f, delimiter=',')
-      rows = [row[:6] for row in reader]
-      rows_rel = [row for row in rows[1:23]]
-      rows_ta = [row for row in rows[24:63]]
+      rows = [row[:6] for row in reader][1:]
+      taxonomy_rel, cn2en_rel = self.__get_taxonomy(rows)
 
-      taxonomy_rel, cn2en_rel = self.__get_taxonomy(rows_rel)
-      taxonomy_ta, cn2en_ta = self.__get_taxonomy(rows_ta)
+    # taxonomy of intransitive actions
+    with open(os.path.join(dir_moma, 'anns/taxonomy/intransitive_action.csv')) as f:
+      reader = csv.reader(f, delimiter=',')
+      rows = [row[:5] for row in reader][1:]
+      taxonomy_ia, cn2en_ia = self.__get_taxonomy(rows)
+
+    # taxonomy of transitive actions
+    with open(os.path.join(dir_moma, 'anns/taxonomy/transitive_action.csv')) as f:
+      reader = csv.reader(f, delimiter=',')
+      rows = [row[:6] for row in reader][1:]
+      taxonomy_ta, cn2en_ta = self.__get_taxonomy(rows)
 
     # taxonomy of activities and sub-activities
     with open(os.path.join(dir_moma, 'anns/taxonomy/act_sact.csv')) as f:
@@ -113,13 +117,13 @@ class TaxonomyParser:
       if rows[i][2] != 'REMOVE':
         if len(rows[i]) == 4:
           value.append(rows[i][2])
-        else:  # description
+        else:  # predicate
           assert len(rows[i]) == 5 or len(rows[i]) == 6
           value.append(tuple([rows[i][2]]+rows[i][4:]))
       cn2en[rows[i][3]] = rows[i][2]
 
       # end of superclass or activity
-      if key != 'REMOVE' and (i == len(rows)-1 or rows[i+1][0] != ''):
+      if i == len(rows)-1 or rows[i+1][0] != '':
         taxonomy[key] = sorted(set(value))
 
     return taxonomy, cn2en

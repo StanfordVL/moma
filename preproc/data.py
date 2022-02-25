@@ -62,18 +62,18 @@ class Entity:
     self.bbox = bbox
 
 
-class Description:
-  def __init__(self, description_raw, cn2en):
+class Predicate:
+  def __init__(self, predicate_raw, cn2en):
     """ kind """
-    kind = cn2en[description_raw['slot']['label']]
+    kind = cn2en[predicate_raw['slot']['label']]
 
     """ cname """
-    cname = description_raw['children'][0]['input']['value']
+    cname = predicate_raw['children'][0]['input']['value']
     cname = fix_cname(cname)
-    assert cname in cn2en, '[Description] unseen cname {}'.format(cname)
+    assert cname in cn2en, '[Predicate] unseen cname {}'.format(cname)
 
     """ ids_associated """
-    ids_associated = description_raw['children'][1]['input']['value']
+    ids_associated = predicate_raw['children'][1]['input']['value']
     ids_associated = fix_id(ids_associated)
 
     self.kind = kind
@@ -81,11 +81,11 @@ class Description:
     self.ids_associated = ids_associated
 
   def breakdown(self):
-    if self.kind == 'binary description':
+    if self.kind == 'binary predicate':
       ids_src = self.ids_associated[1:-1].split('),(')[0].split(',')
       ids_trg = self.ids_associated[1:-1].split('),(')[1].split(',')
       return list(itertools.product(ids_src, ids_trg, [self.cname]))
-    elif self.kind == 'unary description':
+    elif self.kind == 'unary predicate':
       ids_src = self.ids_associated.split(',')
       return list(itertools.product(ids_src, [self.cname]))
     else:

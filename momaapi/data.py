@@ -89,10 +89,10 @@ class HOI:
     self.time = ann['time']
     self.actors = [Entity(x, 'actors', taxonomy_actor) for x in ann['actors']]
     self.objects = [Entity(x, 'objects', taxonomy_object) for x in ann['objects']]
-    self.ias = [Description(x, 'intransitive_actions', taxonomy_ia) for x in ann['intransitive_actions']]
-    self.tas = [Description(x, 'transitive_actions', taxonomy_ta) for x in ann['transitive_actions']]
-    self.atts = [Description(x, 'attributes', taxonomy_att) for x in ann['attributes']]
-    self.rels = [Description(x, 'relationships', taxonomy_rel) for x in ann['relationships']]
+    self.ias = [Predicate(x, 'intransitive_actions', taxonomy_ia) for x in ann['intransitive_actions']]
+    self.tas = [Predicate(x, 'transitive_actions', taxonomy_ta) for x in ann['transitive_actions']]
+    self.atts = [Predicate(x, 'attributes', taxonomy_att) for x in ann['attributes']]
+    self.rels = [Predicate(x, 'relationships', taxonomy_rel) for x in ann['relationships']]
 
   @property
   def ids_actor(self):
@@ -147,7 +147,7 @@ class Entity:
     return f'{name}(id={self.id}, cname={self.cname})'
 
 
-class Description:
+class Predicate:
   def __init__(self, ann, kind, taxonomy):
     is_binary = 'target_id' in ann
     self.kind = kind

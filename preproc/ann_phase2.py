@@ -245,43 +245,42 @@ class AnnPhase2:
       errors.append(f'人物/物体词描述;{ids};;同一帧中的人物/物体描述存在重复:{ids_dup}')
       pass
 
-    """ binary description & unary description """
-    for i, kind in enumerate(['binary description', 'unary description']):
+    """ binary predicate & unary predicate """
+    for i, kind in enumerate(['binary predicate', 'unary predicate']):
       assert self.cn2en[ann_hoi_raw['task_result']['annotations'][i+2]['label']] == kind
-      anns_description_raw = ann_hoi_raw['task_result']['annotations'][i+2]['slotsChildren']
-      anns_description = [Description(ann_description_raw, self.cn2en)
-                          for ann_description_raw in anns_description_raw]
+      anns_predicate_raw = ann_hoi_raw['task_result']['annotations'][i+2]['slotsChildren']
+      anns_predicate = [Predicate(ann_predicate_raw, self.cn2en) for ann_predicate_raw in anns_predicate_raw]
 
-      for ann_description in anns_description:
+      for ann_predicate in anns_predicate:
         # check kind
-        assert ann_description.kind == kind, f'[{kind}] wrong kind {ann_description.kind}'
+        assert ann_predicate.kind == kind, f'[{kind}] wrong kind {ann_predicate.kind}'
 
         # check cname
-        taxonomy = self.taxonomy_binary if kind == 'binary description' else self.taxonomy_unary
-        assert ann_description.cname in [x[0] for x in taxonomy], f'[{kind}] unseen cname {ann_description.cname}'
+        taxonomy = self.taxonomy_binary if kind == 'binary predicate' else self.taxonomy_unary
+        assert ann_predicate.cname in [x[0] for x in taxonomy], f'[{kind}] unseen cname {ann_predicate.cname}'
 
         # check ids_associated
-        if kind == 'binary description':
-          assert ann_description.ids_associated[0] == '(' and ann_description.ids_associated[-1] == ')' and \
-              len(ann_description.ids_associated[1:-1].split('),(')) == 2, \
-              f'[{kind}] wrong ids_associated format {ann_description.ids_associated}'
+        if kind == 'binary predicate':
+          assert ann_predicate.ids_associated[0] == '(' and ann_predicate.ids_associated[-1] == ')' and \
+              len(ann_predicate.ids_associated[1:-1].split('),(')) == 2, \
+              f'[{kind}] wrong ids_associated format {ann_predicate.ids_associated}'
 
-          ids_src = ann_description.ids_associated[1:-1].split('),(')[0].split(',')
-          ids_trg = ann_description.ids_associated[1:-1].split('),(')[1].split(',')
+          ids_src = ann_predicate.ids_associated[1:-1].split('),(')[0].split(',')
+          ids_trg = ann_predicate.ids_associated[1:-1].split('),(')[1].split(',')
           assert are_entities(ids_src+ids_trg)
 
           if not set(ids_src+ids_trg).issubset(ids):
             # errors.append(f'[{kind}] unseen ids_associated {set(ids_src+ids_trg)} in {ids}')
             # fixme: Chinese
             ids_unseen = list(set(ids_src+ids_trg)-set(ids))
-            errors.append(f'关系词;{self.en2cn[ann_description.cname]};{ann_description.ids_associated};'
+            errors.append(f'关系词;{self.en2cn[ann_predicate.cname]};{ann_predicate.ids_associated};'
                           f'关系词中出现的人物/物体{ids_unseen}没有在此帧被标注')
             continue
 
           cnames_binary = [x[0] for x in self.taxonomy_binary]
-          assert ann_description.cname in cnames_binary
+          assert ann_predicate.cname in cnames_binary
 
-          index = cnames_binary.index(ann_description.cname)
+          index = cnames_binary.index(ann_predicate.cname)
           kind_src, kind_trg = self.taxonomy_binary[index][1:]
           assert ((kind_src == 'actor' and are_actors(ids_src)) or
                   (kind_src == 'object' and are_objects(ids_src)) or
@@ -289,27 +288,27 @@ class AnnPhase2:
                  ((kind_trg == 'actor' and are_actors(ids_trg)) or
                   (kind_trg == 'object' and are_objects(ids_trg)) or
                   (kind_trg == 'actor/object' and are_entities(ids_trg))), \
-              f'[{kind}] wrong ids_associated {ann_description.ids_associated} for kinds {kind_src} -> {kind_trg}'
+                 f'[{kind}] wrong ids_associated {ann_predicate.ids_associated} for kinds {kind_src} -> {kind_trg}'
 
-        elif kind == 'unary description':
-          ids_src = ann_description.ids_associated.split(',')
-          assert are_actors(ids_src), f'[{kind}] wrong ids_associated format {ann_description.ids_associated}'
+        elif kind == 'unary predicate':
+          ids_src = ann_predicate.ids_associated.split(',')
+          assert are_actors(ids_src), f'[{kind}] wrong ids_associated format {ann_predicate.ids_associated}'
 
           if not set(ids_src).issubset(ids):
             # errors.append(f'[{kind}] unseen ids_associated {set(ids_src)} in {ids}')
             # fixme: Chinese
             ids_unseen = list(set(ids_src)-set(ids))
-            errors.append(f'元动作;{self.en2cn[ann_description.cname]};{ann_description.ids_associated};'
+            errors.append(f'元动作;{self.en2cn[ann_predicate.cname]};{ann_predicate.ids_associated};'
                           f'元动作中出现的人物/物体{ids_unseen}没有在此帧被标注')
             pass
 
           cnames_unary = [x[0] for x in self.taxonomy_unary]
-          index = cnames_unary.index(ann_description.cname)
+          index = cnames_unary.index(ann_predicate.cname)
           kind_src = self.taxonomy_unary[index][1]
           assert (kind_src == 'actor' and are_actors(ids_src)) or \
                  (kind_src == 'object' and are_objects(ids_src)) or \
                  (kind_src == 'actor/object' and are_entities(ids_src)), \
-              f'[{kind}] wrong ids_associated {ann_description.ids_associated} for kinds {kind_src}'
+                 f'[{kind}] wrong ids_associated {ann_predicate.ids_associated} for kinds {kind_src}'
 
     return errors
 
