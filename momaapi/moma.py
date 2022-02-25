@@ -1,5 +1,6 @@
 import itertools
 import json
+import numpy as np
 import os
 import random
 
@@ -46,9 +47,10 @@ class MOMA:
     self.metadata, self.id_act_to_ann_act, self.id_sact_to_ann_sact, self.id_hoi_to_ann_hoi, \
         self.id_sact_to_id_act, self.id_hoi_to_id_sact = self.__read_anns()
 
-    if generate_split:
-      self.__generate_splits()
-    self.ids_act_train, self.ids_act_val = self.__read_splits()
+    self.ids_act_train, self.ids_act_val = self.__read_splits(generate_split)
+    self.statistics, self.distributions = self.__get_summary()
+    self.statistics_train, self.distributions_train = self.__get_summary('train')
+    self.statistics_val, self.distributions_val = self.__get_summary('val')
 
   def get_taxonomy(self, concept):
     assert concept in self.taxonomy
@@ -321,7 +323,10 @@ class MOMA:
 
     return metadata, id_act_to_ann_act, id_sact_to_ann_sact, id_hoi_to_ann_hoi, id_sact_to_id_act, id_hoi_to_id_sact
 
-  def __read_splits(self):
+  def __read_splits(self, generate_split=False):
+    if generate_split:
+      self.__generate_splits()
+
     path_split = os.path.join(self.dir_moma, 'anns/split.json')
 
     if not os.path.isfile(path_split):
@@ -352,3 +357,135 @@ class MOMA:
     path_split = os.path.join(self.dir_moma, 'anns/split.json')
     with open(path_split, 'w') as f:
       json.dump({'train': ids_act_train, 'val': ids_act_val}, f, indent=4, sort_keys=True)
+
+  def __get_summary(self, split=None):
+    if split is None:
+      metadata = self.metadata.values()
+      anns_act = self.id_act_to_ann_act.values()
+      anns_sact = self.id_sact_to_ann_sact.values()
+      anns_hoi = self.id_hoi_to_ann_hoi.values()
+    elif split == 'train' or split == 'val':
+      ids_act = self.ids_act_train if split == 'train' else self.ids_act_val
+      metadata = self.get_metadata(ids_act=ids_act)
+      anns_act = self.get_anns_act(ids_act=ids_act)
+      ids_sact = self.get_ids_sact(ids_act=ids_act)
+      anns_sact = self.get_anns_sact(ids_sact=ids_sact)
+      ids_hoi = self.get_ids_hoi(ids_act=ids_act)
+      anns_hoi = self.get_anns_hoi(ids_hoi=ids_hoi)
+    else:
+      assert False
+  
+    num_acts = len(anns_act)
+    num_classes_act = len(self.taxonomy['act'])
+    num_sacts = len(anns_sact)
+    num_classes_sact = len(self.taxonomy['sact'])
+    num_hois = len(anns_hoi)
+  
+    num_actors_image = sum([len(ann_hoi.actors) for ann_hoi in anns_hoi])
+    num_actors_video = sum([len(ann_sact.ids_actor) for ann_sact in anns_sact])
+    num_classes_actor = len(self.taxonomy['actor'])
+    num_objects_image = sum([len(ann_hoi.objects) for ann_hoi in anns_hoi])
+    num_objects_video = sum([len(ann_sact.ids_object) for ann_sact in anns_sact])
+    num_classes_object = len(self.taxonomy['object'])
+  
+    num_ias = sum([len(ann_hoi.ias) for ann_hoi in anns_hoi])
+    num_classes_ia = len(self.taxonomy['ia'])
+    num_tas = sum([len(ann_hoi.tas) for ann_hoi in anns_hoi])
+    num_classes_ta = len(self.taxonomy['ta'])
+    num_atts = sum([len(ann_hoi.atts) for ann_hoi in anns_hoi])
+    num_classes_att = len(self.taxonomy['att'])
+    num_rels = sum([len(ann_hoi.rels) for ann_hoi in anns_hoi])
+    num_classes_rel = len(self.taxonomy['rel'])
+  
+    duration_total_raw = sum(metadatum.duration for metadatum in metadata)
+  
+    duration_total_act = sum(ann_act.end-ann_act.start for ann_act in anns_act)
+    duration_avg_act = duration_total_act/len(anns_act)
+    duration_min_act = min(ann_act.end-ann_act.start for ann_act in anns_act)
+    duration_max_act = max(ann_act.end-ann_act.start for ann_act in anns_act)
+  
+    duration_total_sact = sum(ann_sact.end-ann_sact.start for ann_sact in anns_sact)
+    duration_avg_sact = duration_total_sact/len(anns_act)
+    duration_min_sact = min(ann_sact.end-ann_sact.start for ann_sact in anns_sact)
+    duration_max_sact = max(ann_sact.end-ann_sact.start for ann_sact in anns_sact)
+  
+    bincount_act = np.bincount([ann_act.cid for ann_act in anns_act], minlength=num_classes_act).tolist()
+    bincount_sact = np.bincount([ann_sact.cid for ann_sact in anns_sact], minlength=num_classes_sact).tolist()
+    bincount_actor, bincount_object, bincount_ia, bincount_ta, bincount_att, bincount_rel = [], [], [], [], [], []
+    for ann_hoi in anns_hoi:
+      bincount_actor += [actor.cid for actor in ann_hoi.actors]
+      bincount_object += [object.cid for object in ann_hoi.objects]
+      bincount_ia += [ia.cid for ia in ann_hoi.ias]
+      bincount_ta += [ta.cid for ta in ann_hoi.tas]
+      bincount_att += [att.cid for att in ann_hoi.atts]
+      bincount_rel += [rel.cid for rel in ann_hoi.rels]
+    bincount_actor = np.bincount(bincount_actor, minlength=num_classes_actor).tolist()
+    bincount_object = np.bincount(bincount_object, minlength=num_classes_object).tolist()
+    bincount_ia = np.bincount(bincount_ia, minlength=num_classes_ia).tolist()
+    bincount_ta = np.bincount(bincount_ta, minlength=num_classes_ta).tolist()
+    bincount_att = np.bincount(bincount_att, minlength=num_classes_att).tolist()
+    bincount_rel = np.bincount(bincount_rel, minlength=num_classes_rel).tolist()
+  
+    statistics = {
+      'raw': {
+        'duration_total': duration_total_raw
+      },
+      'act': {
+        'num_instances': num_acts,
+        'num_classes': num_classes_act,
+        'duration_avg': duration_avg_act,
+        'duration_min': duration_min_act,
+        'duration_max': duration_max_act,
+        'duration_total': duration_total_act
+      },
+      'sact': {
+        'num_instances': num_sacts,
+        'num_classes': num_classes_sact,
+        'duration_avg': duration_avg_sact,
+        'duration_min': duration_min_sact,
+        'duration_max': duration_max_sact,
+        'duration_total': duration_total_sact
+      },
+      'hoi': {
+        'num_instances': num_hois,
+      },
+      'actor': {
+        'num_instances_image': num_actors_image,
+        'num_instances_video': num_actors_video,
+        'num_classes': num_classes_actor
+      },
+      'object': {
+        'num_instances_image': num_objects_image,
+        'num_instances_video': num_objects_video,
+        'num_classes': num_classes_object
+      },
+      'ia': {
+        'num_instances': num_ias,
+        'num_classes': num_classes_ia
+      },
+      'ta': {
+        'num_instances': num_tas,
+        'num_classes': num_classes_ta
+      },
+      'att': {
+        'num_instances': num_atts,
+        'num_classes': num_classes_att
+      },
+      'rel': {
+        'num_instances': num_rels,
+        'num_classes': num_classes_rel
+      },
+    }
+  
+    distributions = {
+      'act': bincount_act,
+      'sact': bincount_sact,
+      'actor': bincount_actor,
+      'object': bincount_object,
+      'ia': bincount_ia,
+      'ta': bincount_ta,
+      'att': bincount_att,
+      'rel': bincount_rel,
+    }
+  
+    return statistics, distributions
