@@ -46,5 +46,6 @@ class StatVisualizer:
                   color=None if with_split else 'seagreen', palette='dark' if with_split else None)
       ax.set(xlabel='class', ylabel='count')
       ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha='right')
+      ax.set_ylim(bottom=1)
       plt.tight_layout()
       plt.savefig(os.path.join(self.dir_vis, 'stats', fname))
