@@ -39,22 +39,22 @@ class BBox:
     return f'({self.x}, {self.y}, {self.width}, {self.height})'
 
 
-class Entity:
-  def __init__(self, entity_raw, cn2en):
+class Ent:
+  def __init__(self, ent_raw, cn2en):
     """ kind """
-    kind = cn2en[entity_raw['slot']['label']]
+    kind = cn2en[ent_raw['slot']['label']]
 
     """ cname """
-    cname = entity_raw['children'][0]['input']['value']
+    cname = ent_raw['children'][0]['input']['value']
     cname = fix_cname(cname)
-    assert cname in cn2en, '[Entity] unseen cname {}'.format(cname)
+    assert cname in cn2en, '[Ent] unseen cname {}'.format(cname)
 
     """ id """
-    id = entity_raw['children'][1]['input']['value']
+    id = ent_raw['children'][1]['input']['value']
     id = fix_id(id)
 
     """ bbox """
-    bbox = BBox(entity_raw['slot']['plane'])
+    bbox = BBox(ent_raw['slot']['plane'])
 
     self.kind = kind
     self.cname = cn2en[cname]

@@ -46,12 +46,12 @@ class AnnVisualizer:
     path_font = font_manager.findfont(font)
     font = ImageFont.truetype(path_font, int(max(image.size)*0.02))
 
-    for entity in ann_hoi.actors+ann_hoi.objects:
-      y1, x1, y2, x2 = entity.bbox.y1, entity.bbox.x1, entity.bbox.y2, entity.bbox.x2
-      width_text, height_text = font.getsize(entity.cname)
-      draw.rectangle(((x1, y1), (x2, y2)), width=width_line, outline=palette[entity.id][0])
-      draw.rectangle(((x1, y1), (x1+width_text+2*width_line, y1+height_text+2*width_line)), fill=palette[entity.id][0])
-      draw.text((x1+width_line, y1+width_line), entity.cname, fill=palette[entity.id][1], font=font)
+    for ent in ann_hoi.actors+ann_hoi.objects:
+      y1, x1, y2, x2 = ent.bbox.y1, ent.bbox.x1, ent.bbox.y2, ent.bbox.x2
+      width_text, height_text = font.getsize(ent.cname)
+      draw.rectangle(((x1, y1), (x2, y2)), width=width_line, outline=palette[ent.id][0])
+      draw.rectangle(((x1, y1), (x1+width_text+2*width_line, y1+height_text+2*width_line)), fill=palette[ent.id][0])
+      draw.text((x1+width_line, y1+width_line), ent.cname, fill=palette[ent.id][1], font=font)
 
     image.paste(Image.alpha_composite(image, overlay))
 
@@ -144,9 +144,9 @@ class AnnVisualizer:
     """ graph """
     # get node & edge positions
     info_nodes = []
-    for id_entity in ann_sact.ids_actor+ann_sact.ids_object:
-      cname_entity = ann_sact.get_cname_entity(id_entity)
-      info_nodes.append((id_entity, cname_entity))
+    for id_ent in ann_sact.ids_actor+ann_sact.ids_object:
+      cname_ent = ann_sact.get_cname_ent(id_ent)
+      info_nodes.append((id_ent, cname_ent))
 
     info_edges = []
     for ann_hoi in anns_hoi:

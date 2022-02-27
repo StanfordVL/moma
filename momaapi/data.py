@@ -67,17 +67,17 @@ class SAct:
     self.end = ann['end_time']
     self.ids_hoi = [x['id'] for x in ann['higher_order_interactions']]
 
-    # unique entity instances in this sub-activity
+    # unique ent instances in this sub-activity
     info_actor = set([(y['id'], y['class_name']) for x in ann['higher_order_interactions'] for y in x['actors']])
     info_object = set([(y['id'], y['class_name']) for x in ann['higher_order_interactions'] for y in x['objects']])
     id_actor_to_cname_actor = dict(info_actor)
     id_object_to_cname_object = dict(info_object)
     self.ids_actor = sorted(id_actor_to_cname_actor.keys())
     self.ids_object = sorted(id_object_to_cname_object.keys(), key=int)
-    self.__id_entity_to_cname_entity = id_actor_to_cname_actor|id_object_to_cname_object
+    self.__id_ent_to_cname_ent = id_actor_to_cname_actor|id_object_to_cname_object
 
-  def get_cname_entity(self, id_entity):
-    return self.__id_entity_to_cname_entity[id_entity]
+  def get_cname_ent(self, id_ent):
+    return self.__id_ent_to_cname_ent[id_ent]
 
   def __repr__(self):
     return f'SAct(id={self.id}, cname={self.cname}, time=[{self.start}, end={self.end}), num_hois={len(self.ids_hoi)})'
@@ -87,8 +87,8 @@ class HOI:
   def __init__(self, ann, taxonomy_actor, taxonomy_object, taxonomy_ia, taxonomy_ta, taxonomy_att, taxonomy_rel):
     self.id = ann['id']
     self.time = ann['time']
-    self.actors = [Entity(x, 'actors', taxonomy_actor) for x in ann['actors']]
-    self.objects = [Entity(x, 'objects', taxonomy_object) for x in ann['objects']]
+    self.actors = [Ent(x, 'actors', taxonomy_actor) for x in ann['actors']]
+    self.objects = [Ent(x, 'objects', taxonomy_object) for x in ann['objects']]
     self.ias = [Predicate(x, 'intransitive_actions', taxonomy_ia) for x in ann['intransitive_actions']]
     self.tas = [Predicate(x, 'transitive_actions', taxonomy_ta) for x in ann['transitive_actions']]
     self.atts = [Predicate(x, 'attributes', taxonomy_att) for x in ann['attributes']]
@@ -134,9 +134,9 @@ class BBox:
     return f'BBox(x={self.x}, y={self.y}, w={self.width}, h={self.height})'
 
 
-class Entity:
+class Ent:
   def __init__(self, ann, kind, taxonomy):
-    self.id = ann['id']
+    self.id = ann['id']  # local instance ID
     self.kind = kind
     self.cname = ann['class_name']
     self.cid = taxonomy.index(self.cname)

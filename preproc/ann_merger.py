@@ -51,14 +51,14 @@ class AnnMerger:
         ids_hoi = sorted(id_hoi_to_timestamp.keys(), key=int)
         assert len(ids_hoi) == len(ann_sact_phase2)
         for id_hoi, ann_hoi in zip(ids_hoi, ann_sact_phase2):
-          id_entity_remove = []
+          id_ent_remove = []
 
           anns_actor = ann_hoi['task_result']['annotations'][0]['slotsChildren']
-          anns_actor = [Entity(ann_actor, cn2en) for ann_actor in anns_actor]
+          anns_actor = [Ent(ann_actor, cn2en) for ann_actor in anns_actor]
           actor = []
           for ann_actor in anns_actor:
             if ann_actor.cname == 'REMOVE':
-              id_entity_remove.append(ann_actor.id)
+              id_ent_remove.append(ann_actor.id)
             else:
               actor.append({
                 'id': ann_actor.id,
@@ -67,11 +67,11 @@ class AnnMerger:
               })
           
           anns_object = ann_hoi['task_result']['annotations'][1]['slotsChildren']
-          anns_object = [Entity(ann_object, cn2en) for ann_object in anns_object]
+          anns_object = [Ent(ann_object, cn2en) for ann_object in anns_object]
           object = []
           for ann_object in anns_object:
             if ann_object.cname == 'REMOVE':
-              id_entity_remove.append(ann_object.id)
+              id_ent_remove.append(ann_object.id)
             else:
               object.append({
                 'id': ann_object.id,
@@ -84,7 +84,7 @@ class AnnMerger:
           rel, ta = [], []
           for ann_binary in anns_binary:
             for id_src, id_trg, cname in ann_binary.breakdown():
-              if not (id_src in id_entity_remove or id_trg in id_entity_remove or cname == 'REMOVE'):
+              if not (id_src in id_ent_remove or id_trg in id_ent_remove or cname == 'REMOVE'):
                 if ann_binary.cname in [x[0] for x in self.ann_phase2.taxonomy_rel]:
                   rel.append({
                     'class_name': cname,
@@ -105,7 +105,7 @@ class AnnMerger:
           att, ia = [], []
           for ann_unary in anns_unary:
             for id_src, cname in ann_unary.breakdown():
-              if not (id_src in id_entity_remove or cname == 'REMOVE'):
+              if not (id_src in id_ent_remove or cname == 'REMOVE'):
                 if ann_unary.cname in [x[0] for x in self.ann_phase2.taxonomy_att]:
                   att.append({
                     'class_name': cname,
