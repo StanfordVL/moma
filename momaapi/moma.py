@@ -576,7 +576,7 @@ class MOMA:
     duration_max_act = max(ann_act.end-ann_act.start for ann_act in anns_act)
   
     duration_total_sact = sum(ann_sact.end-ann_sact.start for ann_sact in anns_sact)
-    duration_avg_sact = duration_total_sact/len(anns_act)
+    duration_avg_sact = duration_total_sact/len(anns_sact)
     duration_min_sact = min(ann_sact.end-ann_sact.start for ann_sact in anns_sact)
     duration_max_sact = max(ann_sact.end-ann_sact.start for ann_sact in anns_sact)
   

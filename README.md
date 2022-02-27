@@ -1,5 +1,5 @@
 # MOMA
-MOMA is a dataset dedicated to multi-object, multi-actor activity recognition. 
+MOMA is a dataset dedicated to multi-object, multi-actor activity parsing. 
 ![activity](figures/moma.gif)
 
 ## Installation
@@ -22,21 +22,21 @@ pip install .
 - Torchvision
 
 ## Hierarchy
-| Level | Concept                                              | Representation                                                 |
-|-------|------------------------------------------------------|----------------------------------------------------------------|
-| 1     | Activity                                             | Semantic label                                                 |
-| 2     | Sub-activity                                         | Temporal boundary and semantic label                           |
-| 3     | Higher-order interaction                             | Spatial-temporal scene graph                                   |
-|       | ┗━&emsp;Entity                                       | Graph node w/ bounding box, instance label, and semantic label |
-|       | &emsp;&emsp;┣━&emsp;Actor                            | -                                                              |
-|       | &emsp;&emsp;┗━&emsp;Object                           | -                                                              |
-|       | ┗━&emsp;Description                                  | Graph edge w/ semantic label                                   |
-|       | &emsp;&emsp;┗━&emsp;State                            | -                                                              |
-|       | &emsp;&emsp;&emsp;&emsp;┣━&emsp;Attribute            | Loop                                                           |
-|       | &emsp;&emsp;&emsp;&emsp;┗━&emsp;Relationship         | Directed edge                                                  |
-|       | &emsp;&emsp;┗━&emsp;Atomic action                    | -                                                              |
-|       | &emsp;&emsp;&emsp;&emsp;┣━&emsp;Intransitive action  | Loop                                                           |
-|       | &emsp;&emsp;&emsp;&emsp;┗━&emsp;Transitive action    | Directed edge                                                  |
+| Level | Concept                                              | Representation                                                             |
+|-------|------------------------------------------------------|----------------------------------------------------------------------------|
+| 1     | Activity                                             | Semantic label                                                             |
+| 2     | Sub-activity                                         | Temporal boundary and semantic label                                       |
+| 3     | Higher-order interaction                             | Spatial-temporal scene graph                                               |
+|       | ┗━&emsp;Entity                                       | Graph node w/ bounding box, instance label, and semantic label             |
+|       | &emsp;&emsp;┣━&emsp;Actor                            | -                                                                          |
+|       | &emsp;&emsp;┗━&emsp;Object                           | -                                                                          |
+|       | ┗━&emsp;Predicate                                    | -                                                                          |
+|       | &emsp;&emsp;┗━&emsp;Binary predicate                 | Directed edge as a triplet (source node, semantic label, and target node)  |
+|       | &emsp;&emsp;&emsp;&emsp;┣━&emsp;Relationship         | -                                                                          |
+|       | &emsp;&emsp;&emsp;&emsp;┗━&emsp;Transitive action    | -                                                                          |
+|       | &emsp;&emsp;┗━&emsp;Unary predicate                  | Semantic label of a graph node as a pair (source node, semantic label)     |
+|       | &emsp;&emsp;&emsp;&emsp;┣━&emsp;Attribute            | -                                                                          |
+|       | &emsp;&emsp;&emsp;&emsp;┗━&emsp;Intransitive action  | -                                                                          |
 
 ## Dataset directory layout
 ```
@@ -44,6 +44,7 @@ $ tree dir_moma
 .
 ├── anns
 │    ├── anns.json
+│    ├── anns_toy.json
 │    ├── split.json
 │    └── taxonomy
 └── videos
@@ -62,15 +63,15 @@ $ tree dir_moma
 ## Annotations
 In this version, we include:
 - 148 hours of videos
-- 1,412 **activity** instances from [20 activity classes](https://raw.githubusercontent.com/d1ngn1gefe1/momatools/main/figures/activity.png?token=GHSAT0AAAAAABQHYNY25PBBGA4AIBT52DAAYPUG5AQ).
-- 15,842 **sub-activity** instances from [92 sub-activity classes](https://raw.githubusercontent.com/d1ngn1gefe1/momatools/main/figures/sub_activity.png?token=GHSAT0AAAAAABQHYNY2CEGAIBK5KOSZLLPWYPUG6EQ).
+- 1,412 **activity** instances from [20 activity classes](https://raw.githubusercontent.com/d1ngn1gefe1/momatools/main/figures/activity.png?token=GHSAT0AAAAAABQHYNY25PBBGA4AIBT52DAAYPUG5AQ) ranging from 3s to 600s and with an average duration of 241s.
+- 15,842 **sub-activity** instances from [91 sub-activity classes](https://raw.githubusercontent.com/d1ngn1gefe1/momatools/main/figures/sub_activity.png?token=GHSAT0AAAAAABQHYNY2CEGAIBK5KOSZLLPWYPUG6EQ) ranging from 3s to 31s and with an average duration of 9s.
 - 161,265 **higher-order interaction** instances.
-- 636,194 image **actor** instances and 104,564 video **actor** instances from [27 classes](https://raw.githubusercontent.com/d1ngn1gefe1/momatools/main/figures/actor.png?token=GHSAT0AAAAAABQHYNY3YODQHWF6ZEIKXHVGYPUG6WQ).
-- 349,244 image **object** instances and 47,523 video **object** instances from [269 classes](https://raw.githubusercontent.com/d1ngn1gefe1/momatools/main/figures/object.png?token=GHSAT0AAAAAABQHYNY2S2BOY2KXIIHDBSPIYPUG6YA).
-- 997,572 **relationship** instances from [22 classes](https://raw.githubusercontent.com/d1ngn1gefe1/momatools/main/figures/relationship.png?token=GHSAT0AAAAAABQHYNY3YR77CAOVI5JQBNZCYPUG7MA).
+- 636,194 image **actor** instances and 104,564 video **actor** instances from [26 classes](https://raw.githubusercontent.com/d1ngn1gefe1/momatools/main/figures/actor.png?token=GHSAT0AAAAAABQHYNY3YODQHWF6ZEIKXHVGYPUG6WQ).
+- 349,034 image **object** instances and 47,494 video **object** instances from [126 classes](https://raw.githubusercontent.com/d1ngn1gefe1/momatools/main/figures/object.png?token=GHSAT0AAAAAABQHYNY2S2BOY2KXIIHDBSPIYPUG6YA).
+- 984,941 **relationship** instances from [19 classes](https://raw.githubusercontent.com/d1ngn1gefe1/momatools/main/figures/relationship.png?token=GHSAT0AAAAAABQHYNY3YR77CAOVI5JQBNZCYPUG7MA).
 - 261,249 **attribute** instances from [4 classes](https://raw.githubusercontent.com/d1ngn1gefe1/momatools/main/figures/attribute.png?token=GHSAT0AAAAAABQHYNY2KBQJLZ5BPJH7EKIKYPUG7PQ).
-- 39,747 **transitive action** instances from [39 classes](https://raw.githubusercontent.com/d1ngn1gefe1/momatools/main/figures/transitive_action.png?token=GHSAT0AAAAAABQHYNY3VTPGYBKO52XBPEUUYPUG7WQ).
-- 442,981 **intransitive action** instances from [11 classes](https://raw.githubusercontent.com/d1ngn1gefe1/momatools/main/figures/intransitive_action.png?token=GHSAT0AAAAAABQHYNY2O4HYZFXUG3S7M5UMYPUG7XA).
+- 52,072 **transitive action** instances from [33 classes](https://raw.githubusercontent.com/d1ngn1gefe1/momatools/main/figures/transitive_action.png?token=GHSAT0AAAAAABQHYNY3VTPGYBKO52XBPEUUYPUG7WQ).
+- 442,981 **intransitive action** instances from [9 classes](https://raw.githubusercontent.com/d1ngn1gefe1/momatools/main/figures/intransitive_action.png?token=GHSAT0AAAAAABQHYNY2O4HYZFXUG3S7M5UMYPUG7XA).
 
 Below, we show the syntax of the MOMA annotations.
 ```json5
