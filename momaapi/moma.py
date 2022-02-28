@@ -125,7 +125,7 @@ class MOMA:
 
     # ids_hoi
     if ids_hoi is not None:
-      ids_act = itertools.chain(*[self.id_sact_to_id_act[self.id_hoi_to_id_sact[id_hoi]] for id_hoi in ids_hoi])
+      ids_act = [self.id_sact_to_id_act[self.id_hoi_to_id_sact[id_hoi]] for id_hoi in ids_hoi]
       ids_act_intersection.append(ids_act)
 
     ids_act_intersection = sorted(set.intersection(*map(set, ids_act_intersection)))
