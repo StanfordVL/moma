@@ -26,6 +26,8 @@ def proc_videos(dir_moma):
   video_processor.trim_act()
   video_processor.trim_sact()
   video_processor.trim_hoi()
+  video_processor.resize_act()
+  video_processor.resize_sact()
 
 
 def main():

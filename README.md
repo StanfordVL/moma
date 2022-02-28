@@ -11,7 +11,7 @@ pip install .
 
 #### Requirements:
 - Python 3.9+
-- ffmpeg
+- ffmpeg (only for preprocessing): ```pip install ffmpeg-python```
 
 
 #### Requirements: visualization
@@ -22,7 +22,7 @@ pip install .
 - Torchvision
 
 ## Hierarchy
-| Level | Concept                                              | Representation                                                             |
+| Level | <div style="width:180px">Concept</div>                                              | Representation                                                             |
 |-------|------------------------------------------------------|----------------------------------------------------------------------------|
 | 1     | Activity                                             | Semantic label                                                             |
 | 2     | Sub-activity                                         | Temporal boundary and semantic label                                       |
