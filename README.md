@@ -22,7 +22,7 @@ pip install .
 - Torchvision
 
 ## Hierarchy
-| Level | <div style="width:180px">Concept</div>                                              | Representation                                                             |
+| Level | <div style="width:200px">Concept</div>                                              | Representation                                                             |
 |-------|------------------------------------------------------|----------------------------------------------------------------------------|
 | 1     | Activity                                             | Semantic label                                                             |
 | 2     | Sub-activity                                         | Temporal boundary and semantic label                                       |
