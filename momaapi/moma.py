@@ -403,7 +403,10 @@ class MOMA:
     else:
       paths = [os.path.join(self.dir_moma, f'videos/higher_order_interaction/{id_hoi}.jpg') for id_hoi in ids_hoi]
 
-    assert all(os.path.exists(path) for path in paths), f'{paths[:5] if len(paths) >= 5 else paths}'
+    if not all(os.path.exists(path) for path in paths):
+      paths_missing = [path for path in paths if not os.path.exists(path)]
+      paths_missing = paths_missing[:5] if len(paths_missing) > 5 else paths_missing
+      assert False, f'{len(paths_missing)} paths do not exist: {paths_missing}'
     return paths
 
   def __read_taxonomy(self):
