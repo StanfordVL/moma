@@ -45,7 +45,6 @@ def register_dataset(moma, merge_actor=False, threshold_train=None, threshold_va
     cname_to_cid_actor = {cname:0 for cname in moma.get_cnames('actor')}
     cname_to_cid_object = {cname: i+1 for i, cname in enumerate(moma.get_cnames('object'))}
     cname_to_cid = {**cname_to_cid_actor, **cname_to_cid_object}
-    lvis_indices = [moma.lvis_mapper[cname] for cname in ['actor']+moma.get_cnames('object')]
 
   else:
     if threshold_train is None and threshold_val is None:
@@ -104,5 +103,3 @@ def register_dataset(moma, merge_actor=False, threshold_train=None, threshold_va
   MetadataCatalog.get('moma_val').thing_classes = cnames
   MetadataCatalog.get('moma_train').thing_colors = colors
   MetadataCatalog.get('moma_val').thing_colors = colors
-
-  return lvis_indices if merge_actor else None
