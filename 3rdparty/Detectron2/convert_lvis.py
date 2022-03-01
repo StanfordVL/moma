@@ -12,12 +12,30 @@ def main():
     weights = pickle.load(f)
 
   moma = momaapi.MOMA(dir_moma, toy=True)
-  lvis_indices = np.array([moma.lvis_mapper[cname] for cname in ['actor']+moma.get_cnames('object')])
+  indices_cls = np.array([moma.lvis_mapper[cname]-1 for cname in ['actor']+moma.get_cnames('object')])
+  indices_bbox = np.stack([4*indices_cls, 4*indices_cls+1, 4*indices_cls+2, 4*indices_cls+3]).flatten(order='F')
 
-  w = weights['model']['roi_heads.box_predictor.cls_score.weight'][lvis_indices]
-  b = weights['model']['roi_heads.box_predictor.cls_score.bias'][lvis_indices]
-  weights['model']['roi_heads.box_predictor.cls_score.weight'] = w
-  weights['model']['roi_heads.box_predictor.cls_score.bias'] = b
+  print('Old dimensions:')
+  print(weights['model']['roi_heads.box_predictor.cls_score.weight'].shape)
+  print(weights['model']['roi_heads.box_predictor.cls_score.bias'].shape)
+  print(weights['model']['roi_heads.box_predictor.bbox_pred.weight'].shape)
+  print(weights['model']['roi_heads.box_predictor.bbox_pred.bias'].shape)
+
+  w1 = weights['model']['roi_heads.box_predictor.cls_score.weight'][indices_cls]
+  b1 = weights['model']['roi_heads.box_predictor.cls_score.bias'][indices_cls]
+  w2 = weights['model']['roi_heads.box_predictor.bbox_pred.weight'][indices_bbox]
+  b2 = weights['model']['roi_heads.box_predictor.bbox_pred.bias'][indices_bbox]
+
+  weights['model']['roi_heads.box_predictor.cls_score.weight'] = w1
+  weights['model']['roi_heads.box_predictor.cls_score.bias'] = b1
+  weights['model']['roi_heads.box_predictor.bbox_pred.weight'] = w2
+  weights['model']['roi_heads.box_predictor.bbox_pred.bias'] = b2
+
+  print('\nNew dimensions:')
+  print(weights['model']['roi_heads.box_predictor.cls_score.weight'].shape)
+  print(weights['model']['roi_heads.box_predictor.cls_score.bias'].shape)
+  print(weights['model']['roi_heads.box_predictor.bbox_pred.weight'].shape)
+  print(weights['model']['roi_heads.box_predictor.bbox_pred.bias'].shape)
 
   with open(os.path.join(dir_moma, 'weights/model_final_571f7c_moma.pkl'), 'wb') as f:
     pickle.dump(weights, f)
