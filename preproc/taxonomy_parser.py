@@ -55,7 +55,14 @@ class TaxonomyParser:
       rows = [row for row in reader][1:]
       taxonomy_act_sact, cn2en_act_sact = self.__get_taxonomy(rows)
 
+    # translator
     cn2en = cn2en|cn2en_actor|cn2en_object|cn2en_ia|cn2en_ta|cn2en_att|cn2en_rel|cn2en_act_sact
+
+    # LVIS mapper
+    with open(os.path.join(dir_moma, 'anns/taxonomy/lvis.csv')) as f:
+      reader = csv.reader(f, delimiter=',')
+      rows = [row[:2] for row in reader][1:]
+      lvis_mapper = {row[0]:int(row[1]) for row in rows}
 
     self.dir_moma = dir_moma
     self.taxonomy_actor = taxonomy_actor
@@ -66,6 +73,7 @@ class TaxonomyParser:
     self.taxonomy_rel = taxonomy_rel
     self.taxonomy_act_sact = taxonomy_act_sact
     self.cn2en = cn2en
+    self.lvis_mapper = lvis_mapper
 
   def dump(self, verbose=True):
     if verbose:
@@ -102,6 +110,8 @@ class TaxonomyParser:
       json.dump(self.taxonomy_act_sact, f, indent=4, sort_keys=True)
     with open(os.path.join(self.dir_moma, 'anns/taxonomy/cn2en.json'), 'w') as f:
       json.dump(self.cn2en, f, ensure_ascii=False, indent=4, sort_keys=True)
+    with open(os.path.join(self.dir_moma, 'anns/taxonomy/lvis.json'), 'w') as f:
+      json.dump(self.lvis_mapper, f, ensure_ascii=False, indent=4, sort_keys=True)
 
   @staticmethod
   def __get_taxonomy(rows):

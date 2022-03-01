@@ -51,7 +51,7 @@ class MOMA:
     self.dir_moma = dir_moma
     self.toy = toy
     self.small = small
-    self.taxonomy = self.__read_taxonomy()
+    self.taxonomy, self.lvis_mapper = self.__read_taxonomy()
     
     self.metadata, \
     self.id_act_to_ann_act, self.id_sact_to_ann_sact, self.id_hoi_to_ann_hoi, \
@@ -443,6 +443,8 @@ class MOMA:
       taxonomy_sact = sorted(itertools.chain(*taxonomy_act_sact.values()))
       taxonomy_sact_to_act = bidict({cname_sact: cname_act for cname_act, cnames_sact in taxonomy_act_sact.items()
                                                            for cname_sact in cnames_sact})
+    with open(os.path.join(self.dir_moma, 'anns/taxonomy/lvis.json'), 'r') as f:
+      lvis_mapper = json.load(f)
 
     taxonomy = {
       'actor': taxonomy_actor,
@@ -456,7 +458,7 @@ class MOMA:
       'sact_to_act': taxonomy_sact_to_act
     }
 
-    return taxonomy
+    return taxonomy, lvis_mapper
 
   def __read_anns(self):
     fname = 'anns_toy.json' if self.toy else 'anns.json'
