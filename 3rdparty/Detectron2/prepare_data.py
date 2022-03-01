@@ -39,12 +39,19 @@ def register_dataset(dir_moma, threshold_train=None, threshold_val=None):
   moma = MOMA(dir_moma)
 
   if threshold_train is None and threshold_val is None:
+    """
+     - Train on all classes
+     - Validate on all classes
+    """
     ids_hoi_train = moma.get_ids_hoi(split='train')
     ids_hoi_val = moma.get_ids_hoi(split='val')
     cnames = moma.get_cnames('actor')+moma.get_cnames('object')
 
   elif threshold_train is None:
-    # train on all cnames, and val on a subset of cnames
+    """
+     - Train on all classes
+     - Validate on the classes with more than threshold_val instances in the validation set
+    """
     cnames_actor = moma.get_cnames(concept='actor', num_instances=threshold_val, split='val')
     cnames_object = moma.get_cnames(concept='object', num_instances=threshold_val, split='val')
     ids_hoi_train = moma.get_ids_hoi(split='train')
@@ -52,7 +59,9 @@ def register_dataset(dir_moma, threshold_train=None, threshold_val=None):
     cnames = moma.get_cnames('actor')+moma.get_cnames('object')
 
   elif threshold_val is None:
-    # train and val on a subset of cnames
+    """ Train and validate on the classes with:
+     - more than threshold_train instances in the training set
+    """
     cnames_actor = moma.get_cnames(concept='actor', num_instances=threshold_train, split='train')
     cnames_object = moma.get_cnames(concept='object', num_instances=threshold_train, split='train')
     ids_hoi_train = moma.get_ids_hoi(split='train', cnames_actor=cnames_actor, cnames_object=cnames_object)
@@ -60,7 +69,10 @@ def register_dataset(dir_moma, threshold_train=None, threshold_val=None):
     cnames = cnames_actor+cnames_object
 
   else:
-    # train and val on a subset of cnames that both splits satisfy
+    """ Train and val on the classes with:
+     - more than threshold_train instances in the training set AND
+     - more than threshold_val instances in the validation set
+    """
     cnames_actor_train = moma.get_cnames(concept='actor', num_instances=threshold_train, split='train')
     cnames_object_train = moma.get_cnames(concept='object', num_instances=threshold_train, split='train')
     cnames_actor_val = moma.get_cnames(concept='actor', num_instances=threshold_val, split='val')
