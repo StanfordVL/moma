@@ -1,7 +1,6 @@
 from detectron2.data import DatasetCatalog, MetadataCatalog
 from detectron2.structures import BoxMode
 from distinctipy import distinctipy
-from momaapi import MOMA
 
 
 def create_dataset(moma, ids_hoi, cname_to_cid):
@@ -35,9 +34,7 @@ def create_dataset(moma, ids_hoi, cname_to_cid):
   return records
 
 
-def register_dataset(dir_moma, threshold_train=None, threshold_val=None):
-  moma = MOMA(dir_moma)
-
+def register_dataset(moma, threshold_train=None, threshold_val=None):
   if threshold_train is None and threshold_val is None:
     """
      - Train on all classes
@@ -84,13 +81,11 @@ def register_dataset(dir_moma, threshold_train=None, threshold_val=None):
     ids_hoi_val = moma.get_ids_hoi(split='val', cnames_actor=cnames_actor, cnames_object=cnames_object)
 
   cname_to_cid = {cname: i for i, cname in enumerate(cnames)}
-  records_train = create_dataset(moma, ids_hoi_train, cname_to_cid)
-  records_val = create_dataset(moma, ids_hoi_val, cname_to_cid)
   colors = distinctipy.get_colors(len(cnames))
   colors = [tuple(int(x*255) for x in color) for color in colors]
 
-  DatasetCatalog.register('moma_train', records_train)
-  DatasetCatalog.register('moma_val', records_val)
+  DatasetCatalog.register('moma_train', lambda: create_dataset(moma, ids_hoi_train, cname_to_cid))
+  DatasetCatalog.register('moma_val', lambda: create_dataset(moma, ids_hoi_val, cname_to_cid))
   MetadataCatalog.get('moma_train').thing_classes = cnames
   MetadataCatalog.get('moma_val').thing_classes = cnames
   MetadataCatalog.get('moma_train').thing_colors = colors

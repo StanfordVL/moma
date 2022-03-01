@@ -40,15 +40,17 @@ Acronyms:
 
 
 class MOMA:
-  def __init__(self, dir_moma: str, toy: bool=False, generate_split: bool=False):
+  def __init__(self, dir_moma: str, toy: bool=False, small=False, generate_split: bool=False):
     """
      - toy: load a toy annotation file to quickly illustrate the behavior of the various algorithms
+     - small: load low-resolution videos
      - generate_split: generate a new train/val split
     """
     assert os.path.isdir(os.path.join(dir_moma, 'anns')) and os.path.isdir(os.path.join(dir_moma, 'videos'))
 
     self.dir_moma = dir_moma
     self.toy = toy
+    self.small = small
     self.taxonomy = self.__read_taxonomy()
     
     self.metadata, \
@@ -397,9 +399,11 @@ class MOMA:
     assert sum([x is not None for x in [ids_act, ids_sact, ids_hoi]]) == 1
 
     if ids_act is not None:
-      paths = [os.path.join(self.dir_moma, f'videos/activity/{id_act}.mp4') for id_act in ids_act]
+      paths = [os.path.join(self.dir_moma, f"videos/activity{'_sm' if self.small else ''}/{id_act}.mp4")
+               for id_act in ids_act]
     elif ids_sact is not None:
-      paths = [os.path.join(self.dir_moma, f'videos/sub_activity/{id_sact}.mp4') for id_sact in ids_sact]
+      paths = [os.path.join(self.dir_moma, f"videos/sub_activity{'_sm' if self.small else ''}/{id_sact}.mp4")
+               for id_sact in ids_sact]
     else:
       paths = [os.path.join(self.dir_moma, f'videos/higher_order_interaction/{id_hoi}.jpg') for id_hoi in ids_hoi]
 
