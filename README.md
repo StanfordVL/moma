@@ -174,18 +174,18 @@ Below, we show the syntax of the MOMA annotations.
 
 ## Class distributions
 ### Activity
-![activity](figures/activity.png)
+![activity](figures/act.png)
 ### Sub-activity
-![sub_activity](figures/sub_activity.png)
+![sub_activity](figures/sact.png)
 ### Actor
 ![actor](figures/actor.png)
 ### Object
 ![object](figures/object.png)
 ### Relationship
-![relationship](figures/relationship.png)
+![relationship](figures/rel.png)
 ### Attribute
-![attribute](figures/attribute.png)
+![attribute](figures/att.png)
 ### Transitive action
-![transitive_action](figures/transitive_action.png)
+![transitive_action](figures/ta.png)
 ### Intransitive action
-![intransitive_action](figures/intransitive_action.png)
+![intransitive_action](figures/ia.png)
