@@ -68,10 +68,15 @@ class MOMA:
     assert concept in self.taxonomy
     return self.taxonomy[concept]
 
-  def get_cnames(self, concept, num_instances=None, split=None):
+  def get_cnames(self, concept, threshold=None, split=None):
+    """
+     - concept: currently only support 'actor' and 'object'
+     - threshold: exclude classes with fewer than this number of instances
+     - split: 'train' or 'val'
+    """
     assert concept in ['actor', 'object']
 
-    if num_instances is None:
+    if threshold is None:
       return self.get_taxonomy(concept)
 
     if split == 'train':
@@ -84,7 +89,7 @@ class MOMA:
 
     cnames = []
     for i, cname in enumerate(self.get_taxonomy(concept)):
-      if distribution[i] >= num_instances:
+      if distribution[i] >= threshold:
         cnames.append(cname)
     return cnames
 
