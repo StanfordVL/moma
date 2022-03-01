@@ -43,9 +43,9 @@ def register_dataset(dir_moma, threshold_train=None, threshold_val=None):
      - Train on all classes
      - Validate on all classes
     """
+    cnames = moma.get_cnames('actor')+moma.get_cnames('object')
     ids_hoi_train = moma.get_ids_hoi(split='train')
     ids_hoi_val = moma.get_ids_hoi(split='val')
-    cnames = moma.get_cnames('actor')+moma.get_cnames('object')
 
   elif threshold_train is None:
     """
@@ -54,9 +54,9 @@ def register_dataset(dir_moma, threshold_train=None, threshold_val=None):
     """
     cnames_actor = moma.get_cnames(concept='actor', num_instances=threshold_val, split='val')
     cnames_object = moma.get_cnames(concept='object', num_instances=threshold_val, split='val')
+    cnames = moma.get_cnames('actor')+moma.get_cnames('object')
     ids_hoi_train = moma.get_ids_hoi(split='train')
     ids_hoi_val = moma.get_ids_hoi(split='val', cnames_actor=cnames_actor, cnames_object=cnames_object)
-    cnames = moma.get_cnames('actor')+moma.get_cnames('object')
 
   elif threshold_val is None:
     """ Train and validate on the classes with:
@@ -64,9 +64,9 @@ def register_dataset(dir_moma, threshold_train=None, threshold_val=None):
     """
     cnames_actor = moma.get_cnames(concept='actor', num_instances=threshold_train, split='train')
     cnames_object = moma.get_cnames(concept='object', num_instances=threshold_train, split='train')
+    cnames = cnames_actor+cnames_object
     ids_hoi_train = moma.get_ids_hoi(split='train', cnames_actor=cnames_actor, cnames_object=cnames_object)
     ids_hoi_val = moma.get_ids_hoi(split='val', cnames_actor=cnames_actor, cnames_object=cnames_object)
-    cnames = cnames_actor+cnames_object
 
   else:
     """ Train and val on the classes with:
@@ -79,9 +79,9 @@ def register_dataset(dir_moma, threshold_train=None, threshold_val=None):
     cnames_object_val = moma.get_cnames(concept='object', num_instances=threshold_val, split='val')
     cnames_actor = list(set(cnames_actor_train).intersection(cnames_actor_val))
     cnames_object = list(set(cnames_object_train).intersection(cnames_object_val))
+    cnames = cnames_actor+cnames_object
     ids_hoi_train = moma.get_ids_hoi(split='train', cnames_actor=cnames_actor, cnames_object=cnames_object)
     ids_hoi_val = moma.get_ids_hoi(split='val', cnames_actor=cnames_actor, cnames_object=cnames_object)
-    cnames = cnames_actor+cnames_object
 
   cname_to_cid = {cname: i for i, cname in enumerate(cnames)}
   records_train = create_dataset(moma, ids_hoi_train, cname_to_cid)
