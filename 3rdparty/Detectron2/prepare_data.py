@@ -41,14 +41,14 @@ def create_dataset(moma, ids_hoi, kind, cname_to_cid):
   return records
 
 
-def register_datasets(moma, threshold=None, kind=None):
+def register_datasets(moma, threshold=25, kind=None):
   """
    - kind: 'actor' or 'object' or None (both)
   """
   if kind is None:
     cnames = moma.get_cnames('actor', threshold, 'either')+moma.get_cnames('object', threshold, 'either')
   else:
-    cnames = moma.get_cnames(kind)
+    cnames = moma.get_cnames(kind, threshold, 'either')
 
   # remove 'crowd'
   if 'crowd' in cnames:

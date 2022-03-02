@@ -7,12 +7,14 @@ import momaapi
 
 def main():
   dir_moma = '/home/alan/data/moma'
+  threshold = 25
 
   with open(os.path.join(dir_moma, 'weights/model_final_571f7c.pkl'), 'rb') as f:
     weights = pickle.load(f)
 
   moma = momaapi.MOMA(dir_moma, toy=True)
-  indices_cls = np.array([moma.lvis_mapper[cname]-1 for cname in moma.get_cnames('object')])
+  cnames = moma.get_cnames('object', threshold, 'either')
+  indices_cls = np.array([moma.lvis_mapper[cname]-1 for cname in cnames])
   indices_bbox = np.stack([4*indices_cls, 4*indices_cls+1, 4*indices_cls+2, 4*indices_cls+3]).flatten(order='F')
   indices_cls = np.append(indices_cls, weights['model']['roi_heads.box_predictor.cls_score.weight'].shape[0]-1)
 
