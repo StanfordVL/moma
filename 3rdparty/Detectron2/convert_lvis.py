@@ -12,7 +12,7 @@ def main():
     weights = pickle.load(f)
 
   moma = momaapi.MOMA(dir_moma, toy=True)
-  indices_cls = np.array([moma.lvis_mapper[cname]-1 for cname in ['actor']+moma.get_cnames('object')])
+  indices_cls = np.array([moma.lvis_mapper[cname]-1 for cname in moma.get_cnames('object')])
   indices_bbox = np.stack([4*indices_cls, 4*indices_cls+1, 4*indices_cls+2, 4*indices_cls+3]).flatten(order='F')
   indices_cls = np.append(indices_cls, weights['model']['roi_heads.box_predictor.cls_score.weight'].shape[0]-1)
 
