@@ -10,17 +10,14 @@ from .data import *
 The following functions are defined:
  - get_taxonomy: Get the taxonomy of a concept ('act', 'sact', etc.)
  - get_cnames: Get the class name of a concept ('act', 'sact', etc.) that satisfy certain conditions
+ - is_sact: Check whether a certain time in an activity is a sub-activity
  - get_ids_act: Get the unique activity instance IDs that satisfy certain conditions
  - get_ids_sact: Get the unique sub-activity instance IDs that satisfy certain conditions
  - get_ids_hoi: Get the unique higher-order interaction instance IDs that satisfy certain conditions
- - get_ids_actor: Get the unique actor global instance IDs that satisfy certain conditions
- - get_ids_object: Get the unique object global instance IDs that satisfy certain conditions
  - get_metadata: Given activity instance IDs, return the metadata of the associated raw videos
  - get_anns_act: Given activity instance IDs, return their annotations
  - get_anns_sact: Given sub-activity instance IDs, return their annotations
  - get_anns_hoi: Given higher-order interaction instance IDs, return their annotations
- - get_anns_actor: Given actor global instance IDs, return their annotations
- - get_anns_object: Given object global instance IDs, return their annotations
  - get_paths: Given instance IDs, return data paths
  
 Acronyms:
@@ -53,16 +50,11 @@ class MOMA:
     self.small = small
     self.taxonomy, self.lvis_mapper = self.__read_taxonomy()
     
-    self.metadata, \
-    self.id_act_to_ann_act, self.id_sact_to_ann_sact, self.id_hoi_to_ann_hoi, \
-    self.id_actor_to_ann_actor, self.id_object_to_ann_object, \
-    self.id_sact_to_id_act, self.id_hoi_to_id_sact, \
-    self.id_actor_to_id_hoi, self.id_object_to_id_hoi = self.__read_anns()
+    self.metadata, self.id_act_to_ann_act, self.id_sact_to_ann_sact, self.id_hoi_to_ann_hoi, \
+        self.id_sact_to_id_act, self.id_hoi_to_id_sact  = self.__read_anns()
 
     self.ids_act_train, self.ids_act_val = self.__read_splits(generate_split)
-    self.statistics, self.distributions = self.__get_summary()
-    self.statistics_train, self.distributions_train = self.__get_summary('train')
-    self.statistics_val, self.distributions_val = self.__get_summary('val')
+    self.statistics, self.distributions = self.__get_summaries()
 
   def get_taxonomy(self, concept):
     assert concept in self.taxonomy
@@ -79,19 +71,33 @@ class MOMA:
     if threshold is None:
       return self.get_taxonomy(concept)
 
-    if split == 'train':
-      distribution = self.distributions_train[concept]
-    elif split == 'val':
-      distribution = self.distributions_val[concept]
-    else:
-      assert split is None
-      distribution = self.distributions[concept]
+    split = 'all' if split is None else split
+    distribution = self.distributions[split][concept]
 
     cnames = []
     for i, cname in enumerate(self.get_taxonomy(concept)):
       if distribution[i] >= threshold:
         cnames.append(cname)
     return cnames
+
+  def is_sact(self, id_act, time, absolute=False):
+    """ Check whether a certain time in an activity is a sub-activity
+     - id_act: activity ID
+     - time: time in seconds
+     - absolute: relative to the full video (True) or relative to the activity video (False)
+    """
+    if not absolute:
+      ann_act = self.id_act_to_ann_act[id_act]
+      time = ann_act.start+time
+
+    is_sact = False
+    ids_sact = self.id_sact_to_id_act.inverse[id_act]
+    for id_sact in ids_sact:
+      ann_sact = self.id_sact_to_ann_sact[id_sact]
+      if ann_sact.start <= time < ann_sact.end:
+        is_sact = True
+
+    return is_sact
 
   def get_ids_act(self, split: str=None, cnames_act: list[str]=None,
                   ids_sact: list[str]=None, ids_hoi: list[str]=None) -> list[str]:
@@ -264,124 +270,6 @@ class MOMA:
     ids_hoi_intersection = sorted(set.intersection(*map(set, ids_hoi_intersection)))
     return ids_hoi_intersection
 
-  def get_ids_actor(self, split: str=None, cnames_actor: list[str]=None,
-                    ids_act: list[str]=None, ids_sact: list[str]=None, ids_hoi: list[str]=None) -> list[str]:
-    """ Get the unique actor global instance IDs that satisfy certain conditions
-    dataset split
-     - split: get actor global IDs [ids_hoi] that belong to the given dataset split [split='train' or 'val']
-    same-level
-     - cnames_actor: get sub-activity IDs [ids_sact] for given sub-activity class names [cnames_sact]
-    top-down
-     - ids_act: get actor global IDs [ids_hoi] for given activity IDs [ids_act]
-     - ids_sact: get actor global IDs [ids_hoi] for given sub-activity IDs [ids_sact]
-     - ids_hoi: get actor global IDs [ids_hoi] for given higher-order interaction IDs [ids_hoi]
-    """
-    if all(x is None for x in [split, ids_act, ids_sact, ids_hoi, cnames_actor]):
-      return sorted(self.id_actor_to_ann_actor.keys())
-
-    ids_actor_intersection = []
-    
-    # split
-    if split is not None:
-      if split == 'train':
-        ids_actor = self.get_ids_actor(ids_act=self.ids_act_train)
-      else:
-        assert split == 'val'
-        ids_actor = self.get_ids_actor(ids_act=self.ids_act_val)
-      ids_actor_intersection.append(ids_actor)
-
-    # cnames_act
-    if cnames_actor is not None:
-      ids_actor = []
-      for id_actor, ann_actor in self.id_actor_to_ann_actor.items():
-        if ann_actor.cname in cnames_actor:
-          ids_actor.append(id_actor)
-      ids_actor_intersection.append(ids_actor)
-
-    # ids_act
-    if ids_act is not None:
-      ids_actor = itertools.chain(*[self.id_actor_to_id_hoi.inverse[id_hoi]
-                                    if id_hoi in self.id_actor_to_id_hoi.inverse else []
-                                    for id_act in ids_act
-                                    for id_sact in self.id_sact_to_id_act.inverse[id_act]
-                                    for id_hoi in self.id_hoi_to_id_sact.inverse[id_sact]])
-      ids_actor_intersection.append(ids_actor)
-
-    # ids_sact
-    if ids_sact is not None:
-      ids_actor = itertools.chain(*[self.id_actor_to_id_hoi.inverse[id_hoi]
-                                    if id_hoi in self.id_actor_to_id_hoi.inverse else []
-                                    for id_sact in ids_sact
-                                    for id_hoi in self.id_hoi_to_id_sact.inverse[id_sact]])
-      ids_actor_intersection.append(ids_actor)
-
-    # ids_hoi
-    if ids_hoi is not None:
-      ids_actor = [self.id_actor_to_id_hoi.inverse[id_hoi] for id_hoi in ids_hoi]
-      ids_actor_intersection.append(ids_actor)
-      
-    ids_actor_intersection = sorted(set.intersection(*map(set, ids_actor_intersection)))
-    return ids_actor_intersection
-
-  def get_ids_object(self, split: str=None, cnames_object: list[str]=None,
-                     ids_act: list[str]=None, ids_sact: list[str]=None, ids_hoi: list[str]=None) -> list[str]:
-    """ Get the unique object global instance IDs that satisfy certain conditions
-    dataset split
-     - split: get object global IDs [ids_hoi] that belong to the given dataset split [split='train' or 'val']
-    same-level
-     - cnames_object: get sub-activity IDs [ids_sact] for given sub-activity class names [cnames_sact]
-    top-down
-     - ids_act: get object global IDs [ids_hoi] for given activity IDs [ids_act]
-     - ids_sact: get object global IDs [ids_hoi] for given sub-activity IDs [ids_sact]
-     - ids_hoi: get object global IDs [ids_hoi] for given higher-order interaction IDs [ids_hoi]
-    """
-    if all(x is None for x in [split, ids_act, ids_sact, ids_hoi, cnames_object]):
-      return sorted(self.id_object_to_ann_object.keys())
-
-    ids_object_intersection = []
-
-    # split
-    if split is not None:
-      if split == 'train':
-        ids_object = self.get_ids_object(ids_act=self.ids_act_train)
-      else:
-        assert split == 'val'
-        ids_object = self.get_ids_object(ids_act=self.ids_act_val)
-      ids_object_intersection.append(ids_object)
-
-    # cnames_act
-    if cnames_object is not None:
-      ids_object = []
-      for id_object, ann_object in self.id_object_to_ann_object.items():
-        if ann_object.cname in cnames_object:
-          ids_object.append(id_object)
-      ids_object_intersection.append(ids_object)
-
-    # ids_act
-    if ids_act is not None:
-      ids_object = itertools.chain(*[self.id_object_to_id_hoi.inverse[id_hoi]
-                                     if id_hoi in self.id_object_to_id_hoi.inverse else []
-                                     for id_act in ids_act
-                                     for id_sact in self.id_sact_to_id_act.inverse[id_act]
-                                     for id_hoi in self.id_hoi_to_id_sact.inverse[id_sact]])
-      ids_object_intersection.append(ids_object)
-
-    # ids_sact
-    if ids_sact is not None:
-      ids_object = itertools.chain(*[self.id_object_to_id_hoi.inverse[id_hoi]
-                                     if id_hoi in self.id_object_to_id_hoi.inverse else []
-                                     for id_sact in ids_sact
-                                     for id_hoi in self.id_hoi_to_id_sact.inverse[id_sact]])
-      ids_object_intersection.append(ids_object)
-
-    # ids_hoi
-    if ids_hoi is not None:
-      ids_object = [self.id_object_to_id_hoi.inverse[id_hoi] for id_hoi in ids_hoi]
-      ids_object_intersection.append(ids_object)
-      
-    ids_object_intersection = sorted(set.intersection(*map(set, ids_object_intersection)))
-    return ids_object_intersection
-
   def get_metadata(self, ids_act: list[str]) -> list[Metadatum]:
     return [self.metadata[id_act] for id_act in ids_act]
 
@@ -393,12 +281,6 @@ class MOMA:
 
   def get_anns_hoi(self, ids_hoi: list[str]) -> list[HOI]:
     return [self.id_hoi_to_ann_hoi[id_hoi] for id_hoi in ids_hoi]
-
-  def get_anns_actor(self, ids_actor: list[str]) -> list[Ent]:
-    return [self.id_actor_to_ann_actor[id_actor] for id_actor in ids_actor]
-
-  def get_anns_object(self, ids_object: list[str]) -> list[Ent]:
-    return [self.id_object_to_ann_object[id_object] for id_object in ids_object]
 
   def get_paths(self, ids_act: list[str]=None, ids_sact: list[str]=None, ids_hoi: list[str]=None) -> list[str]:
     assert sum([x is not None for x in [ids_act, ids_sact, ids_hoi]]) == 1
@@ -465,9 +347,8 @@ class MOMA:
     with open(os.path.join(self.dir_moma, f'anns/{fname}'), 'r') as f:
       anns_raw = json.load(f)
 
-    metadata, id_act_to_ann_act, id_sact_to_ann_sact, id_hoi_to_ann_hoi, \
-        id_actor_to_ann_actor, id_object_to_ann_object = {}, {}, {}, {}, {}, {}
-    id_sact_to_id_act, id_hoi_to_id_sact, id_actor_to_id_hoi, id_object_to_id_hoi = {}, {}, {}, {}
+    metadata, id_act_to_ann_act, id_sact_to_ann_sact, id_hoi_to_ann_hoi = {}, {}, {}, {}
+    id_sact_to_id_act, id_hoi_to_id_sact = {}, {}
 
     for ann_raw in anns_raw:
       ann_act_raw = ann_raw['activity']
@@ -486,27 +367,11 @@ class MOMA:
                                                      self.taxonomy['ia'], self.taxonomy['ta'],
                                                      self.taxonomy['att'], self.taxonomy['rel'])
           id_hoi_to_id_sact[ann_hoi_raw['id']] = ann_sact_raw['id']
-          anns_actor_raw = ann_hoi_raw['actors']
-          anns_object_raw = ann_hoi_raw['objects']
-
-          for ann_actor_raw in anns_actor_raw:
-            id_actor = f"{ann_hoi_raw['id']}_{ann_actor_raw['id']}"
-            id_actor_to_ann_actor[id_actor] = Ent(ann_actor_raw, 'actor', self.taxonomy['actor'])
-            id_actor_to_id_hoi[id_actor] = ann_hoi_raw['id']
-            
-          for ann_object_raw in anns_object_raw:
-            id_object = f"{ann_hoi_raw['id']}_{ann_object_raw['id']}"
-            id_object_to_ann_object[id_object] = Ent(ann_object_raw, 'object', self.taxonomy['object'])
-            id_object_to_id_hoi[id_object] = ann_hoi_raw['id']
 
     id_sact_to_id_act = bidict(id_sact_to_id_act)
     id_hoi_to_id_sact = bidict(id_hoi_to_id_sact)
-    id_actor_to_id_hoi = bidict(id_actor_to_id_hoi)
-    id_object_to_id_hoi = bidict(id_object_to_id_hoi)
 
-    return metadata, \
-           id_act_to_ann_act, id_sact_to_ann_sact, id_hoi_to_ann_hoi, id_actor_to_ann_actor, id_object_to_ann_object, \
-           id_sact_to_id_act, id_hoi_to_id_sact, id_actor_to_id_hoi, id_object_to_id_hoi
+    return metadata, id_act_to_ann_act, id_sact_to_ann_sact, id_hoi_to_ann_hoi, id_sact_to_id_act, id_hoi_to_id_sact
 
   def __read_splits(self, generate_split=False):
     if generate_split:
@@ -542,6 +407,25 @@ class MOMA:
     path_split = os.path.join(self.dir_moma, 'anns/split.json')
     with open(path_split, 'w') as f:
       json.dump({'train': ids_act_train, 'val': ids_act_val}, f, indent=4, sort_keys=True)
+
+  def __get_summaries(self):
+    statistics_all, distributions_all = self.__get_summary()
+    statistics_train, distributions_train = self.__get_summary('train')
+    statistics_val, distributions_val = self.__get_summary('val')
+    
+    statistics = {
+      'all': statistics_all,
+      'train': statistics_train,
+      'val': statistics_val
+    }
+    
+    distributions = {
+      'all': distributions_all,
+      'train': distributions_train,
+      'val': distributions_val
+    }
+
+    return statistics, distributions
 
   def __get_summary(self, split=None):
     if split is None:
