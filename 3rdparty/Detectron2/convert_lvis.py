@@ -12,7 +12,7 @@ def main():
   with open(os.path.join(dir_moma, 'weights/model_final_571f7c.pkl'), 'rb') as f:
     weights = pickle.load(f)
 
-  moma = momaapi.MOMA(dir_moma, toy=True)
+  moma = momaapi.MOMA(dir_moma)
   cnames = moma.get_cnames('object', threshold, 'either')
   indices_cls = np.array([moma.lvis_mapper[cname]-1 for cname in cnames])
   indices_bbox = np.stack([4*indices_cls, 4*indices_cls+1, 4*indices_cls+2, 4*indices_cls+3]).flatten(order='F')
