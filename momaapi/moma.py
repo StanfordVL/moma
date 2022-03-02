@@ -64,20 +64,26 @@ class MOMA:
     """
      - concept: currently only support 'actor' and 'object'
      - threshold: exclude classes with fewer than this number of instances
-     - split: 'train' or 'val'
+     - split: 'train', 'val', 'all', 'either'
     """
     assert concept in ['actor', 'object']
 
     if threshold is None:
       return self.get_taxonomy(concept)
 
-    split = 'all' if split is None else split
-    distribution = self.distributions[split][concept]
+    assert split is not None
+    if split == 'either':  # exclude if < threshold in either one split
+      distribution = np.minimum(self.distributions['train'][concept], self.distributions['val'][concept])
+    elif split == 'both':  # exclude if < threshold in all splits
+      distribution = np.maximum(self.distributions['train'][concept], self.distributions['val'][concept])
+    else:
+      distribution = self.distributions[split][concept]
 
     cnames = []
     for i, cname in enumerate(self.get_taxonomy(concept)):
       if distribution[i] >= threshold:
         cnames.append(cname)
+
     return cnames
 
   def is_sact(self, id_act, time, absolute=False):

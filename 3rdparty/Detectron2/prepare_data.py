@@ -21,13 +21,14 @@ def create_dataset(moma, ids_hoi, kind, cname_to_cid):
 
     annotations = []
     for entity in entities:
-      annotation = {
-        'bbox': [entity.bbox.x, entity.bbox.y, entity.bbox.width, entity.bbox.height],
-        'bbox_mode': BoxMode.XYWH_ABS,
-        'category_id': cname_to_cid[entity.cname],
-        'iscrowd': 1 if entity.cname == 'crowd' else 0
-      }
-      annotations.append(annotation)
+      if entity.cname in cname_to_cid:
+        annotation = {
+          'bbox': [entity.bbox.x, entity.bbox.y, entity.bbox.width, entity.bbox.height],
+          'bbox_mode': BoxMode.XYWH_ABS,
+          'category_id': cname_to_cid[entity.cname],
+          'iscrowd': 1 if entity.cname == 'crowd' else 0
+        }
+        annotations.append(annotation)
 
     record = {
       'file_name': image_path,
@@ -41,12 +42,12 @@ def create_dataset(moma, ids_hoi, kind, cname_to_cid):
   return records
 
 
-def register_datasets(moma, kind=None):
+def register_datasets(moma, threshold=None, kind=None):
   """
    - kind: 'actor' or 'object' or None (both)
   """
   if kind is None:
-    cnames = moma.get_cnames('actor')+moma.get_cnames('object')
+    cnames = moma.get_cnames('actor', threshold, 'either')+moma.get_cnames('object', threshold, 'either')
   else:
     cnames = moma.get_cnames(kind)
 
