@@ -118,7 +118,35 @@ class VideoProcessor:
       if path_exist not in paths_trg:
         os.remove(path_exist)
 
-  def trim_hoi(self, overwrite=False):
+  def trim_hoi(self, overwrite=False, duration_clip=6):
+    paths_trg = []
+    for ann in self.anns:
+      duration = ann['duration']
+      anns_sact = ann['activity']['sub_activities']
+      for ann_sact in anns_sact:
+        anns_hoi = ann_sact['higher_order_interactions']
+        for ann_hoi in anns_hoi:
+          path_src = os.path.join(self.dir_moma, 'videos/raw', ann['file_name'])
+          path_trg = os.path.join(self.dir_moma, 'videos/higher_order_interaction_clip', f"{ann_hoi['id']}.mp4")
+          assert os.path.exists(path_src)
+          if not os.path.exists(path_trg) or overwrite:
+            time = ann_hoi['time']
+            if time < duration_clip/2:
+              start, end = 0, duration_clip
+            elif time > duration-duration_clip/2:
+              start, end = duration-duration_clip, duration
+            else:
+              start, end = time-duration_clip/2, time+duration_clip/2
+            assert end-start == duration_clip
+            self.trim_video(path_src, path_trg, start, end)
+          paths_trg.append(path_trg)
+
+    paths_exist = glob.glob(os.path.join(self.dir_moma, 'videos/higher_order_interaction_clip/*.mp4'))
+    for path_exist in paths_exist:
+      if path_exist not in paths_trg:
+        os.remove(path_exist)
+
+  def sample_hoi(self, overwrite=False):
     paths_trg = []
     for ann in self.anns:
       anns_sact = ann['activity']['sub_activities']

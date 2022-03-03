@@ -105,6 +105,14 @@ class MOMA:
 
     return is_sact
 
+  def get_tracklet(self, id_hoi, fps=5, duration=6):
+    """ Given a higher-order interaction ID, return
+     - a video clip of fps*duration frames that centers at the higher-order interaction
+     - all other graphs within this window
+    """
+    pass
+
+
   def get_ids_act(self, split: str=None, cnames_act: list[str]=None,
                   ids_sact: list[str]=None, ids_hoi: list[str]=None) -> list[str]:
     """ Get the unique activity instance IDs that satisfy certain conditions
