@@ -1,5 +1,6 @@
 import json
 import os
+import random
 
 from .data import *
 from .utils import *
@@ -17,7 +18,7 @@ class AnnMerger:
       json.dump(self.anns, f, ensure_ascii=False, indent=2, sort_keys=False)
 
     with open(os.path.join(self.dir_moma, 'anns/anns_toy.json'), 'w') as f:
-      json.dump(self.anns[:10], f, ensure_ascii=False, indent=2, sort_keys=False)
+      json.dump(random.sample(self.anns, 10), f, ensure_ascii=False, indent=2, sort_keys=False)
 
   def __get_anns(self):
     for id_act in self.ann_phase1.id_act_to_ids_sact:

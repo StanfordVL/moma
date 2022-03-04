@@ -95,23 +95,23 @@ class TaxonomyParser:
       pprint(self.cn2en)
 
     with open(os.path.join(self.dir_moma, 'anns/taxonomy/actor.json'), 'w') as f:
-      json.dump(self.taxonomy_actor, f, indent=4, sort_keys=True)
+      json.dump(self.taxonomy_actor, f, indent=2, sort_keys=True)
     with open(os.path.join(self.dir_moma, 'anns/taxonomy/object.json'), 'w') as f:
-      json.dump(self.taxonomy_object, f, indent=4, sort_keys=True)
+      json.dump(self.taxonomy_object, f, indent=2, sort_keys=True)
     with open(os.path.join(self.dir_moma, 'anns/taxonomy/intransitive_action.json'), 'w') as f:
-      json.dump(self.taxonomy_ia, f, indent=4, sort_keys=True)
+      json.dump(self.taxonomy_ia, f, indent=2, sort_keys=True)
     with open(os.path.join(self.dir_moma, 'anns/taxonomy/transitive_action.json'), 'w') as f:
-      json.dump(self.taxonomy_ta, f, indent=4, sort_keys=True)
+      json.dump(self.taxonomy_ta, f, indent=2, sort_keys=True)
     with open(os.path.join(self.dir_moma, 'anns/taxonomy/attribute.json'), 'w') as f:
-      json.dump(self.taxonomy_att, f, indent=4, sort_keys=True)
+      json.dump(self.taxonomy_att, f, indent=2, sort_keys=True)
     with open(os.path.join(self.dir_moma, 'anns/taxonomy/relationship.json'), 'w') as f:
-      json.dump(self.taxonomy_rel, f, indent=4, sort_keys=True)
+      json.dump(self.taxonomy_rel, f, indent=2, sort_keys=True)
     with open(os.path.join(self.dir_moma, 'anns/taxonomy/act_sact.json'), 'w') as f:
-      json.dump(self.taxonomy_act_sact, f, indent=4, sort_keys=True)
+      json.dump(self.taxonomy_act_sact, f, indent=2, sort_keys=True)
     with open(os.path.join(self.dir_moma, 'anns/taxonomy/cn2en.json'), 'w') as f:
-      json.dump(self.cn2en, f, ensure_ascii=False, indent=4, sort_keys=True)
+      json.dump(self.cn2en, f, ensure_ascii=False, indent=2, sort_keys=True)
     with open(os.path.join(self.dir_moma, 'anns/taxonomy/lvis.json'), 'w') as f:
-      json.dump(self.lvis_mapper, f, ensure_ascii=False, indent=4, sort_keys=True)
+      json.dump(self.lvis_mapper, f, ensure_ascii=False, indent=2, sort_keys=True)
 
   @staticmethod
   def __get_taxonomy(rows):

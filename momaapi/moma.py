@@ -45,11 +45,19 @@ Definitions:
 
 
 class MOMA:
-  def __init__(self, dir_moma: str, toy: bool=False, full_res: bool=False, generate_split: bool=False):
+  def __init__(self,
+               dir_moma: str,
+               toy: bool=False,
+               full_res: bool=False,
+               generate_split: bool=False,
+               few_shot: bool=False,
+               load_val: bool=False):
     """
      - toy: load a toy annotation file to quickly illustrate the behavior of the various algorithms
      - full_res: load full-resolution videos
      - generate_split: generate a new train/val split
+     - few_shot: load few-shot splits
+     - load_val: load the validation set separately
     """
     assert os.path.isdir(os.path.join(dir_moma, 'anns')) and os.path.isdir(os.path.join(dir_moma, 'videos'))
 
@@ -59,9 +67,9 @@ class MOMA:
     self.taxonomy, self.lvis_mapper = self.__read_taxonomy()
     
     self.metadata, self.id_act_to_ann_act, self.id_sact_to_ann_sact, self.id_hoi_to_ann_hoi, \
-        self.id_sact_to_id_act, self.id_hoi_to_id_sact  = self.__read_anns()
+        self.id_sact_to_id_act, self.id_hoi_to_id_sact = self.__read_anns()
 
-    self.ids_act_train, self.ids_act_val = self.__read_splits(generate_split)
+    self.split_to_ids_act = self.__read_splits(generate_split, few_shot, load_val)
     self.statistics, self.distributions = self.__get_summaries()
 
   def get_taxonomy(self, concept):
@@ -72,13 +80,14 @@ class MOMA:
     """
      - concept: currently only support 'actor' and 'object'
      - threshold: exclude classes with fewer than this number of instances
-     - split: 'train', 'val', 'all', 'either'
+     - split: 'train', 'val', 'test', 'all', 'either'
     """
     assert concept in ['actor', 'object']
 
     if threshold is None:
       return self.get_taxonomy(concept)
 
+    # todo
     assert split is not None
     if split == 'either':  # exclude if < threshold in either one split
       distribution = np.minimum(self.distributions['train'][concept], self.distributions['val'][concept])
@@ -117,7 +126,7 @@ class MOMA:
                   ids_sact: list[str]=None, ids_hoi: list[str]=None) -> list[str]:
     """ Get the unique activity instance IDs that satisfy certain conditions
     dataset split
-     - split: get activity IDs [ids_act] that belong to the given dataset split [split='train' or 'val']
+     - split: get activity IDs [ids_act] that belong to the given dataset split
     same-level
      - cnames_act: get activity IDs [ids_act] for given activity class names [cnames_act]
     bottom-up
@@ -131,11 +140,8 @@ class MOMA:
 
     # split
     if split is not None:
-      if split == 'train':
-        ids_act_intersection.append(self.ids_act_train)
-      else:
-        assert split == 'val'
-        ids_act_intersection.append(self.ids_act_val)
+      assert split in self.split_to_ids_act
+      ids_act_intersection.append(self.split_to_ids_act[split])
 
     # cnames_act
     if cnames_act is not None:
@@ -165,7 +171,7 @@ class MOMA:
                    cnames_att: list[str]=None, cnames_rel: list[str]=None) -> list[str]:
     """ Get the unique sub-activity instance IDs that satisfy certain conditions
     dataset split
-     - split: get sub-activity IDs [ids_sact] that belong to the given dataset split [split='train' or 'val']
+     - split: get sub-activity IDs [ids_sact] that belong to the given dataset split
     same-level
      - cnames_sact: get sub-activity IDs [ids_sact] for given sub-activity class names [cnames_sact]
     top-down
@@ -187,11 +193,8 @@ class MOMA:
 
     # split
     if split is not None:
-      if split == 'train':
-        ids_sact = self.get_ids_sact(ids_act=self.ids_act_train)
-      else:
-        assert split == 'val'
-        ids_sact = self.get_ids_sact(ids_act=self.ids_act_val)
+      assert split in self.split_to_ids_act
+      ids_sact = self.get_ids_sact(ids_act=self.split_to_ids_act[split])
       ids_sact_intersection.append(ids_sact)
 
     # cnames_sact
@@ -230,7 +233,7 @@ class MOMA:
                   cnames_att: list[str]=None, cnames_rel: list[str]=None) -> list[str]:
     """ Get the unique higher-order interaction instance IDs that satisfy certain conditions
     dataset split
-     - split: get higher-order interaction IDs [ids_hoi] that belong to the given dataset split [split='train' or 'val']
+     - split: get higher-order interaction IDs [ids_hoi] that belong to the given dataset split
     top-down
      - ids_act: get higher-order interaction IDs [ids_hoi] for given activity IDs [ids_act]
      - ids_sact: get higher-order interaction IDs [ids_hoi] for given sub-activity IDs [ids_sact]
@@ -250,11 +253,8 @@ class MOMA:
 
     # split
     if split is not None:
-      if split == 'train':
-        ids_hoi = self.get_ids_hoi(ids_act=self.ids_act_train)
-      else:
-        assert split == 'val'
-        ids_hoi = self.get_ids_hoi(ids_act=self.ids_act_val)
+      assert split in self.split_to_ids_act
+      ids_hoi = self.get_ids_hoi(ids_act=self.split_to_ids_act[split])
       ids_hoi_intersection.append(ids_hoi)
 
     # ids_act
@@ -428,57 +428,66 @@ class MOMA:
 
     return metadata, id_act_to_ann_act, id_sact_to_ann_sact, id_hoi_to_ann_hoi, id_sact_to_id_act, id_hoi_to_id_sact
 
-  def __read_splits(self, generate_split=False):
+  def __read_splits(self, generate_split, few_shot, load_val):
     if generate_split:
-      self.__generate_splits()
+      self.__generate_splits(few_shot)
 
-    path_split = os.path.join(self.dir_moma, 'anns/split.json')
-
+    # load split
+    path_split = os.path.join(self.dir_moma, 'anns/split_fs.json' if few_shot else 'anns/split.json')
     if not os.path.isfile(path_split):
       print(f'Dataset split file does not exist: {path_split}')
       return None, None
-
     with open(path_split, 'r') as f:
       ids_act_splits = json.load(f)
 
-    ids_act_train, ids_act_val = ids_act_splits['train'], ids_act_splits['val']
+    ids_act_train, ids_act_val, ids_act_test = ids_act_splits['train'], ids_act_splits['val'], ids_act_splits['test']
 
     if self.toy:
-      ids_act_train = list(set(self.get_ids_act())-set(ids_act_val))
-      ids_act_val = list(set(self.get_ids_act())-set(ids_act_train))
+      ids_act_train = list(set(ids_act_train)&set(self.get_ids_act()))
+      ids_act_val = list(set(ids_act_val)&set(self.get_ids_act()))
+      ids_act_test = list(set(ids_act_test)&set(self.get_ids_act()))
     else:
-      assert set(self.get_ids_act()) == set(ids_act_train+ids_act_val)
+      assert set(self.get_ids_act()) == set(ids_act_train+ids_act_val+ids_act_test)
 
-    return ids_act_train, ids_act_val
+    if load_val:
+      return {'train': ids_act_train, 'val': ids_act_val, 'test': ids_act_test}
+    else:
+      return {'train': ids_act_train+ids_act_val, 'test': ids_act_test}
 
-  def __generate_splits(self, ratio_train=0.80):
-    ids_act = sorted(self.id_act_to_ann_act.keys())
-    ids_act = random.sample(ids_act, len(ids_act))
+  def __generate_splits(self, few_shot, ratio=0.8):
+    if few_shot:
+      with open(os.path.join(self.dir_moma, 'anns/taxonomy/few_shot.json'), 'r') as f:
+        split_to_cnames = json.load(f)
 
-    size_train = round(len(ids_act)*ratio_train)
-    ids_act_train = ids_act[:size_train]
-    ids_act_val = ids_act[size_train:]
+      path_split = os.path.join(self.dir_moma, 'anns/split_fs.json')
+      with open(path_split, 'w') as f:
+        json.dump({split: self.get_ids_act(cnames_act=split_to_cnames[split]) for split in split_to_cnames},
+                  f, indent=2, sort_keys=False)
+    else:
+      ids_act = sorted(self.id_act_to_ann_act.keys())
+      ids_act = random.sample(ids_act, len(ids_act))
 
-    path_split = os.path.join(self.dir_moma, 'anns/split.json')
-    with open(path_split, 'w') as f:
-      json.dump({'train': ids_act_train, 'val': ids_act_val}, f, indent=4, sort_keys=True)
+      size_train = round(len(ids_act)*ratio)
+      size_val = round(size_train*(1-ratio))
+      size_train = size_train-size_val
+
+      ids_act_train = ids_act[:size_train]
+      ids_act_val = ids_act[size_train:(size_train+size_val)]
+      ids_act_test = ids_act[(size_train+size_val):]
+
+      path_split = os.path.join(self.dir_moma, 'anns/split.json')
+      with open(path_split, 'w') as f:
+        json.dump({'train': ids_act_train, 'val': ids_act_val, 'test': ids_act_test}, f, indent=2, sort_keys=False)
 
   def __get_summaries(self):
     statistics_all, distributions_all = self.__get_summary()
-    statistics_train, distributions_train = self.__get_summary('train')
-    statistics_val, distributions_val = self.__get_summary('val')
-    
-    statistics = {
-      'all': statistics_all,
-      'train': statistics_train,
-      'val': statistics_val
-    }
-    
-    distributions = {
-      'all': distributions_all,
-      'train': distributions_train,
-      'val': distributions_val
-    }
+    statistics = {'all': statistics_all}
+    distributions = {'all': distributions_all}
+
+    for split in self.split_to_ids_act:
+      statistics_split, distributions_split = self.__get_summary(split)
+      statistics[split] = statistics_split
+      distributions[split] = distributions_split
 
     return statistics, distributions
 
@@ -488,16 +497,15 @@ class MOMA:
       anns_act = self.id_act_to_ann_act.values()
       anns_sact = self.id_sact_to_ann_sact.values()
       anns_hoi = self.id_hoi_to_ann_hoi.values()
-    elif split == 'train' or split == 'val':
-      ids_act = self.ids_act_train if split == 'train' else self.ids_act_val
+    else:
+      assert split in self.split_to_ids_act
+      ids_act = self.split_to_ids_act[split]
       metadata = self.get_metadata(ids_act=ids_act)
       anns_act = self.get_anns_act(ids_act=ids_act)
       ids_sact = self.get_ids_sact(ids_act=ids_act)
       anns_sact = self.get_anns_sact(ids_sact=ids_sact)
       ids_hoi = self.get_ids_hoi(ids_act=ids_act)
       anns_hoi = self.get_anns_hoi(ids_hoi=ids_hoi)
-    else:
-      assert False
   
     num_acts = len(anns_act)
     num_classes_act = len(self.taxonomy['act'])

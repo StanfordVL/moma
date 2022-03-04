@@ -272,4 +272,4 @@ class VideoProcessor:
         os.remove(path_exist)
 
     with open(os.path.join(dir_out, 'timestamps.json'), 'w') as f:
-      json.dump(timestamps, f, indent=4, sort_keys=True)
+      json.dump(timestamps, f, indent=2, sort_keys=True)
