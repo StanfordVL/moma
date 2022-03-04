@@ -16,11 +16,12 @@ The following functions are defined:
  - get_ids_act: Get the unique activity instance IDs that satisfy certain conditions
  - get_ids_sact: Get the unique sub-activity instance IDs that satisfy certain conditions
  - get_ids_hoi: Get the unique higher-order interaction instance IDs that satisfy certain conditions
- - get_metadata: Given activity instance IDs, return the metadata of the associated raw videos (one-to-one mapping)
- - get_anns_act: Given activity instance IDs, return their annotations (one-to-one mapping)
- - get_anns_sact: Given sub-activity instance IDs, return their annotations (one-to-one mapping)
- - get_anns_hoi: Given higher-order interaction instance IDs, return their annotations (one-to-one mapping)
- - get_paths: Given instance IDs, return data paths (one-to-one mapping)
+ - get_metadata: Given activity instance IDs, return the metadata of the associated raw videos
+ - get_anns_act: Given activity instance IDs, return their annotations
+ - get_anns_sact: Given sub-activity instance IDs, return their annotations
+ - get_anns_hoi: Given higher-order interaction instance IDs, return their annotations
+ - get_paths: Given instance IDs, return data paths
+ - sort: Given sub-activity or higher-order interaction instance IDs, return them in sorted order
  
 Acronyms:
  - act: activity
@@ -111,20 +112,6 @@ class MOMA:
         is_sact = True
 
     return is_sact
-
-  def get_paths_window(self, id_hoi):
-    """ Given a higher-order interaction ID, return
-     - a path to the 1s video clip centered at the higher-order interaction (<1s if exceeds the raw video boundary)
-     - paths to 5 frames centered at the higher-order interaction (<5 frames if exceeds the raw video boundary)
-    """
-    path_video = os.path.join(self.dir_moma, f'videos/interaction_video/{id_hoi}.mp4')
-    paths_frame = [os.path.join(self.dir_moma, f'videos/interaction_frames/{id_hoi}_l2.jpg'),
-                   os.path.join(self.dir_moma, f'videos/interaction_frames/{id_hoi}_l1.jpg'),
-                   os.path.join(self.dir_moma, f'videos/interaction/{id_hoi}.jpg'),
-                   os.path.join(self.dir_moma, f'videos/interaction_frames/{id_hoi}_r1.jpg'),
-                   os.path.join(self.dir_moma, f'videos/interaction_frames/{id_hoi}_r2.jpg')]
-
-    return path_video, paths_frame
 
   def get_ids_act(self, split: str=None, cnames_act: list[str]=None,
                   ids_sact: list[str]=None, ids_hoi: list[str]=None) -> list[str]:
@@ -326,7 +313,7 @@ class MOMA:
     else:  # hoi
       assert is_window is not None
       if is_window:
-        paths = [self.get_paths_window(id_hoi=id_hoi) for id_hoi in ids_hoi]
+        paths = [self.__get_paths_window(id_hoi=id_hoi) for id_hoi in ids_hoi]
       else:
         paths = [os.path.join(self.dir_moma, f'videos/interaction/{id_hoi}.jpg') for id_hoi in ids_hoi]
 
@@ -335,6 +322,38 @@ class MOMA:
       paths_missing = paths_missing[:5] if len(paths_missing) > 5 else paths_missing
       assert False, f'{len(paths_missing)} paths do not exist: {paths_missing}'
     return paths
+
+  def sort(self, ids_sact: list[str]=None, ids_hoi: list[str]=None, sanity_check: bool=True):
+    assert sum([x is not None for x in [ids_sact, ids_hoi]]) == 1
+
+    if ids_sact is not None:
+      if sanity_check:  # make sure they come from the same activity instance
+        id_act = self.get_ids_act(ids_sact=[ids_sact[0]])[0]
+        ids_sact_all = self.get_ids_sact(ids_act=[id_act])
+        assert set(ids_sact).issubset(set(ids_sact_all))
+      ids_sact = sorted(ids_sact, key=lambda x: self.get_anns_sact(ids_sact=[x])[0].start)
+      return ids_sact
+    else:
+      if sanity_check:  # make sure they come from the same sub-activity instance
+        id_sact = self.get_ids_sact(ids_hoi=[ids_hoi[0]])[0]
+        ids_hoi_all = self.get_ids_hoi(ids_sact=[id_sact])
+        assert set(ids_hoi).issubset(set(ids_hoi_all))
+      ids_hoi = sorted(ids_hoi, key=lambda x: self.get_anns_hoi(ids_hoi=[x])[0].time)
+      return ids_hoi
+
+  def __get_paths_window(self, id_hoi):
+    """ Given a higher-order interaction ID, return
+     - a path to the 1s video clip centered at the higher-order interaction (<1s if exceeds the raw video boundary)
+     - paths to 5 frames centered at the higher-order interaction (<5 frames if exceeds the raw video boundary)
+    """
+    path_video = os.path.join(self.dir_moma, f'videos/interaction_video/{id_hoi}.mp4')
+    paths_frame = [os.path.join(self.dir_moma, f'videos/interaction_frames/{id_hoi}_l2.jpg'),
+                   os.path.join(self.dir_moma, f'videos/interaction_frames/{id_hoi}_l1.jpg'),
+                   os.path.join(self.dir_moma, f'videos/interaction/{id_hoi}.jpg'),
+                   os.path.join(self.dir_moma, f'videos/interaction_frames/{id_hoi}_r1.jpg'),
+                   os.path.join(self.dir_moma, f'videos/interaction_frames/{id_hoi}_r2.jpg')]
+
+    return path_video, paths_frame
 
   def __read_taxonomy(self):
     with open(os.path.join(self.dir_moma, 'anns/taxonomy/actor.json'), 'r') as f:
