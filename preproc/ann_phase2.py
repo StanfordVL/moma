@@ -235,7 +235,7 @@ class AnnPhase2:
                         f'y1={ann_entity.bbox.y}, y2={ann_entity.bbox.y+ann_entity.bbox.height}], '
                         f'图片={width_image}x{height_image};;对象检测框超出原始图片')
 
-      ids += [ann_entity.id for ann_entity in anns_ent]
+      ids += [ann_entity.id for ann_entity in anns_entity]
 
     # check duplicate ids
     if len(set(ids)) != len(ids):

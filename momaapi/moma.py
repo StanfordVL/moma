@@ -5,6 +5,8 @@ import os
 import random
 
 from .data import *
+from .utils import *
+
 
 """
 The following functions are defined:
@@ -42,17 +44,17 @@ Definitions:
 
 
 class MOMA:
-  def __init__(self, dir_moma: str, toy: bool=False, small=False, generate_split: bool=False):
+  def __init__(self, dir_moma: str, toy: bool=False, full_res: bool=False, generate_split: bool=False):
     """
      - toy: load a toy annotation file to quickly illustrate the behavior of the various algorithms
-     - small: load low-resolution videos
+     - full_res: load full-resolution videos
      - generate_split: generate a new train/val split
     """
     assert os.path.isdir(os.path.join(dir_moma, 'anns')) and os.path.isdir(os.path.join(dir_moma, 'videos'))
 
     self.dir_moma = dir_moma
     self.toy = toy
-    self.small = small
+    self.full_res = full_res
     self.taxonomy, self.lvis_mapper = self.__read_taxonomy()
     
     self.metadata, self.id_act_to_ann_act, self.id_sact_to_ann_sact, self.id_hoi_to_ann_hoi, \
@@ -110,22 +112,19 @@ class MOMA:
 
     return is_sact
 
-  def get_tracklet(self, id_hoi):
+  def get_paths_tracklet(self, id_hoi):
     """ Given a higher-order interaction ID, return
-     - a path to the 1s video clip centered at the higher-order interaction
-     - all other graphs within this window
+     - a path to the 1s video clip centered at the higher-order interaction (<1s if exceeds the raw video boundary)
+     - paths to 5 frames centered at the higher-order interaction (<5 frames if exceeds the raw video boundary)
     """
-    now = self.get_anns_hoi(ids_hoi=[id_hoi])[0].time
+    path_video = os.path.join(self.dir_moma, f'videos/interaction_video/{id_hoi}.mp4')
+    paths_frame = [os.path.join(self.dir_moma, f'videos/interaction_frames/{id_hoi}_l2.jpg'),
+                   os.path.join(self.dir_moma, f'videos/interaction_frames/{id_hoi}_l1.jpg'),
+                   os.path.join(self.dir_moma, f'videos/interaction/{id_hoi}.jpg'),
+                   os.path.join(self.dir_moma, f'videos/interaction_frames/{id_hoi}_r1.jpg'),
+                   os.path.join(self.dir_moma, f'videos/interaction_frames/{id_hoi}_r2.jpg')]
 
-    id_sact = self.get_ids_sact(ids_hoi=[id_hoi])[0]
-    ids_hoi = self.get_ids_hoi(ids_sact=[id_sact])
-    ids_hoi = sorted(ids_hoi, key=lambda x: self.get_ids_hoi(ids_hoi=[x])[0].time)
-    times = [ann_hoi.time for ann_hoi in self.get_anns_hoi(ids_hoi=ids_hoi)]
-
-    ids_hoi, times = [list(x) for x in zip(*[(id_hoi, time) for id_hoi, time in zip(ids_hoi, times)
-                                           if time-duration/2 <= now < time+duration/2])]
-
-
+    return path_video, paths_frame
 
   def get_ids_act(self, split: str=None, cnames_act: list[str]=None,
                   ids_sact: list[str]=None, ids_hoi: list[str]=None) -> list[str]:
@@ -310,19 +309,27 @@ class MOMA:
   def get_anns_hoi(self, ids_hoi: list[str]) -> list[HOI]:
     return [self.id_hoi_to_ann_hoi[id_hoi] for id_hoi in ids_hoi]
 
-  def get_paths(self, ids_act: list[str]=None, ids_sact: list[str]=None, ids_hoi: list[str]=None) -> list[str]:
+  def get_paths(self,
+                ids_act: list[str]=None,
+                ids_sact: list[str]=None,
+                ids_hoi: list[str]=None,
+                is_tracklet: bool=None) -> list[str]:
     assert sum([x is not None for x in [ids_act, ids_sact, ids_hoi]]) == 1
 
     if ids_act is not None:
-      paths = [os.path.join(self.dir_moma, f"videos/activity{'_sm' if self.small else ''}/{id_act}.mp4")
+      paths = [os.path.join(self.dir_moma, f"videos/activity{'_fr' if self.full_res else ''}/{id_act}.mp4")
                for id_act in ids_act]
     elif ids_sact is not None:
-      paths = [os.path.join(self.dir_moma, f"videos/sub_activity{'_sm' if self.small else ''}/{id_sact}.mp4")
+      paths = [os.path.join(self.dir_moma, f"videos/sub_activity{'_fr' if self.full_res else ''}/{id_sact}.mp4")
                for id_sact in ids_sact]
     else:  # hoi
-      paths = [os.path.join(self.dir_moma, f'videos/higher_order_interaction/{id_hoi}.jpg') for id_hoi in ids_hoi]
+      assert is_tracklet is not None
+      if is_tracklet:
+        paths = [self.get_paths_tracklet(id_hoi=id_hoi) for id_hoi in ids_hoi]
+      else:
+        paths = [os.path.join(self.dir_moma, f'videos/interaction/{id_hoi}.jpg') for id_hoi in ids_hoi]
 
-    if not all(os.path.exists(path) for path in paths):
+    if not all(os.path.exists(path) for path in flatten(paths)):
       paths_missing = [path for path in paths if not os.path.exists(path)]
       paths_missing = paths_missing[:5] if len(paths_missing) > 5 else paths_missing
       assert False, f'{len(paths_missing)} paths do not exist: {paths_missing}'
