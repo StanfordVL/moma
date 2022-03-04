@@ -112,7 +112,7 @@ class MOMA:
 
     return is_sact
 
-  def get_paths_tracklet(self, id_hoi):
+  def get_paths_window(self, id_hoi):
     """ Given a higher-order interaction ID, return
      - a path to the 1s video clip centered at the higher-order interaction (<1s if exceeds the raw video boundary)
      - paths to 5 frames centered at the higher-order interaction (<5 frames if exceeds the raw video boundary)
@@ -313,7 +313,7 @@ class MOMA:
                 ids_act: list[str]=None,
                 ids_sact: list[str]=None,
                 ids_hoi: list[str]=None,
-                is_tracklet: bool=None) -> list[str]:
+                is_window: bool=None) -> list[str]:
     assert sum([x is not None for x in [ids_act, ids_sact, ids_hoi]]) == 1
 
     if ids_act is not None:
@@ -323,9 +323,9 @@ class MOMA:
       paths = [os.path.join(self.dir_moma, f"videos/sub_activity{'_fr' if self.full_res else ''}/{id_sact}.mp4")
                for id_sact in ids_sact]
     else:  # hoi
-      assert is_tracklet is not None
-      if is_tracklet:
-        paths = [self.get_paths_tracklet(id_hoi=id_hoi) for id_hoi in ids_hoi]
+      assert is_window is not None
+      if is_window:
+        paths = [self.get_paths_window(id_hoi=id_hoi) for id_hoi in ids_hoi]
       else:
         paths = [os.path.join(self.dir_moma, f'videos/interaction/{id_hoi}.jpg') for id_hoi in ids_hoi]
 
