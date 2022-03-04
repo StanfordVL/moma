@@ -35,7 +35,7 @@ def is_object(id):
   return id.isnumeric() and 1 <= int(id) <= 99
 
 
-def is_ent(id):
+def is_entity(id):
   return is_actor(id) or is_object(id)
 
 
@@ -48,7 +48,7 @@ def are_objects(ids):
 
 
 def are_entities(ids):
-  return all([is_ent(id) for id in ids])
+  return all([is_entity(id) for id in ids])
 
 
 def sort(ids):

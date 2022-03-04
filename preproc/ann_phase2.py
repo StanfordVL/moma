@@ -145,12 +145,12 @@ class AnnPhase2:
     for i, ann_hoi_raw in enumerate(ann_sact_raw):
       # actor
       anns_hoi_actor_raw = ann_hoi_raw['task_result']['annotations'][0]['slotsChildren']
-      anns_hoi_actor = [Ent(ann_actor_raw, self.cn2en) for ann_actor_raw in anns_hoi_actor_raw]
+      anns_hoi_actor = [Entity(ann_actor_raw, self.cn2en) for ann_actor_raw in anns_hoi_actor_raw]
       anns_sact_actor += anns_hoi_actor
 
       # object
       anns_hoi_object_raw = ann_hoi_raw['task_result']['annotations'][1]['slotsChildren']
-      anns_hoi_object = [Ent(ann_object_raw, self.cn2en) for ann_object_raw in anns_hoi_object_raw]
+      anns_hoi_object = [Entity(ann_object_raw, self.cn2en) for ann_object_raw in anns_hoi_object_raw]
       anns_sact_object += anns_hoi_object
 
       # check id_sact, ids_hoi, and num_hois
@@ -206,36 +206,36 @@ class AnnPhase2:
     ids = []
     for i, kind in enumerate(['actor', 'object']):
       assert self.cn2en[ann_hoi_raw['task_result']['annotations'][i]['label']] == kind
-      anns_ent_raw = ann_hoi_raw['task_result']['annotations'][i]['slotsChildren']
-      anns_ent = [Ent(ann_ent_raw, self.cn2en) for ann_ent_raw in anns_ent_raw]
+      anns_entity_raw = ann_hoi_raw['task_result']['annotations'][i]['slotsChildren']
+      anns_entity = [Entity(ann_entity_raw, self.cn2en) for ann_entity_raw in anns_entity_raw]
 
-      for ann_ent in anns_ent:
+      for ann_entity in anns_entity:
         # check kind
-        assert ann_ent.kind == kind, f'[{kind}] wrong kind {ann_ent.kind}'
+        assert ann_entity.kind == kind, f'[{kind}] wrong kind {ann_entity.kind}'
 
         # check cname
         taxonomy = self.taxonomy_actor if kind == 'actor' else self.taxonomy_object
-        assert ann_ent.cname in taxonomy+['REMOVE'], f'[{kind}] unseen cname {ann_ent.cname}'
+        assert ann_entity.cname in taxonomy+['REMOVE'], f'[{kind}] unseen cname {ann_entity.cname}'
 
         # check id
-        assert (kind == 'actor' and is_actor(ann_ent.id)) or kind == 'object' and is_object(ann_ent.id), \
-            f'[{kind}] wrong id format {ann_ent.id}'.encode('unicode_escape').decode('utf-8')
+        assert (kind == 'actor' and is_actor(ann_entity.id)) or kind == 'object' and is_object(ann_entity.id), \
+            f'[{kind}] wrong id format {ann_entity.id}'.encode('unicode_escape').decode('utf-8')
 
         # check bbox
-        assert ann_ent.bbox.width > 0 and ann_ent.bbox.height > 0
+        assert ann_entity.bbox.width > 0 and ann_entity.bbox.height > 0
 
-        if ann_ent.bbox.x < 0 or \
-           ann_ent.bbox.y < 0 or \
-           ann_ent.bbox.x+ann_ent.bbox.width > width_image or \
-           ann_ent.bbox.y+ann_ent.bbox.height > height_image:
-          # errors.append(f'[{kind}] bbox exceeds image {ann_ent.bbox} vs [W={width_image}, H={height_image}]')
+        if ann_entity.bbox.x < 0 or \
+           ann_entity.bbox.y < 0 or \
+           ann_entity.bbox.x+ann_entity.bbox.width > width_image or \
+           ann_entity.bbox.y+ann_entity.bbox.height > height_image:
+          # errors.append(f'[{kind}] bbox exceeds image {ann_entity.bbox} vs [W={width_image}, H={height_image}]')
           # fixme: Chinese
-          errors.append(f'人物/物体词对象检测;{self.en2cn[ann_ent.cname]} {ann_ent.id}: '
-                        f'对象检测框=[x1={ann_ent.bbox.x}, x2={ann_ent.bbox.x+ann_ent.bbox.width}, '
-                        f'y1={ann_ent.bbox.y}, y2={ann_ent.bbox.y+ann_ent.bbox.height}], '
+          errors.append(f'人物/物体词对象检测;{self.en2cn[ann_entity.cname]} {ann_entity.id}: '
+                        f'对象检测框=[x1={ann_entity.bbox.x}, x2={ann_entity.bbox.x+ann_entity.bbox.width}, '
+                        f'y1={ann_entity.bbox.y}, y2={ann_entity.bbox.y+ann_entity.bbox.height}], '
                         f'图片={width_image}x{height_image};;对象检测框超出原始图片')
 
-      ids += [ann_ent.id for ann_ent in anns_ent]
+      ids += [ann_entity.id for ann_entity in anns_ent]
 
     # check duplicate ids
     if len(set(ids)) != len(ids):

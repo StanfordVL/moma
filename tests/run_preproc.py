@@ -23,12 +23,11 @@ def proc_anns(dir_moma, fname_ann_phase1, fname_ann_phase2):
 def proc_videos(dir_moma):
   video_processor = preproc.VideoProcessor(dir_moma)
   video_processor.select()
-  video_processor.trim_act()
-  video_processor.trim_sact()
-  video_processor.trim_hoi()
+  video_processor.trim_act(resize=True)
+  video_processor.trim_sact(resize=True)
+  video_processor.trim_hoi(resize=True)
   video_processor.sample_hoi()
-  video_processor.resize_act()
-  video_processor.resize_sact()
+  video_processor.sample_hoi_frames()
 
 
 def main():

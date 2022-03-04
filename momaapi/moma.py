@@ -14,17 +14,17 @@ The following functions are defined:
  - get_ids_act: Get the unique activity instance IDs that satisfy certain conditions
  - get_ids_sact: Get the unique sub-activity instance IDs that satisfy certain conditions
  - get_ids_hoi: Get the unique higher-order interaction instance IDs that satisfy certain conditions
- - get_metadata: Given activity instance IDs, return the metadata of the associated raw videos
- - get_anns_act: Given activity instance IDs, return their annotations
- - get_anns_sact: Given sub-activity instance IDs, return their annotations
- - get_anns_hoi: Given higher-order interaction instance IDs, return their annotations
- - get_paths: Given instance IDs, return data paths
+ - get_metadata: Given activity instance IDs, return the metadata of the associated raw videos (one-to-one mapping)
+ - get_anns_act: Given activity instance IDs, return their annotations (one-to-one mapping)
+ - get_anns_sact: Given sub-activity instance IDs, return their annotations (one-to-one mapping)
+ - get_anns_hoi: Given higher-order interaction instance IDs, return their annotations (one-to-one mapping)
+ - get_paths: Given instance IDs, return data paths (one-to-one mapping)
  
 Acronyms:
  - act: activity
  - sact: sub-activity
  - hoi: higher-order interaction
- - ent: entity
+ - entity: entity
  - ia: intransitive action
  - ta: transitive action
  - att: attribute
@@ -33,6 +33,11 @@ Acronyms:
  - id: instance ID
  - cname: class name
  - cid: class ID
+ 
+Definitions:
+ - concept: ['act', 'sact', 'hoi', 'actor', 'object', 'ia', 'ta', 'att', 'rel']
+ - kind: for entity, ['actor', 'object']; 
+         for predicate ['ia', 'ta', 'att', 'rel']
 """
 
 
@@ -105,12 +110,21 @@ class MOMA:
 
     return is_sact
 
-  def get_tracklet(self, id_hoi, fps=5, duration=6):
+  def get_tracklet(self, id_hoi):
     """ Given a higher-order interaction ID, return
-     - a video clip of fps*duration frames that centers at the higher-order interaction
+     - a path to the 1s video clip centered at the higher-order interaction
      - all other graphs within this window
     """
-    pass
+    now = self.get_anns_hoi(ids_hoi=[id_hoi])[0].time
+
+    id_sact = self.get_ids_sact(ids_hoi=[id_hoi])[0]
+    ids_hoi = self.get_ids_hoi(ids_sact=[id_sact])
+    ids_hoi = sorted(ids_hoi, key=lambda x: self.get_ids_hoi(ids_hoi=[x])[0].time)
+    times = [ann_hoi.time for ann_hoi in self.get_anns_hoi(ids_hoi=ids_hoi)]
+
+    ids_hoi, times = [list(x) for x in zip(*[(id_hoi, time) for id_hoi, time in zip(ids_hoi, times)
+                                           if time-duration/2 <= now < time+duration/2])]
+
 
 
   def get_ids_act(self, split: str=None, cnames_act: list[str]=None,
@@ -305,7 +319,7 @@ class MOMA:
     elif ids_sact is not None:
       paths = [os.path.join(self.dir_moma, f"videos/sub_activity{'_sm' if self.small else ''}/{id_sact}.mp4")
                for id_sact in ids_sact]
-    else:
+    else:  # hoi
       paths = [os.path.join(self.dir_moma, f'videos/higher_order_interaction/{id_hoi}.jpg') for id_hoi in ids_hoi]
 
     if not all(os.path.exists(path) for path in paths):

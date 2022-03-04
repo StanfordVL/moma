@@ -54,10 +54,10 @@ def main():
 
   moma = MOMA(dir_moma)
 
-  # visualize_anns(moma, dir_vis)
+  visualize_anns(moma, dir_vis)
   visualize_stats(moma, dir_vis)
-  # visualize_timeline(moma, dir_vis)
-  # visualize_anns_all(moma, dir_vis)
+  visualize_timeline(moma, dir_vis)
+  visualize_anns_all(moma, dir_vis)
 
 
 if __name__ == '__main__':
