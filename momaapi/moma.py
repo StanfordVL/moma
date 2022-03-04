@@ -313,7 +313,8 @@ class MOMA:
                 ids_act: list[str]=None,
                 ids_sact: list[str]=None,
                 ids_hoi: list[str]=None,
-                is_window: bool=None) -> list[str]:
+                is_window: bool=None,
+                sanity_check: bool=True) -> list[str]:
     assert sum([x is not None for x in [ids_act, ids_sact, ids_hoi]]) == 1
 
     if ids_act is not None:
@@ -329,7 +330,7 @@ class MOMA:
       else:
         paths = [os.path.join(self.dir_moma, f'videos/interaction/{id_hoi}.jpg') for id_hoi in ids_hoi]
 
-    if not all(os.path.exists(path) for path in flatten(paths)):
+    if sanity_check and not all(os.path.exists(path) for path in flatten(paths)):
       paths_missing = [path for path in paths if not os.path.exists(path)]
       paths_missing = paths_missing[:5] if len(paths_missing) > 5 else paths_missing
       assert False, f'{len(paths_missing)} paths do not exist: {paths_missing}'
