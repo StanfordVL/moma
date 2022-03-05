@@ -87,12 +87,13 @@ class MOMA:
     if threshold is None:
       return self.get_taxonomy(concept)
 
-    # todo
     assert split is not None
     if split == 'either':  # exclude if < threshold in either one split
-      distribution = np.minimum(self.distributions['train'][concept], self.distributions['val'][concept])
+      distribution = np.stack([self.distributions[split][concept] for split in self.split_to_ids_act], axis=0)
+      distribution = np.amin(distribution, axis=0).tolist()
     elif split == 'both':  # exclude if < threshold in all splits
-      distribution = np.maximum(self.distributions['train'][concept], self.distributions['val'][concept])
+      distribution = np.stack([self.distributions[split][concept] for split in self.split_to_ids_act], axis=0)
+      distribution = np.amax(distribution, axis=0).tolist()
     else:
       distribution = self.distributions[split][concept]
 

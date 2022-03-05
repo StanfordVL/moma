@@ -83,8 +83,8 @@ class AnnPhase1:
 
     # remove overlapping sub-activity
     ids_sact_rm = ['27', '198', '199', '653', '1535', '1536', '3775', '4024', '5531', '5629',
-                    '5729', '6178', '6478', '7073', '7074', '7076', '7350', '9713', '10926', '10927',
-                    '11168', '11570', '12696', '12697', '15225', '15403', '15579', '15616']
+                   '5729', '6178', '6478', '7073', '7074', '7076', '7350', '9713', '10926', '10927',
+                   '11168', '11570', '12696', '12697', '15225', '15403', '15579', '15616']
     for id_sact_rm in sorted(ids_sact_rm, key=int, reverse=True):  # make sure to remove in descending index order
       del self.anns_act[lookup[id_sact_rm][0]]['subactivity'][lookup[id_sact_rm][1]]
 
@@ -104,12 +104,12 @@ class AnnPhase1:
 
   def __inspect_anns_act(self):
     # check video files
-    fnames_video_all = os.listdir(os.path.join(self.dir_moma, 'videos/all'))
+    fnames_video_all = os.listdir(os.path.join(self.dir_moma, 'videos/raw'))
     assert all([fname_video.endswith('.mp4') for fname_video in fnames_video_all])
 
     # make sure ids_sact are unique integers across different activities
     ids_sact = [self.get_id_sact(ann_sact) for id_act in self.anns_act
-                 for ann_sact in self.anns_act[id_act]['subactivity']]
+                for ann_sact in self.anns_act[id_act]['subactivity']]
     assert len(ids_sact) == len(set(ids_sact))
 
     # make sure sub-activity classes from different activity classes are mutually exclusive
@@ -139,7 +139,8 @@ class AnnPhase1:
 
     # make sure the corresponding video exist
     fname_video = anns_sact[0]['orig_vid']
-    path_video = os.path.join(self.dir_moma, f'videos/all/{fname_video}')
+    # path_video = os.path.join(self.dir_moma, f'videos/all/{fname_video}')
+    path_video = os.path.join(self.dir_moma, f"videos/raw/{fname_video.split('_', 1)[1]}")
     assert os.path.isfile(path_video), f'video file does not exit: {path_video}'
 
     # make sure fps is consistent
@@ -181,20 +182,20 @@ class AnnPhase1:
       if end_sact_last > start_sact:
         if end_sact_last >= end_sact:
           errors[id_sact].append(f'completely overlapped sub-activity boundaries '
-                                  f'({s2hms(start_sact_last)}, {s2hms(end_sact_last)}) and '
-                                  f'({s2hms(start_sact)}, {s2hms(end_sact)})')
+                                 f'({s2hms(start_sact_last)}, {s2hms(end_sact_last)}) and '
+                                 f'({s2hms(start_sact)}, {s2hms(end_sact)})')
         else:
           errors[id_sact].append(f'partially overlapped sub-activity boundaries '
-                                  f'({s2hms(start_sact_last)}, {s2hms(end_sact_last)}) and '
-                                  f'({s2hms(start_sact)}, {s2hms(end_sact)})')
+                                 f'({s2hms(start_sact_last)}, {s2hms(end_sact_last)}) and '
+                                 f'({s2hms(start_sact)}, {s2hms(end_sact)})')
       start_sact_last = start_sact
       end_sact_last = end_sact
 
       # make sure the sub-activity temporal boundary is within the activity and the length is positive
       if not (start_act <= start_sact < end_sact <= end_act):
         errors[id_sact].append(f'incorrect sub-activity boundary '
-                                f'{s2hms(start_act)} <= {s2hms(start_sact)} < '
-                                f'{s2hms(end_sact)} <= {s2hms(end_act)}')
+                               f'{s2hms(start_act)} <= {s2hms(start_sact)} < '
+                               f'{s2hms(end_sact)} <= {s2hms(end_act)}')
 
     errors = defaultdict_to_dict(errors)
     return errors
