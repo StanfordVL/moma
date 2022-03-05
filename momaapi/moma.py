@@ -22,6 +22,7 @@ The following functions are defined:
  - get_paths: Given instance IDs, return data paths
  - get_paths_window: Given an HOI instance ID, return window paths
  - sort: Given sub-activity or higher-order interaction instance IDs, return them in sorted order
+ - get_cid_fs： Get the consecutive few-shot class id given a class id
  
 Acronyms:
  - act: activity
@@ -321,6 +322,22 @@ class MOMA:
       assert False, f'{len(paths_missing)} paths do not exist: {paths_missing}'
     return paths
 
+  def get_paths_window(self, id_hoi):
+    """ Given a higher-order interaction ID, return
+     - a path to the 1s video clip centered at the higher-order interaction (<1s if exceeds the raw video boundary)
+     - paths to 5 frames centered at the higher-order interaction (<5 frames if exceeds the raw video boundary)
+    """
+    window = self.windows[id_hoi]
+    now = self.get_anns_hoi(ids_hoi=[id_hoi])[0].time
+    window = [[os.path.join(self.dir_moma, f'videos/interaction_frames/{fname}.jpg'), time] for fname, time in window]+ \
+             [[os.path.join(self.dir_moma, f'videos/interaction/{id_hoi}.jpg'), now]]
+    window = sorted(window, key=lambda x: x[1])
+
+    path_video = os.path.join(self.dir_moma, f'videos/interaction_video/{id_hoi}.mp4')
+    paths_frame = [path_frame for path_frame, time in window]
+
+    return path_video, paths_frame
+  
   def sort(self, ids_sact: list[str]=None, ids_hoi: list[str]=None, sanity_check: bool=True):
     assert sum([x is not None for x in [ids_sact, ids_hoi]]) == 1
 
@@ -339,23 +356,7 @@ class MOMA:
       ids_hoi = sorted(ids_hoi, key=lambda x: self.get_anns_hoi(ids_hoi=[x])[0].time)
       return ids_hoi
 
-  def get_paths_window(self, id_hoi):
-    """ Given a higher-order interaction ID, return
-     - a path to the 1s video clip centered at the higher-order interaction (<1s if exceeds the raw video boundary)
-     - paths to 5 frames centered at the higher-order interaction (<5 frames if exceeds the raw video boundary)
-    """
-    window = self.windows[id_hoi]
-    now = self.get_anns_hoi(ids_hoi=[id_hoi])[0].time
-    window = [[os.path.join(self.dir_moma, f'videos/interaction_frames/{fname}.jpg'), time] for fname, time in window]+\
-             [[os.path.join(self.dir_moma, f'videos/interaction/{id_hoi}.jpg'), now]]
-    window = sorted(window, key=lambda x: x[1])
-
-    path_video = os.path.join(self.dir_moma, f'videos/interaction_video/{id_hoi}.mp4')
-    paths_frame = [path_frame for path_frame, time in window]
-
-    return path_video, paths_frame
-
-  def cid_to_cid_fs(self, cid, concept, split):
+  def get_cid_fs(self, cid, concept, split):
     assert concept in ['act', 'sact']
     cname = self.taxonomy[concept][cid]
     if cname in self.taxonomy_fs[f'{concept}_val'] and not self.load_val:
