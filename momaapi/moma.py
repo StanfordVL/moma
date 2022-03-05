@@ -64,6 +64,8 @@ class MOMA:
     self.dir_moma = dir_moma
     self.toy = toy
     self.full_res = full_res
+    self.load_val = load_val
+
     self.taxonomy, self.taxonomy_fs, self.lvis_mapper = self.__read_taxonomy()
     
     self.metadata, self.id_act_to_ann_act, self.id_sact_to_ann_sact, self.id_hoi_to_ann_hoi, \
@@ -356,7 +358,11 @@ class MOMA:
   def cid_to_cid_fs(self, cid, concept, split):
     assert concept in ['act', 'sact']
     cname = self.taxonomy[concept][cid]
-    cid_fs = self.taxonomy_fs[f'{concept}_{split}'].index(cname)
+    if cname in self.taxonomy_fs[f'{concept}_val'] and not self.load_val:
+      cid_fs = self.taxonomy_fs[f'{concept}_val'].index(cname)
+      cid_fs += len(self.taxonomy_fs[f'{concept}_train'])
+    else:
+      cid_fs = self.taxonomy_fs[f'{concept}_{split}'].index(cname)
     return cid_fs
 
   def __read_taxonomy(self):
