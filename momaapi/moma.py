@@ -21,6 +21,7 @@ The following functions are defined:
  - get_anns_sact: Given sub-activity instance IDs, return their annotations
  - get_anns_hoi: Given higher-order interaction instance IDs, return their annotations
  - get_paths: Given instance IDs, return data paths
+ - get_paths_window: Given an HOI instance ID, return window paths
  - sort: Given sub-activity or higher-order interaction instance IDs, return them in sorted order
  
 Acronyms:
@@ -67,7 +68,7 @@ class MOMA:
     self.taxonomy, self.lvis_mapper = self.__read_taxonomy()
     
     self.metadata, self.id_act_to_ann_act, self.id_sact_to_ann_sact, self.id_hoi_to_ann_hoi, \
-        self.id_sact_to_id_act, self.id_hoi_to_id_sact = self.__read_anns()
+        self.id_sact_to_id_act, self.id_hoi_to_id_sact, self.windows = self.__read_anns()
 
     self.split_to_ids_act = self.__read_splits(generate_split, few_shot, load_val)
     self.statistics, self.distributions = self.__get_summaries()
@@ -301,7 +302,6 @@ class MOMA:
                 ids_act: list[str]=None,
                 ids_sact: list[str]=None,
                 ids_hoi: list[str]=None,
-                is_window: bool=None,
                 sanity_check: bool=True) -> list[str]:
     assert sum([x is not None for x in [ids_act, ids_sact, ids_hoi]]) == 1
 
@@ -312,13 +312,9 @@ class MOMA:
       paths = [os.path.join(self.dir_moma, f"videos/sub_activity{'_fr' if self.full_res else ''}/{id_sact}.mp4")
                for id_sact in ids_sact]
     else:  # hoi
-      assert is_window is not None
-      if is_window:
-        paths = [self.__get_paths_window(id_hoi=id_hoi) for id_hoi in ids_hoi]
-      else:
-        paths = [os.path.join(self.dir_moma, f'videos/interaction/{id_hoi}.jpg') for id_hoi in ids_hoi]
+      paths = [os.path.join(self.dir_moma, f'videos/interaction/{id_hoi}.jpg') for id_hoi in ids_hoi]
 
-    if sanity_check and not all(os.path.exists(path) for path in flatten(paths)):
+    if sanity_check and not all(os.path.exists(path) for path in paths):
       paths_missing = [path for path in paths if not os.path.exists(path)]
       paths_missing = paths_missing[:5] if len(paths_missing) > 5 else paths_missing
       assert False, f'{len(paths_missing)} paths do not exist: {paths_missing}'
@@ -342,17 +338,19 @@ class MOMA:
       ids_hoi = sorted(ids_hoi, key=lambda x: self.get_anns_hoi(ids_hoi=[x])[0].time)
       return ids_hoi
 
-  def __get_paths_window(self, id_hoi):
+  def get_paths_window(self, id_hoi):
     """ Given a higher-order interaction ID, return
      - a path to the 1s video clip centered at the higher-order interaction (<1s if exceeds the raw video boundary)
      - paths to 5 frames centered at the higher-order interaction (<5 frames if exceeds the raw video boundary)
     """
+    window = self.windows[id_hoi]
+    now = self.get_anns_hoi(ids_hoi=[id_hoi])[0].time
+    window = [[os.path.join(self.dir_moma, f'videos/interaction_frames/{fname}.jpg'), time] for fname, time in window]+\
+             [[os.path.join(self.dir_moma, f'videos/interaction/{id_hoi}.jpg'), now]]
+    window = sorted(window, key=lambda x: x[1])
+
     path_video = os.path.join(self.dir_moma, f'videos/interaction_video/{id_hoi}.mp4')
-    paths_frame = [os.path.join(self.dir_moma, f'videos/interaction_frames/{id_hoi}_l2.jpg'),
-                   os.path.join(self.dir_moma, f'videos/interaction_frames/{id_hoi}_l1.jpg'),
-                   os.path.join(self.dir_moma, f'videos/interaction/{id_hoi}.jpg'),
-                   os.path.join(self.dir_moma, f'videos/interaction_frames/{id_hoi}_r1.jpg'),
-                   os.path.join(self.dir_moma, f'videos/interaction_frames/{id_hoi}_r2.jpg')]
+    paths_frame = [path_frame for path_frame, time in window]
 
     return path_video, paths_frame
 
@@ -427,7 +425,14 @@ class MOMA:
     id_sact_to_id_act = bidict(id_sact_to_id_act)
     id_hoi_to_id_sact = bidict(id_hoi_to_id_sact)
 
-    return metadata, id_act_to_ann_act, id_sact_to_ann_sact, id_hoi_to_ann_hoi, id_sact_to_id_act, id_hoi_to_id_sact
+    if os.path.isfile(os.path.join(self.dir_moma, f'videos/interaction_frames/timestamps.json')):
+      with open(os.path.join(self.dir_moma, f'videos/interaction_frames/timestamps.json'), 'r') as f:
+        windows = json.load(f)
+    else:
+      windows = None
+
+    return metadata, id_act_to_ann_act, id_sact_to_ann_sact, id_hoi_to_ann_hoi, \
+           id_sact_to_id_act, id_hoi_to_id_sact, windows
 
   def __read_splits(self, generate_split, few_shot, load_val):
     if generate_split:
