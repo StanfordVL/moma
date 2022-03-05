@@ -5,7 +5,6 @@ import os
 import random
 
 from .data import *
-from .utils import *
 
 
 """
@@ -65,7 +64,7 @@ class MOMA:
     self.dir_moma = dir_moma
     self.toy = toy
     self.full_res = full_res
-    self.taxonomy, self.lvis_mapper = self.__read_taxonomy()
+    self.taxonomy, self.taxonomy_fs, self.lvis_mapper = self.__read_taxonomy()
     
     self.metadata, self.id_act_to_ann_act, self.id_sact_to_ann_sact, self.id_hoi_to_ann_hoi, \
         self.id_sact_to_id_act, self.id_hoi_to_id_sact, self.windows = self.__read_anns()
@@ -354,6 +353,12 @@ class MOMA:
 
     return path_video, paths_frame
 
+  def cid_to_cid_fs(self, cid, concept, split):
+    assert concept in ['act', 'sact']
+    cname = self.taxonomy[concept][cid]
+    cid_fs = self.taxonomy_fs[f'{concept}_{split}'].index(cname)
+    return cid_fs
+
   def __read_taxonomy(self):
     with open(os.path.join(self.dir_moma, 'anns/taxonomy/actor.json'), 'r') as f:
       taxonomy_actor = json.load(f)
@@ -381,6 +386,17 @@ class MOMA:
                                                            for cname_sact in cnames_sact})
     with open(os.path.join(self.dir_moma, 'anns/taxonomy/lvis.json'), 'r') as f:
       lvis_mapper = json.load(f)
+    with open(os.path.join(self.dir_moma, 'anns/taxonomy/few_shot.json'), 'r') as f:
+      taxonomy_fs = json.load(f)
+      taxonomy_act_train = sorted(taxonomy_fs['train'])
+      taxonomy_act_val = sorted(taxonomy_fs['val'])
+      taxonomy_act_test = sorted(taxonomy_fs['test'])
+      taxonomy_sact_train = [list(taxonomy_sact_to_act.inverse[x]) for x in taxonomy_act_train]
+      taxonomy_sact_val = [list(taxonomy_sact_to_act.inverse[x]) for x in taxonomy_act_val]
+      taxonomy_sact_test = [list(taxonomy_sact_to_act.inverse[x]) for x in taxonomy_act_test]
+      taxonomy_sact_train = sorted(itertools.chain(*taxonomy_sact_train))
+      taxonomy_sact_val = sorted(itertools.chain(*taxonomy_sact_val))
+      taxonomy_sact_test = sorted(itertools.chain(*taxonomy_sact_test))
 
     taxonomy = {
       'actor': taxonomy_actor,
@@ -394,7 +410,16 @@ class MOMA:
       'sact_to_act': taxonomy_sact_to_act
     }
 
-    return taxonomy, lvis_mapper
+    taxonomy_fs = {
+      'act_train': taxonomy_act_train,
+      'act_val': taxonomy_act_val,
+      'act_test': taxonomy_act_test,
+      'sact_train': taxonomy_sact_train,
+      'sact_val': taxonomy_sact_val,
+      'sact_test': taxonomy_sact_test
+    }
+
+    return taxonomy, taxonomy_fs, lvis_mapper
 
   def __read_anns(self):
     fname = 'anns_toy.json' if self.toy else 'anns.json'
