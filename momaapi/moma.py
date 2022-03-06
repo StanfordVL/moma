@@ -337,7 +337,7 @@ class MOMA:
     paths_frame = [path_frame for path_frame, time in window]
 
     return path_video, paths_frame
-  
+
   def sort(self, ids_sact: list[str]=None, ids_hoi: list[str]=None, sanity_check: bool=True):
     assert sum([x is not None for x in [ids_sact, ids_hoi]]) == 1
 
