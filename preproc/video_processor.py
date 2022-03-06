@@ -158,7 +158,7 @@ class VideoProcessor:
     os.makedirs(os.path.join(self.dir_moma, 'videos/interaction_video'), exist_ok=True)
 
     paths_trg = []
-    for ann in self.anns:
+    for i, ann in enumerate(self.anns):
       anns_sact = ann['activity']['sub_activities']
       for ann_sact in anns_sact:
         anns_hoi = ann_sact['higher_order_interactions']
@@ -212,7 +212,7 @@ class VideoProcessor:
       if path_exist not in paths_trg:
         os.remove(path_exist)
 
-  def sample_hoi_frames(self, num_frames=5, overwrite=False):
+  def sample_hoi_frames(self, num_frames=5, overwrite=False, split='test'):
     dir_out = os.path.join(self.dir_moma, 'videos/interaction_frames')
     os.makedirs(dir_out, exist_ok=True)
     assert num_frames%2 == 1  # odd number
@@ -223,8 +223,17 @@ class VideoProcessor:
     else:
       timestamps = defaultdict(list)
 
+    if split is not None:
+      with open(os.path.join(self.dir_moma, 'anns/split.json'), 'r') as f:
+        ids_act = json.load(f)[split]
+      anns = [ann for ann in self.anns if ann['activity']['id'] in ids_act]
+    else:
+      anns = self.anns
+
+    print(f'Number of activities: {len(anns)}')
+
     paths_trg = []
-    for ann in self.anns:
+    for ann in anns:
       anns_sact = ann['activity']['sub_activities']
       for ann_sact in anns_sact:
         anns_hoi = ann_sact['higher_order_interactions']
@@ -265,6 +274,8 @@ class VideoProcessor:
             if not os.path.exists(path_trg) or overwrite:
               self.sample_image(path_src, path_trg, time)
             paths_trg.append(path_trg)
+
+    print('Done extracting frames')
 
     paths_exist = glob.glob(os.path.join(dir_out, '*.jpg'))
     for path_exist in paths_exist:
