@@ -27,7 +27,7 @@ def main():
       for actor in ann_hoi.actors:
         lines_actor.append([i+1, actor.id,
                             actor.bbox.x, actor.bbox.y, actor.bbox.width, actor.bbox.height,
-                            -1, -1, -1, -1])
+                            0, actor.cid+1, 1])
         iids_actor.append(actor.id)
     iids_actor = sorted(set(iids_actor))
     map_iid_actor = {iid:j+1 for j, iid in enumerate(iids_actor)}
@@ -39,7 +39,7 @@ def main():
       for object in ann_hoi.objects:
         lines_object.append([i+1, object.id,
                              object.bbox.x, object.bbox.y, object.bbox.width, object.bbox.height,
-                             -1, -1, -1, -1])
+                             0, object.cid+1, 1])
         iids_object.append(object.id)
     iids_object = sorted(set(iids_object))
     map_iid_object = {iid:j+1 for j, iid in enumerate(iids_object)}
