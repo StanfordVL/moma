@@ -3,6 +3,7 @@ from distinctipy import distinctipy
 import glob
 import math
 from matplotlib import font_manager
+import matplotlib.pyplot as plt
 import os
 import PIL.Image as Image
 import PIL.ImageDraw as ImageDraw
@@ -123,6 +124,7 @@ class AnnVisualizer:
     os.remove(path_graph)
     image_bbox.close()
     image_graph.close()
+    plt.close('all')
 
   def show_sact(self, id_sact, vstack=True):
     if os.path.isfile(os.path.join(self.dir_vis, f'sact/{id_sact}.gif')):
@@ -273,3 +275,4 @@ class AnnVisualizer:
     [image_bbox.close() for image_bbox in images_bbox]
     [image_graph.close() for image_graph in images_graph]
     [image_timeline.close() for image_timeline in images_timeline]
+    plt.close('all')
