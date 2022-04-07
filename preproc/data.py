@@ -36,7 +36,7 @@ class BBox:
     self.height = abs(y_bl-y_tl)
 
   def __repr__(self):
-    return f'({self.x}, {self.y}, {self.width}, {self.height})'
+    return f'BBox({self.x}, {self.y}, {self.width}, {self.height})'
 
 
 class Entity:
@@ -60,6 +60,9 @@ class Entity:
     self.cname = cn2en[cname]
     self.id = id
     self.bbox = bbox
+
+  def __repr__(self):
+    return f'Entity(kind={self.kind}, cname={self.cname}, id={self.id})'
 
 
 class Predicate:
