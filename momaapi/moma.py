@@ -302,10 +302,10 @@ class MOMA:
     return [self.id_sact_to_ann_sact[id_sact] for id_sact in ids_sact]
 
   def get_paths(self,
-                ids_act: list[str]=None,
-                ids_sact: list[str]=None,
-                ids_hoi: list[str]=None,
-                sanity_check: bool=True) -> list[str]:
+                ids_act: list=None,
+                ids_sact: list=None,
+                ids_hoi: list=None,
+                sanity_check: bool=True) -> list:
     assert sum([x is not None for x in [ids_act, ids_sact, ids_hoi]]) == 1
 
     if ids_act is not None:
