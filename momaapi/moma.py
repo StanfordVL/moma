@@ -126,8 +126,9 @@ class MOMA:
 
     return is_sact
 
-  def get_ids_act(self, split: str=None, cnames_act: list[str]=None,
-                  ids_sact: list[str]=None, ids_hoi: list[str]=None) -> list[str]:
+  def get_ids_act(self, split: str=None, cnames_act: list=None,
+                  ids_sact: list=None, ids_hoi: list=None) -> list:
+
     """ Get the unique activity instance IDs that satisfy certain conditions
     dataset split
      - split: get activity IDs [ids_act] that belong to the given dataset split
@@ -169,10 +170,11 @@ class MOMA:
     return ids_act_intersection
 
   def get_ids_sact(self, split: str=None,
-                   cnames_sact: list[str]=None, ids_act: list[str]=None, ids_hoi: list[str]=None,
-                   cnames_actor: list[str]=None, cnames_object: list[str]=None,
-                   cnames_ia: list[str]=None, cnames_ta: list[str]=None,
-                   cnames_att: list[str]=None, cnames_rel: list[str]=None) -> list[str]:
+                   cnames_sact: list=None, ids_act: list=None, ids_hoi: list=None,
+                   cnames_actor: list=None, cnames_object: list=None,
+                   cnames_ia: list=None, cnames_ta: list=None,
+                   cnames_att: list=None, cnames_rel: list=None) -> list:
+
     """ Get the unique sub-activity instance IDs that satisfy certain conditions
     dataset split
      - split: get sub-activity IDs [ids_sact] that belong to the given dataset split
@@ -231,10 +233,9 @@ class MOMA:
     return ids_sact_intersection
 
   def get_ids_hoi(self, split: str=None,
-                  ids_act: list[str]=None, ids_sact: list[str]=None,
-                  cnames_actor: list[str]=None, cnames_object: list[str]=None,
-                  cnames_ia: list[str]=None, cnames_ta: list[str]=None,
-                  cnames_att: list[str]=None, cnames_rel: list[str]=None) -> list[str]:
+                  ids_act: list=None, ids_sact: list=None,
+                  cnames_actor: list=None, cnames_object: list=None,
+
     """ Get the unique higher-order interaction instance IDs that satisfy certain conditions
     dataset split
      - split: get higher-order interaction IDs [ids_hoi] that belong to the given dataset split
