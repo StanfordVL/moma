@@ -302,7 +302,7 @@ class MOMA:
      return [self.id_sact_to_ann_sact[id_sact] for id_sact in ids_sact]
     
   def get_anns_hoi(self, ids_hoi: list) -> list:
-    return [self.id_sact_to_ann_sact[id_sact] for id_sact in ids_sact]
+     return [self.id_hoi_to_ann_hoi[id_hoi] for id_hoi in ids_hoi]
 
   def get_paths(self,
                 ids_act: list=None,
