@@ -235,7 +235,10 @@ class MOMA:
   def get_ids_hoi(self, split: str=None,
                   ids_act: list=None, ids_sact: list=None,
                   cnames_actor: list=None, cnames_object: list=None,
+                  cnames_ia: list=None, cnames_ta: list=None,
+                  cnames_att: list=None, cnames_rel: list=None) -> list:
 
+  
     """ Get the unique higher-order interaction instance IDs that satisfy certain conditions
     dataset split
      - split: get higher-order interaction IDs [ids_hoi] that belong to the given dataset split
@@ -289,13 +292,13 @@ class MOMA:
     ids_hoi_intersection = sorted(set.intersection(*map(set, ids_hoi_intersection)))
     return ids_hoi_intersection
 
-  def get_metadata(self, ids_act: list[str]) -> list[Metadatum]:
+  def get_metadata(self, ids_act: list) -> list:
     return [self.metadata[id_act] for id_act in ids_act]
 
-  def get_anns_act(self, ids_act: list[str]) -> list[Act]:
+  def get_anns_act(self, ids_act: list) -> list:
     return [self.id_act_to_ann_act[id_act] for id_act in ids_act]
 
-  def get_anns_sact(self, ids_sact: list[str]) -> list[SAct]:
+  def get_anns_hoi(self, ids_hoi: list) -> list:
     return [self.id_sact_to_ann_sact[id_sact] for id_sact in ids_sact]
 
   def get_anns_hoi(self, ids_hoi: list[str]) -> list[HOI]:
