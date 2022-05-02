@@ -342,7 +342,7 @@ class MOMA:
 
     return path_video, paths_frame
 
-  def sort(self, ids_sact: list[str]=None, ids_hoi: list[str]=None, sanity_check: bool=True):
+  def sort(self, ids_sact: list=None, ids_hoi: list=None, sanity_check: bool=True):
     assert sum([x is not None for x in [ids_sact, ids_hoi]]) == 1
 
     if ids_sact is not None:
