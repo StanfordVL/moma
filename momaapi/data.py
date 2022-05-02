@@ -74,7 +74,7 @@ class SAct:
     id_object_to_cname_object = dict(info_object)
     self.ids_actor = sorted(id_actor_to_cname_actor.keys())
     self.ids_object = sorted(id_object_to_cname_object.keys(), key=int)
-    self.__id_entity_to_cname_entity = id_actor_to_cname_actor|id_object_to_cname_object
+    self.__id_entity_to_cname_entity = dict(list(id_actor_to_cname_actor.items()) + list(id_object_to_cname_object.items()))
 
   def get_cname_entity(self, id_entity):
     return self.__id_entity_to_cname_entity[id_entity]
