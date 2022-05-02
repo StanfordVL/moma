@@ -297,7 +297,10 @@ class MOMA:
 
   def get_anns_act(self, ids_act: list) -> list:
     return [self.id_act_to_ann_act[id_act] for id_act in ids_act]
-
+  
+  def get_anns_sact(self, ids_sact: list) -> list:
+     return [self.id_sact_to_ann_sact[id_sact] for id_sact in ids_sact]
+    
   def get_anns_hoi(self, ids_hoi: list) -> list:
     return [self.id_sact_to_ann_sact[id_sact] for id_sact in ids_sact]
 
