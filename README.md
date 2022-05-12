@@ -46,13 +46,16 @@ $ tree dir_moma
 │    ├── anns.json
 │    ├── anns_toy.json
 │    ├── split.json
+│    ├── split_fs.json
 │    └── taxonomy
 └── videos
      ├── all
      ├── raw
+     ├── activity_fr
      ├── activity
+     ├── sub_activity_fr
      ├── sub_activity
-     └── higher_order_interaction
+     └── interaction
 ```
 
 ## Scripts
