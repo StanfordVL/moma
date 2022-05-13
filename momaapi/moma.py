@@ -5,6 +5,7 @@ import os
 import random
 
 from .data import *
+from .io import *
 
 
 """
@@ -237,8 +238,6 @@ class MOMA:
                   cnames_actor: list=None, cnames_object: list=None,
                   cnames_ia: list=None, cnames_ta: list=None,
                   cnames_att: list=None, cnames_rel: list=None) -> list:
-
-  
     """ Get the unique higher-order interaction instance IDs that satisfy certain conditions
     dataset split
      - split: get higher-order interaction IDs [ids_hoi] that belong to the given dataset split
@@ -433,42 +432,58 @@ class MOMA:
     return taxonomy, taxonomy_fs, lvis_mapper
 
   def __read_anns(self):
-    fname = 'anns_toy.json' if self.toy else 'anns.json'
-    with open(os.path.join(self.dir_moma, f'anns/{fname}'), 'r') as f:
-      anns_raw = json.load(f)
+    dir_cache = os.path.join(self.dir_moma, 'anns/cache')
 
-    metadata, id_act_to_ann_act, id_sact_to_ann_sact, id_hoi_to_ann_hoi = {}, {}, {}, {}
-    id_sact_to_id_act, id_hoi_to_id_sact = {}, {}
+    try:
+      names = ['metadata', 'id_act_to_ann_act', 'id_sact_to_ann_sact', 'id_hoi_to_ann_hoi', 'id_sact_to_id_act',
+               'id_hoi_to_id_sact']
+      metadata, id_act_to_ann_act, id_sact_to_ann_sact, id_hoi_to_ann_hoi, id_sact_to_id_act, id_hoi_to_id_sact = \
+          load_cache(dir_cache, names)
 
-    for ann_raw in anns_raw:
-      ann_act_raw = ann_raw['activity']
-      metadata[ann_act_raw['id']] = Metadatum(ann_raw)
-      id_act_to_ann_act[ann_act_raw['id']] = Act(ann_act_raw, self.taxonomy['act'])
-      anns_sact_raw = ann_act_raw['sub_activities']
+    except FileNotFoundError:
+      fname = 'anns_toy.json' if self.toy else 'anns.json'
+      with open(os.path.join(self.dir_moma, f'anns/{fname}'), 'r') as f:
+        anns_raw = json.load(f)
 
-      for ann_sact_raw in anns_sact_raw:
-        id_sact_to_ann_sact[ann_sact_raw['id']] = SAct(ann_sact_raw, self.taxonomy['sact'])
-        id_sact_to_id_act[ann_sact_raw['id']] = ann_act_raw['id']
-        anns_hoi_raw = ann_sact_raw['higher_order_interactions']
+      metadata, id_act_to_ann_act, id_sact_to_ann_sact, id_hoi_to_ann_hoi = {}, {}, {}, {}
+      id_sact_to_id_act, id_hoi_to_id_sact = {}, {}
 
-        for ann_hoi_raw in anns_hoi_raw:
-          id_hoi_to_ann_hoi[ann_hoi_raw['id']] = HOI(ann_hoi_raw,
-                                                     self.taxonomy['actor'], self.taxonomy['object'],
-                                                     self.taxonomy['ia'], self.taxonomy['ta'],
-                                                     self.taxonomy['att'], self.taxonomy['rel'])
-          id_hoi_to_id_sact[ann_hoi_raw['id']] = ann_sact_raw['id']
+      for ann_raw in anns_raw:
+        ann_act_raw = ann_raw['activity']
+        metadata[ann_act_raw['id']] = Metadatum(ann_raw)
+        id_act_to_ann_act[ann_act_raw['id']] = Act(ann_act_raw, self.taxonomy['act'])
+        anns_sact_raw = ann_act_raw['sub_activities']
+
+        for ann_sact_raw in anns_sact_raw:
+          id_sact_to_ann_sact[ann_sact_raw['id']] = SAct(ann_sact_raw, self.taxonomy['sact'])
+          id_sact_to_id_act[ann_sact_raw['id']] = ann_act_raw['id']
+          anns_hoi_raw = ann_sact_raw['higher_order_interactions']
+
+          for ann_hoi_raw in anns_hoi_raw:
+            id_hoi_to_ann_hoi[ann_hoi_raw['id']] = HOI(ann_hoi_raw,
+                                                       self.taxonomy['actor'], self.taxonomy['object'],
+                                                       self.taxonomy['ia'], self.taxonomy['ta'],
+                                                       self.taxonomy['att'], self.taxonomy['rel'])
+            id_hoi_to_id_sact[ann_hoi_raw['id']] = ann_sact_raw['id']
+
+      named_variables = {
+        'metadata': metadata,
+        'id_act_to_ann_act': id_act_to_ann_act,
+        'id_sact_to_ann_sact': id_sact_to_ann_sact,
+        'id_hoi_to_ann_hoi': id_hoi_to_ann_hoi,
+        'id_sact_to_id_act': id_sact_to_id_act,
+        'id_hoi_to_id_sact': id_hoi_to_id_sact
+      }
+      save_cache(dir_cache, named_variables)
 
     id_sact_to_id_act = bidict(id_sact_to_id_act)
     id_hoi_to_id_sact = bidict(id_hoi_to_id_sact)
 
-    if os.path.isfile(os.path.join(self.dir_moma, f'videos/interaction_frames/timestamps.json')):
-      with open(os.path.join(self.dir_moma, f'videos/interaction_frames/timestamps.json'), 'r') as f:
-        windows = json.load(f)
-    else:
-      windows = None
+    with open(os.path.join(self.dir_moma, f'videos/interaction_frames/timestamps.json'), 'r') as f:
+      windows = json.load(f)
 
-    return metadata, id_act_to_ann_act, id_sact_to_ann_sact, id_hoi_to_ann_hoi, \
-           id_sact_to_id_act, id_hoi_to_id_sact, windows
+    return metadata, id_act_to_ann_act, id_sact_to_ann_sact, id_hoi_to_ann_hoi, id_sact_to_id_act, id_hoi_to_id_sact, \
+           windows
 
   def __read_splits(self, generate_split, few_shot, load_val):
     if generate_split:
