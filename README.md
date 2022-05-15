@@ -44,7 +44,6 @@ $ tree dir_moma
 .
 ├── anns
 │    ├── anns.json
-│    ├── anns_toy.json
 │    ├── split.json
 │    ├── split_fs.json
 │    └── taxonomy

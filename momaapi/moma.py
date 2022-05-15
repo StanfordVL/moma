@@ -49,13 +49,11 @@ Definitions:
 class MOMA:
   def __init__(self,
                dir_moma: str,
-               toy: bool=False,
                full_res: bool=False,
                generate_split: bool=False,
                few_shot: bool=False,
                load_val: bool=False):
     """
-     - toy: load a toy annotation file to quickly illustrate the behavior of the various algorithms
      - full_res: load full-resolution videos
      - generate_split: generate a new train/val split
      - few_shot: load few-shot splits
@@ -64,7 +62,6 @@ class MOMA:
     assert os.path.isdir(os.path.join(dir_moma, 'anns')) and os.path.isdir(os.path.join(dir_moma, 'videos'))
 
     self.dir_moma = dir_moma
-    self.toy = toy
     self.full_res = full_res
     self.load_val = load_val
 
@@ -441,8 +438,7 @@ class MOMA:
           load_cache(dir_cache, names)
 
     except FileNotFoundError:
-      fname = 'anns_toy.json' if self.toy else 'anns.json'
-      with open(os.path.join(self.dir_moma, f'anns/{fname}'), 'r') as f:
+      with open(os.path.join(self.dir_moma, f'anns/anns.json'), 'r') as f:
         anns_raw = json.load(f)
 
       metadata, id_act_to_ann_act, id_sact_to_ann_sact, id_hoi_to_ann_hoi = {}, {}, {}, {}
@@ -498,13 +494,7 @@ class MOMA:
       ids_act_splits = json.load(f)
 
     ids_act_train, ids_act_val, ids_act_test = ids_act_splits['train'], ids_act_splits['val'], ids_act_splits['test']
-
-    if self.toy:
-      ids_act_train = list(set(ids_act_train)&set(self.get_ids_act()))
-      ids_act_val = list(set(ids_act_val)&set(self.get_ids_act()))
-      ids_act_test = list(set(ids_act_test)&set(self.get_ids_act()))
-    else:
-      assert set(self.get_ids_act()) == set(ids_act_train+ids_act_val+ids_act_test)
+    assert set(self.get_ids_act()) == set(ids_act_train+ids_act_val+ids_act_test)
 
     if load_val:
       return {'train': ids_act_train, 'val': ids_act_val, 'test': ids_act_test}
