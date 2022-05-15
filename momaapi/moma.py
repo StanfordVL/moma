@@ -3,6 +3,7 @@ import numpy as np
 import os
 
 from .io import IO
+from .lookup import Lookup
 from .statistics import Statistics
 
 
@@ -67,13 +68,11 @@ class MOMA:
 
     io = IO(dir_moma)
     self.taxonomy, self.taxonomy_fs, self.lvis_mapper = io.read_taxonomy()
-    self.metadata, self.id_act_to_ann_act, self.id_sact_to_ann_sact, self.id_hoi_to_ann_hoi, \
-        self.id_sact_to_id_act, self.id_hoi_to_id_sact, self.id_hoi_to_window = io.read_anns()
     self.split_to_ids_act = io.read_splits(few_shot, load_val)
+    self.lookup = Lookup(dir_moma, self.taxonomy)
+    self.statistics = Statistics(self)
 
     assert set(self.get_ids_act()) == set(itertools.chain.from_iterable(self.split_to_ids_act.values()))
-
-    self.statistics = Statistics(self)
 
   def get_taxonomy(self, concept):
     assert concept in self.taxonomy
@@ -114,13 +113,13 @@ class MOMA:
      - absolute: relative to the full video (True) or relative to the activity video (False)
     """
     if not absolute:
-      ann_act = self.id_act_to_ann_act[id_act]
+      ann_act = self.lookup.get_ann(id_act=id_act)
       time = ann_act.start+time
 
     is_sact = False
-    ids_sact = self.id_sact_to_id_act.inverse[id_act]
+    ids_sact = self.lookup.trace(id_act=id_act, level='sact')
     for id_sact in ids_sact:
-      ann_sact = self.id_sact_to_ann_sact[id_sact]
+      ann_sact = self.lookup.get_ann(id_sact=id_sact)
       if ann_sact.start <= time < ann_sact.end:
         is_sact = True
 
@@ -138,7 +137,7 @@ class MOMA:
      - ids_hoi: get activity IDs [ids_act] for given higher-order interaction IDs [ids_hoi]
     """
     if all(x is None for x in [split, cnames_act, ids_sact, ids_hoi]):
-      return sorted(self.id_act_to_ann_act.keys())
+      return sorted(self.lookup.get_ids('act'))
 
     ids_act_intersection = []
 
@@ -150,19 +149,20 @@ class MOMA:
     # cnames_act
     if cnames_act is not None:
       ids_act = []
-      for id_act, ann_act in self.id_act_to_ann_act.items():
+      for id_act in self.lookup.get_ids('act'):
+        ann_act = self.lookup.get_ann(id_act=id_act)
         if ann_act.cname in cnames_act:
           ids_act.append(id_act)
       ids_act_intersection.append(ids_act)
 
     # ids_sact
     if ids_sact is not None:
-      ids_act = [self.id_sact_to_id_act[id_sact] for id_sact in ids_sact]
+      ids_act = [self.lookup.trace(id_sact=id_sact, level='act') for id_sact in ids_sact]
       ids_act_intersection.append(ids_act)
 
     # ids_hoi
     if ids_hoi is not None:
-      ids_act = [self.id_sact_to_id_act[self.id_hoi_to_id_sact[id_hoi]] for id_hoi in ids_hoi]
+      ids_act = [self.lookup.trace(id_hoi=id_hoi, level='act')for id_hoi in ids_hoi]
       ids_act_intersection.append(ids_act)
 
     ids_act_intersection = sorted(set.intersection(*map(set, ids_act_intersection)))
@@ -191,7 +191,7 @@ class MOMA:
     """
     if all(x is None for x in [split, cnames_sact, ids_act, ids_hoi, cnames_actor, cnames_object,
                                cnames_ia, cnames_ta, cnames_att, cnames_rel]):
-      return sorted(self.id_sact_to_ann_sact.keys())
+      return sorted(self.lookup.get_ids('sact'))
 
     ids_sact_intersection = []
 
@@ -204,19 +204,20 @@ class MOMA:
     # cnames_sact
     if cnames_sact is not None:
       ids_sact = []
-      for id_sact, ann_sact in self.id_sact_to_ann_sact.items():
+      for id_sact in self.lookup.get_ids('sact'):
+        ann_sact = self.lookup.get_ann(id_sact=id_sact)
         if ann_sact.cname in cnames_sact:
           ids_sact.append(id_sact)
       ids_sact_intersection.append(ids_sact)
 
     # ids_act
     if ids_act is not None:
-      ids_sact = itertools.chain(*[self.id_sact_to_id_act.inverse[id_act] for id_act in ids_act])
+      ids_sact = itertools.chain(*[self.lookup.trace(id_act=id_act, level='sact') for id_act in ids_act])
       ids_sact_intersection.append(ids_sact)
 
     # ids_hoi
     if ids_hoi is not None:
-      ids_sact = [self.id_hoi_to_id_sact[id_hoi] for id_hoi in ids_hoi]
+      ids_sact = [self.lookup.trace(id_hoi=id_hoi, level='sact') for id_hoi in ids_hoi]
       ids_sact_intersection.append(ids_sact)
 
     # cnames_actor, cnames_object, cnames_ia, cnames_ta, cnames_att, cnames_rel
@@ -224,7 +225,7 @@ class MOMA:
       kwargs = {'cnames_actor': cnames_actor, 'cnames_object': cnames_object,
                 'cnames_ia': cnames_ia, 'cnames_ta': cnames_ta,
                 'cnames_att': cnames_att, 'cnames_rel': cnames_rel}
-      ids_sact = [self.id_hoi_to_id_sact[id_hoi] for id_hoi in self.get_ids_hoi(**kwargs)]
+      ids_sact = [self.lookup.trace(id_hoi=id_hoi, level='sact') for id_hoi in self.get_ids_hoi(**kwargs)]
       ids_sact_intersection.append(ids_sact)
 
     ids_sact_intersection = sorted(set.intersection(*map(set, ids_sact_intersection)))
@@ -251,7 +252,7 @@ class MOMA:
     """
     if all(x is None for x in [split, ids_act, ids_sact, cnames_actor, cnames_object,
                                cnames_ia, cnames_ta, cnames_att, cnames_rel]):
-      return sorted(self.id_hoi_to_ann_hoi.keys())
+      return sorted(self.lookup.get_ids('hoi'))
 
     ids_hoi_intersection = []
 
@@ -263,14 +264,12 @@ class MOMA:
 
     # ids_act
     if ids_act is not None:
-      ids_hoi = itertools.chain(*[self.id_hoi_to_id_sact.inverse[id_sact]
-                                  for id_act in ids_act
-                                  for id_sact in self.id_sact_to_id_act.inverse[id_act]])
+      ids_hoi = itertools.chain(*[self.lookup.trace(id_act=id_act, level='hoi') for id_act in ids_act])
       ids_hoi_intersection.append(ids_hoi)
 
     # ids_sact
     if ids_sact is not None:
-      ids_hoi = itertools.chain(*[self.id_hoi_to_id_sact.inverse[id_sact] for id_sact in ids_sact])
+      ids_hoi = itertools.chain(*[self.lookup.trace(id_sact=id_sact, level='hoi') for id_sact in ids_sact])
       ids_hoi_intersection.append(ids_hoi)
 
     # cnames_actor, cnames_object, cnames_ia, cnames_ta, cnames_att, cnames_rel
@@ -280,8 +279,8 @@ class MOMA:
     for var, cnames in cnames_dict.items():
       if cnames is not None:
         ids_hoi = []
-        for id_hoi in self.id_hoi_to_ann_hoi.keys():
-          ann_hoi = self.id_hoi_to_ann_hoi[id_hoi]
+        for id_hoi in self.lookup.get_ids('hoi'):
+          ann_hoi = self.lookup.get_ann(id_hoi=id_hoi)
           if not set(cnames).isdisjoint([x.cname for x in getattr(ann_hoi, var)]):
             ids_hoi.append(id_hoi)
         ids_hoi_intersection.append(ids_hoi)
@@ -290,16 +289,16 @@ class MOMA:
     return ids_hoi_intersection
 
   def get_metadata(self, ids_act: list) -> list:
-    return [self.metadata[id_act] for id_act in ids_act]
+    return [self.lookup.get_metadatum(id_act=id_act) for id_act in ids_act]
 
   def get_anns_act(self, ids_act: list) -> list:
-    return [self.id_act_to_ann_act[id_act] for id_act in ids_act]
+    return [self.lookup.get_ann(id_act=id_act) for id_act in ids_act]
   
   def get_anns_sact(self, ids_sact: list) -> list:
-     return [self.id_sact_to_ann_sact[id_sact] for id_sact in ids_sact]
+     return [self.lookup.get_ann(id_sact=id_sact) for id_sact in ids_sact]
     
   def get_anns_hoi(self, ids_hoi: list) -> list:
-     return [self.id_hoi_to_ann_hoi[id_hoi] for id_hoi in ids_hoi]
+     return [self.lookup.get_ann(id_hoi=id_hoi) for id_hoi in ids_hoi]
 
   def get_paths(self,
                 ids_act: list=None,
@@ -328,7 +327,7 @@ class MOMA:
      - a path to the 1s video clip centered at the higher-order interaction (<1s if exceeds the raw video boundary)
      - paths to 5 frames centered at the higher-order interaction (<5 frames if exceeds the raw video boundary)
     """
-    window = self.id_hoi_to_window[id_hoi]
+    window = self.lookup.get_window(id_hoi=id_hoi)
     now = self.get_anns_hoi(ids_hoi=[id_hoi])[0].time
     window = [[os.path.join(self.dir_moma, f'videos/interaction_frames/{fname}.jpg'), time] for fname, time in window]+\
              [[os.path.join(self.dir_moma, f'videos/interaction/{id_hoi}.jpg'), now]]
