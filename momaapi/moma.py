@@ -2,7 +2,7 @@ import itertools
 import numpy as np
 import os
 
-from .io import *
+from .io import IO
 from .statistics import Statistics
 
 

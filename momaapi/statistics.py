@@ -1,16 +1,27 @@
+import json
 import numpy as np
+import os
 
 
 class Statistics(dict):
-  def __init__(self, moma):
+  def __init__(self, moma, reload=False):
     super().__init__()
+    self.reload = reload
     self.statistics = self.get_statistics(moma)
 
   def get_statistics(self, moma):
-    statistics = {'all': self.get_statistic(moma)}
+    if os.path.exists(os.path.join(moma.dir_moma, 'anns/cache/statistics.json')) and not self.reload:
+      with open(os.path.join(moma.dir_moma, 'anns/cache/statistics.json'), 'r') as f:
+        statistics = json.load(f)
 
-    for split in moma.split_to_ids_act:
-      statistics[split] = self.get_statistic(moma, split)
+    else:
+      statistics = {'all': self.get_statistic(moma)}
+      for split in moma.split_to_ids_act:
+        statistics[split] = self.get_statistic(moma, split)
+
+      os.makedirs(os.path.join(moma.dir_moma, 'cache'), exist_ok=True)
+      with open(os.path.join(moma.dir_moma, 'anns/cache/statistics.json'), 'w') as f:
+        json.dump(statistics, f, indent=2, sort_keys=False)
 
     return statistics
 
