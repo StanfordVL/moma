@@ -3,6 +3,7 @@ import numpy as np
 import os
 
 from .io import *
+from .statistics import Statistics
 
 
 """
@@ -21,6 +22,9 @@ The following functions are defined:
  - get_paths_window: Given an HOI instance ID, return window paths
  - sort: Given sub-activity or higher-order interaction instance IDs, return them in sorted order
  - get_cid_fs： Get the consecutive few-shot class id given a class id
+ 
+The following attributes are defined:
+ - statistics: TODO
  
 Acronyms:
  - act: activity
@@ -68,7 +72,7 @@ class MOMA:
 
     assert set(self.get_ids_act()) == set(itertools.chain.from_iterable(self.split_to_ids_act.values()))
 
-    self.statistics, self.distributions = self.__get_summaries()
+    self.statistics = Statistics(self)
 
   def get_taxonomy(self, concept):
     assert concept in self.taxonomy
@@ -362,146 +366,3 @@ class MOMA:
     else:
       cid_fs = self.taxonomy_fs[f'{concept}_{split}'].index(cname)
     return cid_fs
-
-  def __get_summaries(self):
-    statistics_all, distributions_all = self.__get_summary()
-    statistics = {'all': statistics_all}
-    distributions = {'all': distributions_all}
-
-    for split in self.split_to_ids_act:
-      statistics_split, distributions_split = self.__get_summary(split)
-      statistics[split] = statistics_split
-      distributions[split] = distributions_split
-
-    return statistics, distributions
-
-  def __get_summary(self, split=None):
-    if split is None:
-      metadata = self.metadata.values()
-      anns_act = self.id_act_to_ann_act.values()
-      anns_sact = self.id_sact_to_ann_sact.values()
-      anns_hoi = self.id_hoi_to_ann_hoi.values()
-    else:
-      assert split in self.split_to_ids_act
-      ids_act = self.split_to_ids_act[split]
-      metadata = self.get_metadata(ids_act=ids_act)
-      anns_act = self.get_anns_act(ids_act=ids_act)
-      ids_sact = self.get_ids_sact(ids_act=ids_act)
-      anns_sact = self.get_anns_sact(ids_sact=ids_sact)
-      ids_hoi = self.get_ids_hoi(ids_act=ids_act)
-      anns_hoi = self.get_anns_hoi(ids_hoi=ids_hoi)
-  
-    num_acts = len(anns_act)
-    num_classes_act = len(self.taxonomy['act'])
-    num_sacts = len(anns_sact)
-    num_classes_sact = len(self.taxonomy['sact'])
-    num_hois = len(anns_hoi)
-  
-    num_actors_image = sum([len(ann_hoi.actors) for ann_hoi in anns_hoi])
-    num_actors_video = sum([len(ann_sact.ids_actor) for ann_sact in anns_sact])
-    num_classes_actor = len(self.taxonomy['actor'])
-    num_objects_image = sum([len(ann_hoi.objects) for ann_hoi in anns_hoi])
-    num_objects_video = sum([len(ann_sact.ids_object) for ann_sact in anns_sact])
-    num_classes_object = len(self.taxonomy['object'])
-  
-    num_ias = sum([len(ann_hoi.ias) for ann_hoi in anns_hoi])
-    num_classes_ia = len(self.taxonomy['ia'])
-    num_tas = sum([len(ann_hoi.tas) for ann_hoi in anns_hoi])
-    num_classes_ta = len(self.taxonomy['ta'])
-    num_atts = sum([len(ann_hoi.atts) for ann_hoi in anns_hoi])
-    num_classes_att = len(self.taxonomy['att'])
-    num_rels = sum([len(ann_hoi.rels) for ann_hoi in anns_hoi])
-    num_classes_rel = len(self.taxonomy['rel'])
-  
-    duration_total_raw = sum(metadatum.duration for metadatum in metadata)
-  
-    duration_total_act = sum(ann_act.end-ann_act.start for ann_act in anns_act)
-    duration_avg_act = duration_total_act/len(anns_act)
-    duration_min_act = min(ann_act.end-ann_act.start for ann_act in anns_act)
-    duration_max_act = max(ann_act.end-ann_act.start for ann_act in anns_act)
-  
-    duration_total_sact = sum(ann_sact.end-ann_sact.start for ann_sact in anns_sact)
-    duration_avg_sact = duration_total_sact/len(anns_sact)
-    duration_min_sact = min(ann_sact.end-ann_sact.start for ann_sact in anns_sact)
-    duration_max_sact = max(ann_sact.end-ann_sact.start for ann_sact in anns_sact)
-  
-    bincount_act = np.bincount([ann_act.cid for ann_act in anns_act], minlength=num_classes_act).tolist()
-    bincount_sact = np.bincount([ann_sact.cid for ann_sact in anns_sact], minlength=num_classes_sact).tolist()
-    bincount_actor, bincount_object, bincount_ia, bincount_ta, bincount_att, bincount_rel = [], [], [], [], [], []
-    for ann_hoi in anns_hoi:
-      bincount_actor += [actor.cid for actor in ann_hoi.actors]
-      bincount_object += [object.cid for object in ann_hoi.objects]
-      bincount_ia += [ia.cid for ia in ann_hoi.ias]
-      bincount_ta += [ta.cid for ta in ann_hoi.tas]
-      bincount_att += [att.cid for att in ann_hoi.atts]
-      bincount_rel += [rel.cid for rel in ann_hoi.rels]
-    bincount_actor = np.bincount(bincount_actor, minlength=num_classes_actor).tolist()
-    bincount_object = np.bincount(bincount_object, minlength=num_classes_object).tolist()
-    bincount_ia = np.bincount(bincount_ia, minlength=num_classes_ia).tolist()
-    bincount_ta = np.bincount(bincount_ta, minlength=num_classes_ta).tolist()
-    bincount_att = np.bincount(bincount_att, minlength=num_classes_att).tolist()
-    bincount_rel = np.bincount(bincount_rel, minlength=num_classes_rel).tolist()
-  
-    statistics = {
-      'raw': {
-        'duration_total': duration_total_raw
-      },
-      'act': {
-        'num_instances': num_acts,
-        'num_classes': num_classes_act,
-        'duration_avg': duration_avg_act,
-        'duration_min': duration_min_act,
-        'duration_max': duration_max_act,
-        'duration_total': duration_total_act
-      },
-      'sact': {
-        'num_instances': num_sacts,
-        'num_classes': num_classes_sact,
-        'duration_avg': duration_avg_sact,
-        'duration_min': duration_min_sact,
-        'duration_max': duration_max_sact,
-        'duration_total': duration_total_sact
-      },
-      'hoi': {
-        'num_instances': num_hois,
-      },
-      'actor': {
-        'num_instances_image': num_actors_image,
-        'num_instances_video': num_actors_video,
-        'num_classes': num_classes_actor
-      },
-      'object': {
-        'num_instances_image': num_objects_image,
-        'num_instances_video': num_objects_video,
-        'num_classes': num_classes_object
-      },
-      'ia': {
-        'num_instances': num_ias,
-        'num_classes': num_classes_ia
-      },
-      'ta': {
-        'num_instances': num_tas,
-        'num_classes': num_classes_ta
-      },
-      'att': {
-        'num_instances': num_atts,
-        'num_classes': num_classes_att
-      },
-      'rel': {
-        'num_instances': num_rels,
-        'num_classes': num_classes_rel
-      },
-    }
-  
-    distributions = {
-      'act': bincount_act,
-      'sact': bincount_sact,
-      'actor': bincount_actor,
-      'object': bincount_object,
-      'ia': bincount_ia,
-      'ta': bincount_ta,
-      'att': bincount_att,
-      'rel': bincount_rel,
-    }
-  
-    return statistics, distributions
