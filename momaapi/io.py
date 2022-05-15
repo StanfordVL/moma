@@ -3,35 +3,58 @@ import json
 import os
 import pickle
 
-from .data import *
-
-
-def save_cache(dir_cache, named_variables):
-  os.makedirs(dir_cache, exist_ok=True)
-
-  for name, variable in named_variables.items():
-    assert variable is not None
-    with open(os.path.join(dir_cache, name), 'wb') as f:
-      pickle.dump(variable, f)
-
-
-def load_cache(dir_cache, names):
-  if not all([os.path.exists(os.path.join(dir_cache, name)) for name in names]):
-    raise FileNotFoundError
-
-  variables = []
-  for name in names:
-    with open(os.path.join(dir_cache, name), 'rb') as f:
-      variable = pickle.load(f)
-      variables.append(variable)
-
-  return variables
+from .data import bidict, lazydict, Metadatum, Act, SAct, HOI
+from .utils import timeit
 
 
 class IO:
   def __init__(self, dir_moma):
     self.dir_moma = dir_moma
     self.taxonomy = None
+
+  @staticmethod
+  def save_cache(dir_moma, metadata, id_act_to_ann_act, id_sact_to_ann_sact, id_hoi_to_ann_hoi,
+                 id_sact_to_id_act, id_hoi_to_id_sact, id_hoi_to_window):
+    named_variables = {
+      'metadata': metadata,
+      'id_act_to_ann_act': id_act_to_ann_act,
+      'id_sact_to_ann_sact': id_sact_to_ann_sact,
+      'id_hoi_to_ann_hoi': id_hoi_to_ann_hoi,
+      'id_sact_to_id_act': id_sact_to_id_act,
+      'id_hoi_to_id_sact': id_hoi_to_id_sact,
+      'id_hoi_to_window': id_hoi_to_window
+    }
+
+    os.makedirs(os.path.join(dir_moma, 'anns/cache'), exist_ok=True)
+    os.makedirs(os.path.join(dir_moma, 'anns/cache/id_hoi_to_ann_hoi'), exist_ok=True)
+
+    for name, variable in named_variables.items():
+      assert variable is not None
+
+      if name == 'id_hoi_to_ann_hoi':
+        for id_hoi, ann_hoi in variable.items():
+          with open(os.path.join(dir_moma, 'anns/cache/id_hoi_to_ann_hoi', id_hoi), 'wb') as f:
+            pickle.dump(ann_hoi, f)
+
+      else:
+        with open(os.path.join(dir_moma, 'anns/cache', name), 'wb') as f:
+          pickle.dump(variable, f)
+
+  @staticmethod
+  def load_cache(dir_moma):
+    variables = []
+    for name in ['metadata',
+                 'id_act_to_ann_act', 'id_sact_to_ann_sact',
+                 'id_sact_to_id_act', 'id_hoi_to_id_sact', 'id_hoi_to_window']:
+      with open(os.path.join(dir_moma, 'anns/cache', name), 'rb') as f:
+        variable = pickle.load(f)
+      variables.append(variable)
+
+    ids_hoi = variables[4].keys()
+    id_hoi_to_ann_hoi = lazydict(ids_hoi, os.path.join(dir_moma, 'anns/cache/id_hoi_to_ann_hoi'))
+    variables.insert(3, id_hoi_to_ann_hoi)
+
+    return variables
 
   def read_taxonomy(self):
     with open(os.path.join(self.dir_moma, 'anns/taxonomy/actor.json'), 'r') as f:
@@ -96,19 +119,18 @@ class IO:
     self.taxonomy = taxonomy
     return taxonomy, taxonomy_fs, lvis_mapper
 
+  @timeit
   def read_anns(self):
     if self.taxonomy is None:
       raise Exception('read_taxonomy() should be called first.')
 
-    dir_cache = os.path.join(self.dir_moma, 'anns/cache')
-
     try:
-      names = ['metadata', 'id_act_to_ann_act', 'id_sact_to_ann_sact', 'id_hoi_to_ann_hoi', 'id_sact_to_id_act',
-               'id_hoi_to_id_sact']
-      metadata, id_act_to_ann_act, id_sact_to_ann_sact, id_hoi_to_ann_hoi, id_sact_to_id_act, id_hoi_to_id_sact = \
-          load_cache(dir_cache, names)
+      metadata, \
+      id_act_to_ann_act, id_sact_to_ann_sact, id_hoi_to_ann_hoi, \
+      id_sact_to_id_act, id_hoi_to_id_sact, id_hoi_to_window = self.load_cache(self.dir_moma)
 
     except FileNotFoundError:
+      print('FileNotFoundError')
       with open(os.path.join(self.dir_moma, f'anns/anns.json'), 'r') as f:
         anns_raw = json.load(f)
 
@@ -133,24 +155,18 @@ class IO:
                                                        self.taxonomy['att'], self.taxonomy['rel'])
             id_hoi_to_id_sact[ann_hoi_raw['id']] = ann_sact_raw['id']
 
-      named_variables = {
-        'metadata': metadata,
-        'id_act_to_ann_act': id_act_to_ann_act,
-        'id_sact_to_ann_sact': id_sact_to_ann_sact,
-        'id_hoi_to_ann_hoi': id_hoi_to_ann_hoi,
-        'id_sact_to_id_act': id_sact_to_id_act,
-        'id_hoi_to_id_sact': id_hoi_to_id_sact
-      }
-      save_cache(dir_cache, named_variables)
+      with open(os.path.join(self.dir_moma, f'videos/interaction_frames/timestamps.json'), 'r') as f:
+        id_hoi_to_window = json.load(f)
+
+      self.save_cache(self.dir_moma, metadata,
+                      id_act_to_ann_act, id_sact_to_ann_sact, id_hoi_to_ann_hoi,
+                      id_sact_to_id_act, id_hoi_to_id_sact, id_hoi_to_window)
 
     id_sact_to_id_act = bidict(id_sact_to_id_act)
     id_hoi_to_id_sact = bidict(id_hoi_to_id_sact)
-
-    with open(os.path.join(self.dir_moma, f'videos/interaction_frames/timestamps.json'), 'r') as f:
-      windows = json.load(f)
-
-    return metadata, id_act_to_ann_act, id_sact_to_ann_sact, id_hoi_to_ann_hoi, id_sact_to_id_act, id_hoi_to_id_sact, \
-           windows
+    return metadata, \
+           id_act_to_ann_act, id_sact_to_ann_sact, id_hoi_to_ann_hoi, \
+           id_sact_to_id_act, id_hoi_to_id_sact, id_hoi_to_window
 
   def read_splits(self, few_shot, load_val):
     # load split

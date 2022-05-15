@@ -156,8 +156,8 @@ class Statistics(dict):
   def keys(self):
     return self.statistics.keys()
 
-  def __getitem__(self, item):
-    return self.statistics[item]
+  def __getitem__(self, key):
+    return self.statistics[key]
 
   def __len__(self):
     return len(self.statistics.keys())

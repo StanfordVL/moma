@@ -54,9 +54,10 @@ class MOMA:
                few_shot: bool=False,
                load_val: bool=False):
     """
-     - full_res: load full-resolution videos
-     - few_shot: load few-shot splits
-     - load_val: load the validation set separately
+     - dir_moma: directory of the MOMA dataset
+     - full_res: whether to load full-resolution videos
+     - few_shot: whether to load few-shot splits
+     - load_val: whether to load the validation set separately
     """
     assert os.path.isdir(os.path.join(dir_moma, 'anns')) and os.path.isdir(os.path.join(dir_moma, 'videos'))
 
@@ -67,7 +68,7 @@ class MOMA:
     io = IO(dir_moma)
     self.taxonomy, self.taxonomy_fs, self.lvis_mapper = io.read_taxonomy()
     self.metadata, self.id_act_to_ann_act, self.id_sact_to_ann_sact, self.id_hoi_to_ann_hoi, \
-        self.id_sact_to_id_act, self.id_hoi_to_id_sact, self.windows = io.read_anns()
+        self.id_sact_to_id_act, self.id_hoi_to_id_sact, self.id_hoi_to_window = io.read_anns()
     self.split_to_ids_act = io.read_splits(few_shot, load_val)
 
     assert set(self.get_ids_act()) == set(itertools.chain.from_iterable(self.split_to_ids_act.values()))
@@ -281,7 +282,8 @@ class MOMA:
     for var, cnames in cnames_dict.items():
       if cnames is not None:
         ids_hoi = []
-        for id_hoi, ann_hoi in self.id_hoi_to_ann_hoi.items():
+        for id_hoi in self.id_hoi_to_ann_hoi.keys():
+          ann_hoi = self.id_hoi_to_ann_hoi[id_hoi]
           if not set(cnames).isdisjoint([x.cname for x in getattr(ann_hoi, var)]):
             ids_hoi.append(id_hoi)
         ids_hoi_intersection.append(ids_hoi)
@@ -328,9 +330,9 @@ class MOMA:
      - a path to the 1s video clip centered at the higher-order interaction (<1s if exceeds the raw video boundary)
      - paths to 5 frames centered at the higher-order interaction (<5 frames if exceeds the raw video boundary)
     """
-    window = self.windows[id_hoi]
+    window = self.id_hoi_to_window[id_hoi]
     now = self.get_anns_hoi(ids_hoi=[id_hoi])[0].time
-    window = [[os.path.join(self.dir_moma, f'videos/interaction_frames/{fname}.jpg'), time] for fname, time in window]+ \
+    window = [[os.path.join(self.dir_moma, f'videos/interaction_frames/{fname}.jpg'), time] for fname, time in window]+\
              [[os.path.join(self.dir_moma, f'videos/interaction/{id_hoi}.jpg'), now]]
     window = sorted(window, key=lambda x: x[1])
 

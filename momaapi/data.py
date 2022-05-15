@@ -1,3 +1,7 @@
+import os
+import pickle
+
+
 class bidict(dict):
   """
   A many-to-one bidirectional dictionary
@@ -20,6 +24,33 @@ class bidict(dict):
     if len(self.inverse[self[key]]) == 0:
       del self.inverse[self[key]]
     super(bidict, self).__delitem__(key)
+
+
+class lazydict(dict):
+  def __init__(self, keys, dir_pickle):
+    super().__init__()
+    self._keys = keys
+    self.buffer = {}
+    self.dir_pickle = dir_pickle
+    assert set(keys) == set(os.listdir(dir_pickle))
+
+  def keys(self):
+    return self._keys
+
+  def __getitem__(self, key):
+    if key in self.buffer:
+      return self.buffer[key]
+    else:
+      with open(os.path.join(self.dir_pickle, key), 'rb') as f:
+        value = pickle.load(f)
+        self.buffer[key] = value
+        return value
+
+  def __len__(self):
+    return len(self._keys)
+
+  def __repr__(self):
+    return 'lazydict()'
 
 
 class Metadatum:
