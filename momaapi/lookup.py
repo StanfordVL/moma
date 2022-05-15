@@ -7,7 +7,7 @@ from .data import bidict, lazydict, Metadatum, Act, SAct, HOI
 
 
 class Lookup:
-  def __init__(self, dir_moma, taxonomy):
+  def __init__(self, dir_moma, taxonomy, few_shot=False, load_val=False):
     self.dir_moma = dir_moma
     self.taxonomy = taxonomy
 
@@ -18,8 +18,10 @@ class Lookup:
     self.id_sact_to_id_act = None
     self.id_hoi_to_id_sact = None
     self.id_hoi_to_window = None
+    self.split_to_ids_act = None
 
     self.read_anns()
+    self.read_splits(few_shot, load_val)
 
   @staticmethod
   def save_cache(dir_moma,
@@ -114,10 +116,32 @@ class Lookup:
     self.id_hoi_to_id_sact = id_hoi_to_id_sact
     self.id_hoi_to_window = id_hoi_to_window
 
-  def get_ids(self, level):
-    assert level in ['act', 'sact', 'hoi']
+  def read_splits(self, few_shot, load_val):
+    # load split
+    path_split = os.path.join(self.dir_moma, 'anns/split_fs.json' if few_shot else 'anns/split.json')
+    if not os.path.isfile(path_split):
+      print(f'Dataset split file does not exist: {path_split}')
+      return
+    with open(path_split, 'r') as f:
+      ids_act_splits = json.load(f)
 
-    if level == 'act':
+    ids_act_train, ids_act_val, ids_act_test = ids_act_splits['train'], ids_act_splits['val'], ids_act_splits['test']
+
+    if load_val:
+      self.split_to_ids_act = {'train': ids_act_train, 'val': ids_act_val, 'test': ids_act_test}
+    else:
+      self.split_to_ids_act = {'train': ids_act_train+ids_act_val, 'test': ids_act_test}
+
+  def get_splits(self):
+    return self.split_to_ids_act.keys()
+
+  def get_ids(self, level, split=None):
+    assert level in ['act', 'sact', 'hoi']
+    assert split is None or (split in self.get_splits() and level == 'act')
+
+    if split is not None:
+      return self.split_to_ids_act[split]
+    elif level == 'act':
       return self.id_act_to_ann_act.keys()
     elif level == 'sact':
       return self.id_sact_to_ann_sact.keys()
@@ -144,7 +168,7 @@ class Lookup:
   def get_window(self, id_hoi):
     return self.id_hoi_to_window[id_hoi]
 
-  def trace(self, id_act=None, id_sact=None, id_hoi=None, level=None):
+  def trace_id(self, id_act=None, id_sact=None, id_hoi=None, level=None):
     assert sum([x is not None for x in [id_act, id_sact, id_hoi]]) == 1
     assert level in ['act', 'sact', 'hoi']
 

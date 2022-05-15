@@ -70,19 +70,3 @@ class IO:
     }
 
     return taxonomy, taxonomy_fs, lvis_mapper
-
-  def read_splits(self, few_shot, load_val):
-    # load split
-    path_split = os.path.join(self.dir_moma, 'anns/split_fs.json' if few_shot else 'anns/split.json')
-    if not os.path.isfile(path_split):
-      print(f'Dataset split file does not exist: {path_split}')
-      return None, None
-    with open(path_split, 'r') as f:
-      ids_act_splits = json.load(f)
-
-    ids_act_train, ids_act_val, ids_act_test = ids_act_splits['train'], ids_act_splits['val'], ids_act_splits['test']
-
-    if load_val:
-      return {'train': ids_act_train, 'val': ids_act_val, 'test': ids_act_test}
-    else:
-      return {'train': ids_act_train+ids_act_val, 'test': ids_act_test}

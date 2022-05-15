@@ -68,11 +68,8 @@ class MOMA:
 
     io = IO(dir_moma)
     self.taxonomy, self.taxonomy_fs, self.lvis_mapper = io.read_taxonomy()
-    self.split_to_ids_act = io.read_splits(few_shot, load_val)
-    self.lookup = Lookup(dir_moma, self.taxonomy)
+    self.lookup = Lookup(dir_moma, self.taxonomy, few_shot, load_val)
     self.statistics = Statistics(self)
-
-    assert set(self.get_ids_act()) == set(itertools.chain.from_iterable(self.split_to_ids_act.values()))
 
   def get_taxonomy(self, concept):
     assert concept in self.taxonomy
@@ -91,10 +88,10 @@ class MOMA:
 
     assert split is not None
     if split == 'either':  # exclude if < threshold in either one split
-      distribution = np.stack([self.statistics[split][concept]['distribution'] for split in self.split_to_ids_act])
+      distribution = np.stack([self.statistics[split][concept]['distribution'] for split in self.lookup.get_splits()])
       distribution = np.amin(distribution, axis=0).tolist()
     elif split == 'both':  # exclude if < threshold in all splits
-      distribution = np.stack([self.statistics[split][concept]['distribution'] for split in self.split_to_ids_act])
+      distribution = np.stack([self.statistics[split][concept]['distribution'] for split in self.lookup.get_splits()])
       distribution = np.amax(distribution, axis=0).tolist()
     else:
       distribution = self.statistics[split][concept]['distribution']
@@ -117,7 +114,7 @@ class MOMA:
       time = ann_act.start+time
 
     is_sact = False
-    ids_sact = self.lookup.trace(id_act=id_act, level='sact')
+    ids_sact = self.lookup.trace_id(id_act=id_act, level='sact')
     for id_sact in ids_sact:
       ann_sact = self.lookup.get_ann(id_sact=id_sact)
       if ann_sact.start <= time < ann_sact.end:
@@ -143,8 +140,8 @@ class MOMA:
 
     # split
     if split is not None:
-      assert split in self.split_to_ids_act
-      ids_act_intersection.append(self.split_to_ids_act[split])
+      assert split in self.lookup.get_splits()
+      ids_act_intersection.append(self.lookup.get_ids('act', split))
 
     # cnames_act
     if cnames_act is not None:
@@ -157,12 +154,12 @@ class MOMA:
 
     # ids_sact
     if ids_sact is not None:
-      ids_act = [self.lookup.trace(id_sact=id_sact, level='act') for id_sact in ids_sact]
+      ids_act = [self.lookup.trace_id(id_sact=id_sact, level='act') for id_sact in ids_sact]
       ids_act_intersection.append(ids_act)
 
     # ids_hoi
     if ids_hoi is not None:
-      ids_act = [self.lookup.trace(id_hoi=id_hoi, level='act')for id_hoi in ids_hoi]
+      ids_act = [self.lookup.trace_id(id_hoi=id_hoi, level='act')for id_hoi in ids_hoi]
       ids_act_intersection.append(ids_act)
 
     ids_act_intersection = sorted(set.intersection(*map(set, ids_act_intersection)))
@@ -197,8 +194,8 @@ class MOMA:
 
     # split
     if split is not None:
-      assert split in self.split_to_ids_act
-      ids_sact = self.get_ids_sact(ids_act=self.split_to_ids_act[split])
+      assert split in self.lookup.get_splits()
+      ids_sact = self.get_ids_sact(ids_act=self.lookup.get_ids('act', split))
       ids_sact_intersection.append(ids_sact)
 
     # cnames_sact
@@ -212,12 +209,12 @@ class MOMA:
 
     # ids_act
     if ids_act is not None:
-      ids_sact = itertools.chain(*[self.lookup.trace(id_act=id_act, level='sact') for id_act in ids_act])
+      ids_sact = itertools.chain(*[self.lookup.trace_id(id_act=id_act, level='sact') for id_act in ids_act])
       ids_sact_intersection.append(ids_sact)
 
     # ids_hoi
     if ids_hoi is not None:
-      ids_sact = [self.lookup.trace(id_hoi=id_hoi, level='sact') for id_hoi in ids_hoi]
+      ids_sact = [self.lookup.trace_id(id_hoi=id_hoi, level='sact') for id_hoi in ids_hoi]
       ids_sact_intersection.append(ids_sact)
 
     # cnames_actor, cnames_object, cnames_ia, cnames_ta, cnames_att, cnames_rel
@@ -225,7 +222,7 @@ class MOMA:
       kwargs = {'cnames_actor': cnames_actor, 'cnames_object': cnames_object,
                 'cnames_ia': cnames_ia, 'cnames_ta': cnames_ta,
                 'cnames_att': cnames_att, 'cnames_rel': cnames_rel}
-      ids_sact = [self.lookup.trace(id_hoi=id_hoi, level='sact') for id_hoi in self.get_ids_hoi(**kwargs)]
+      ids_sact = [self.lookup.trace_id(id_hoi=id_hoi, level='sact') for id_hoi in self.get_ids_hoi(**kwargs)]
       ids_sact_intersection.append(ids_sact)
 
     ids_sact_intersection = sorted(set.intersection(*map(set, ids_sact_intersection)))
@@ -258,18 +255,18 @@ class MOMA:
 
     # split
     if split is not None:
-      assert split in self.split_to_ids_act
-      ids_hoi = self.get_ids_hoi(ids_act=self.split_to_ids_act[split])
+      assert split in self.lookup.get_splits()
+      ids_hoi = self.get_ids_hoi(ids_act=self.lookup.get_ids('act', split))
       ids_hoi_intersection.append(ids_hoi)
 
     # ids_act
     if ids_act is not None:
-      ids_hoi = itertools.chain(*[self.lookup.trace(id_act=id_act, level='hoi') for id_act in ids_act])
+      ids_hoi = itertools.chain(*[self.lookup.trace_id(id_act=id_act, level='hoi') for id_act in ids_act])
       ids_hoi_intersection.append(ids_hoi)
 
     # ids_sact
     if ids_sact is not None:
-      ids_hoi = itertools.chain(*[self.lookup.trace(id_sact=id_sact, level='hoi') for id_sact in ids_sact])
+      ids_hoi = itertools.chain(*[self.lookup.trace_id(id_sact=id_sact, level='hoi') for id_sact in ids_sact])
       ids_hoi_intersection.append(ids_hoi)
 
     # cnames_actor, cnames_object, cnames_ia, cnames_ta, cnames_att, cnames_rel
