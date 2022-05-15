@@ -91,13 +91,13 @@ class MOMA:
 
     assert split is not None
     if split == 'either':  # exclude if < threshold in either one split
-      distribution = np.stack([self.distributions[split][concept] for split in self.split_to_ids_act], axis=0)
+      distribution = np.stack([self.statistics[split][concept]['distribution'] for split in self.split_to_ids_act])
       distribution = np.amin(distribution, axis=0).tolist()
     elif split == 'both':  # exclude if < threshold in all splits
-      distribution = np.stack([self.distributions[split][concept] for split in self.split_to_ids_act], axis=0)
+      distribution = np.stack([self.statistics[split][concept]['distribution'] for split in self.split_to_ids_act])
       distribution = np.amax(distribution, axis=0).tolist()
     else:
-      distribution = self.distributions[split][concept]
+      distribution = self.statistics[split][concept]['distribution']
 
     cnames = []
     for i, cname in enumerate(self.get_taxonomy(concept)):

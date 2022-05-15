@@ -92,7 +92,7 @@ class Statistics(dict):
         'duration_min': duration_min_act,
         'duration_max': duration_max_act,
         'duration_total': duration_total_act,
-        'class_distribution': bincount_act
+        'distribution': bincount_act
       },
       'sact': {
         'num_instances': num_sacts,
@@ -101,7 +101,7 @@ class Statistics(dict):
         'duration_min': duration_min_sact,
         'duration_max': duration_max_sact,
         'duration_total': duration_total_sact,
-        'class_distribution': bincount_sact
+        'distribution': bincount_sact
       },
       'hoi': {
         'num_instances': num_hois,
@@ -110,33 +110,33 @@ class Statistics(dict):
         'num_instances_image': num_actors_image,
         'num_instances_video': num_actors_video,
         'num_classes': num_classes_actor,
-        'class_distribution': bincount_actor
+        'distribution': bincount_actor
       },
       'object': {
         'num_instances_image': num_objects_image,
         'num_instances_video': num_objects_video,
         'num_classes': num_classes_object,
-        'class_distribution': bincount_object
+        'distribution': bincount_object
       },
       'ia': {
         'num_instances': num_ias,
         'num_classes': num_classes_ia,
-        'class_distribution': bincount_ia
+        'distribution': bincount_ia
       },
       'ta': {
         'num_instances': num_tas,
         'num_classes': num_classes_ta,
-        'class_distribution': bincount_ta
+        'distribution': bincount_ta
       },
       'att': {
         'num_instances': num_atts,
         'num_classes': num_classes_att,
-        'class_distribution': bincount_att
+        'distribution': bincount_att
       },
       'rel': {
         'num_instances': num_rels,
         'num_classes': num_classes_rel,
-        'class_distribution': bincount_rel
+        'distribution': bincount_rel
       },
     }
 
