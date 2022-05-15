@@ -24,7 +24,7 @@ The following functions are defined:
  - get_cid_fs： Get the consecutive few-shot class id given a class id
  
 The following attributes are defined:
- - statistics: TODO
+ - statistics: an object that stores dataset statistics; please see statistics.py:95 for details
  
 Acronyms:
  - act: activity
@@ -128,7 +128,6 @@ class MOMA:
 
   def get_ids_act(self, split: str=None, cnames_act: list=None,
                   ids_sact: list=None, ids_hoi: list=None) -> list:
-
     """ Get the unique activity instance IDs that satisfy certain conditions
     dataset split
      - split: get activity IDs [ids_act] that belong to the given dataset split
@@ -174,7 +173,6 @@ class MOMA:
                    cnames_actor: list=None, cnames_object: list=None,
                    cnames_ia: list=None, cnames_ta: list=None,
                    cnames_att: list=None, cnames_rel: list=None) -> list:
-
     """ Get the unique sub-activity instance IDs that satisfy certain conditions
     dataset split
      - split: get sub-activity IDs [ids_sact] that belong to the given dataset split
