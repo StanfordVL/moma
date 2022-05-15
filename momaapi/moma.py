@@ -1,10 +1,7 @@
 import itertools
-import json
 import numpy as np
 import os
-import random
 
-from .data import *
 from .io import *
 
 
@@ -50,12 +47,10 @@ class MOMA:
   def __init__(self,
                dir_moma: str,
                full_res: bool=False,
-               generate_split: bool=False,
                few_shot: bool=False,
                load_val: bool=False):
     """
      - full_res: load full-resolution videos
-     - generate_split: generate a new train/val split
      - few_shot: load few-shot splits
      - load_val: load the validation set separately
     """
@@ -65,12 +60,14 @@ class MOMA:
     self.full_res = full_res
     self.load_val = load_val
 
-    self.taxonomy, self.taxonomy_fs, self.lvis_mapper = self.__read_taxonomy()
-    
+    io = IO(dir_moma)
+    self.taxonomy, self.taxonomy_fs, self.lvis_mapper = io.read_taxonomy()
     self.metadata, self.id_act_to_ann_act, self.id_sact_to_ann_sact, self.id_hoi_to_ann_hoi, \
-        self.id_sact_to_id_act, self.id_hoi_to_id_sact, self.windows = self.__read_anns()
+        self.id_sact_to_id_act, self.id_hoi_to_id_sact, self.windows = io.read_anns()
+    self.split_to_ids_act = io.read_splits(few_shot, load_val)
 
-    self.split_to_ids_act = self.__read_splits(generate_split, few_shot, load_val)
+    assert set(self.get_ids_act()) == set(itertools.chain.from_iterable(self.split_to_ids_act.values()))
+
     self.statistics, self.distributions = self.__get_summaries()
 
   def get_taxonomy(self, concept):
@@ -365,166 +362,6 @@ class MOMA:
     else:
       cid_fs = self.taxonomy_fs[f'{concept}_{split}'].index(cname)
     return cid_fs
-
-  def __read_taxonomy(self):
-    with open(os.path.join(self.dir_moma, 'anns/taxonomy/actor.json'), 'r') as f:
-      taxonomy_actor = json.load(f)
-      taxonomy_actor = sorted(itertools.chain(*taxonomy_actor.values()))
-    with open(os.path.join(self.dir_moma, 'anns/taxonomy/object.json'), 'r') as f:
-      taxonomy_object = json.load(f)
-      taxonomy_object = sorted(itertools.chain(*taxonomy_object.values()))
-    with open(os.path.join(self.dir_moma, 'anns/taxonomy/intransitive_action.json'), 'r') as f:
-      taxonomy_ia = json.load(f)
-      taxonomy_ia = sorted(map(tuple, itertools.chain(*taxonomy_ia.values())))
-    with open(os.path.join(self.dir_moma, 'anns/taxonomy/transitive_action.json'), 'r') as f:
-      taxonomy_ta = json.load(f)
-      taxonomy_ta = sorted(map(tuple, itertools.chain(*taxonomy_ta.values())))
-    with open(os.path.join(self.dir_moma, 'anns/taxonomy/attribute.json'), 'r') as f:
-      taxonomy_att = json.load(f)
-      taxonomy_att = sorted(map(tuple, itertools.chain(*taxonomy_att.values())))
-    with open(os.path.join(self.dir_moma, 'anns/taxonomy/relationship.json'), 'r') as f:
-      taxonomy_rel = json.load(f)
-      taxonomy_rel = sorted(map(tuple, itertools.chain(*taxonomy_rel.values())))
-    with open(os.path.join(self.dir_moma, 'anns/taxonomy/act_sact.json'), 'r') as f:
-      taxonomy_act_sact = json.load(f)
-      taxonomy_act = sorted(taxonomy_act_sact.keys())
-      taxonomy_sact = sorted(itertools.chain(*taxonomy_act_sact.values()))
-      taxonomy_sact_to_act = bidict({cname_sact: cname_act for cname_act, cnames_sact in taxonomy_act_sact.items()
-                                                           for cname_sact in cnames_sact})
-    with open(os.path.join(self.dir_moma, 'anns/taxonomy/lvis.json'), 'r') as f:
-      lvis_mapper = json.load(f)
-    with open(os.path.join(self.dir_moma, 'anns/taxonomy/few_shot.json'), 'r') as f:
-      taxonomy_fs = json.load(f)
-      taxonomy_act_train = sorted(taxonomy_fs['train'])
-      taxonomy_act_val = sorted(taxonomy_fs['val'])
-      taxonomy_act_test = sorted(taxonomy_fs['test'])
-      taxonomy_sact_train = [list(taxonomy_sact_to_act.inverse[x]) for x in taxonomy_act_train]
-      taxonomy_sact_val = [list(taxonomy_sact_to_act.inverse[x]) for x in taxonomy_act_val]
-      taxonomy_sact_test = [list(taxonomy_sact_to_act.inverse[x]) for x in taxonomy_act_test]
-      taxonomy_sact_train = sorted(itertools.chain(*taxonomy_sact_train))
-      taxonomy_sact_val = sorted(itertools.chain(*taxonomy_sact_val))
-      taxonomy_sact_test = sorted(itertools.chain(*taxonomy_sact_test))
-
-    taxonomy = {
-      'actor': taxonomy_actor,
-      'object': taxonomy_object,
-      'ia': taxonomy_ia,
-      'ta': taxonomy_ta,
-      'att': taxonomy_att,
-      'rel': taxonomy_rel,
-      'act': taxonomy_act,
-      'sact': taxonomy_sact,
-      'sact_to_act': taxonomy_sact_to_act
-    }
-
-    taxonomy_fs = {
-      'act_train': taxonomy_act_train,
-      'act_val': taxonomy_act_val,
-      'act_test': taxonomy_act_test,
-      'sact_train': taxonomy_sact_train,
-      'sact_val': taxonomy_sact_val,
-      'sact_test': taxonomy_sact_test
-    }
-
-    return taxonomy, taxonomy_fs, lvis_mapper
-
-  def __read_anns(self):
-    dir_cache = os.path.join(self.dir_moma, 'anns/cache')
-
-    try:
-      names = ['metadata', 'id_act_to_ann_act', 'id_sact_to_ann_sact', 'id_hoi_to_ann_hoi', 'id_sact_to_id_act',
-               'id_hoi_to_id_sact']
-      metadata, id_act_to_ann_act, id_sact_to_ann_sact, id_hoi_to_ann_hoi, id_sact_to_id_act, id_hoi_to_id_sact = \
-          load_cache(dir_cache, names)
-
-    except FileNotFoundError:
-      with open(os.path.join(self.dir_moma, f'anns/anns.json'), 'r') as f:
-        anns_raw = json.load(f)
-
-      metadata, id_act_to_ann_act, id_sact_to_ann_sact, id_hoi_to_ann_hoi = {}, {}, {}, {}
-      id_sact_to_id_act, id_hoi_to_id_sact = {}, {}
-
-      for ann_raw in anns_raw:
-        ann_act_raw = ann_raw['activity']
-        metadata[ann_act_raw['id']] = Metadatum(ann_raw)
-        id_act_to_ann_act[ann_act_raw['id']] = Act(ann_act_raw, self.taxonomy['act'])
-        anns_sact_raw = ann_act_raw['sub_activities']
-
-        for ann_sact_raw in anns_sact_raw:
-          id_sact_to_ann_sact[ann_sact_raw['id']] = SAct(ann_sact_raw, self.taxonomy['sact'])
-          id_sact_to_id_act[ann_sact_raw['id']] = ann_act_raw['id']
-          anns_hoi_raw = ann_sact_raw['higher_order_interactions']
-
-          for ann_hoi_raw in anns_hoi_raw:
-            id_hoi_to_ann_hoi[ann_hoi_raw['id']] = HOI(ann_hoi_raw,
-                                                       self.taxonomy['actor'], self.taxonomy['object'],
-                                                       self.taxonomy['ia'], self.taxonomy['ta'],
-                                                       self.taxonomy['att'], self.taxonomy['rel'])
-            id_hoi_to_id_sact[ann_hoi_raw['id']] = ann_sact_raw['id']
-
-      named_variables = {
-        'metadata': metadata,
-        'id_act_to_ann_act': id_act_to_ann_act,
-        'id_sact_to_ann_sact': id_sact_to_ann_sact,
-        'id_hoi_to_ann_hoi': id_hoi_to_ann_hoi,
-        'id_sact_to_id_act': id_sact_to_id_act,
-        'id_hoi_to_id_sact': id_hoi_to_id_sact
-      }
-      save_cache(dir_cache, named_variables)
-
-    id_sact_to_id_act = bidict(id_sact_to_id_act)
-    id_hoi_to_id_sact = bidict(id_hoi_to_id_sact)
-
-    with open(os.path.join(self.dir_moma, f'videos/interaction_frames/timestamps.json'), 'r') as f:
-      windows = json.load(f)
-
-    return metadata, id_act_to_ann_act, id_sact_to_ann_sact, id_hoi_to_ann_hoi, id_sact_to_id_act, id_hoi_to_id_sact, \
-           windows
-
-  def __read_splits(self, generate_split, few_shot, load_val):
-    if generate_split:
-      self.__generate_splits(few_shot)
-
-    # load split
-    path_split = os.path.join(self.dir_moma, 'anns/split_fs.json' if few_shot else 'anns/split.json')
-    if not os.path.isfile(path_split):
-      print(f'Dataset split file does not exist: {path_split}')
-      return None, None
-    with open(path_split, 'r') as f:
-      ids_act_splits = json.load(f)
-
-    ids_act_train, ids_act_val, ids_act_test = ids_act_splits['train'], ids_act_splits['val'], ids_act_splits['test']
-    assert set(self.get_ids_act()) == set(ids_act_train+ids_act_val+ids_act_test)
-
-    if load_val:
-      return {'train': ids_act_train, 'val': ids_act_val, 'test': ids_act_test}
-    else:
-      return {'train': ids_act_train+ids_act_val, 'test': ids_act_test}
-
-  def __generate_splits(self, few_shot, ratio=0.8):
-    if few_shot:
-      with open(os.path.join(self.dir_moma, 'anns/taxonomy/few_shot.json'), 'r') as f:
-        split_to_cnames = json.load(f)
-
-      path_split = os.path.join(self.dir_moma, 'anns/split_fs.json')
-      with open(path_split, 'w') as f:
-        json.dump({split: self.get_ids_act(cnames_act=split_to_cnames[split]) for split in split_to_cnames},
-                  f, indent=2, sort_keys=False)
-    else:
-      ids_act = sorted(self.id_act_to_ann_act.keys())
-      ids_act = random.sample(ids_act, len(ids_act))
-
-      size_train = round(len(ids_act)*ratio)
-      size_val = round(size_train*(1-ratio))
-      size_train = size_train-size_val
-
-      ids_act_train = ids_act[:size_train]
-      ids_act_val = ids_act[size_train:(size_train+size_val)]
-      ids_act_test = ids_act[(size_train+size_val):]
-
-      path_split = os.path.join(self.dir_moma, 'anns/split.json')
-      with open(path_split, 'w') as f:
-        json.dump({'train': ids_act_train, 'val': ids_act_val, 'test': ids_act_test}, f, indent=2, sort_keys=False)
 
   def __get_summaries(self):
     statistics_all, distributions_all = self.__get_summary()

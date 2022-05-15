@@ -19,6 +19,10 @@ def proc_anns(dir_moma, fname_ann_phase1, fname_ann_phase2):
   ann_merger = preproc.AnnMerger(dir_moma, ann_phase1, ann_phase2)
   ann_merger.dump()
 
+  split_generator = preproc.SplitGenerator(dir_moma)
+  split_generator.generate_regular_splits(ratio=0.8)
+  split_generator.generate_few_shot_splits()
+
 
 def proc_videos(dir_moma):
   video_processor = preproc.VideoProcessor(dir_moma)

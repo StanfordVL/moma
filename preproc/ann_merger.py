@@ -1,6 +1,5 @@
 import json
 import os
-import random
 
 from .data import *
 from .utils import *
