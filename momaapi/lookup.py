@@ -86,7 +86,6 @@ class Lookup:
       id_sact_to_id_act, id_hoi_to_id_sact, id_hoi_to_window = self.load_cache()
 
     except FileNotFoundError:
-      print('FileNotFoundError')
       with open(os.path.join(self.dir_moma, f'anns/anns.json'), 'r') as f:
         anns_raw = json.load(f)
 
