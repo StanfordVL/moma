@@ -1,26 +1,30 @@
+import itertools
 import json
 import numpy as np
 import os
 
 
 class Statistics(dict):
-  def __init__(self, moma, reload=False):
+  def __init__(self, dir_moma, taxonomy, lookup):
     super().__init__()
-    self.reload = reload
-    self.statistics = self.get_statistics(moma)
+    self.dir_moma = dir_moma
+    self.statistics = self.get_statistics(taxonomy, lookup)
 
-  def get_statistics(self, moma):
-    if os.path.exists(os.path.join(moma.dir_moma, 'anns/cache/statistics.json')) and not self.reload:
-      with open(os.path.join(moma.dir_moma, 'anns/cache/statistics.json'), 'r') as f:
+  def get_statistics(self, taxonomy, lookup):
+    splits = lookup.retrieve('splits')
+    suffix = '_'.join(splits)
+
+    if os.path.exists(os.path.join(self.dir_moma, f'anns/cache/statistics_{suffix}.json')):
+      with open(os.path.join(self.dir_moma, f'anns/cache/statistics_{suffix}.json'), 'r') as f:
         statistics = json.load(f)
 
     else:
-      statistics = {'all': self.get_statistic(moma)}
-      for split in moma.split_to_ids_act:
-        statistics[split] = self.get_statistic(moma, split)
+      statistics = {'all': self.get_statistic(taxonomy, lookup)}
+      for split in splits:
+        statistics[split] = self.get_statistic(taxonomy, lookup, split)
 
-      os.makedirs(os.path.join(moma.dir_moma, 'cache'), exist_ok=True)
-      with open(os.path.join(moma.dir_moma, 'anns/cache/statistics.json'), 'w') as f:
+      os.makedirs(os.path.join(self.dir_moma, 'cache'), exist_ok=True)
+      with open(os.path.join(self.dir_moma, f'anns/cache/statistics_{suffix}.json'), 'w') as f:
         json.dump(statistics, f, indent=2, sort_keys=False)
 
     return statistics
@@ -33,43 +37,42 @@ class Statistics(dict):
     duration_max = max(ann.end-ann.start for ann in anns)
     return duration_total, duration_avg, duration_min, duration_max
 
-  def get_statistic(self, moma, split=None):
+  def get_statistic(self, taxonomy, lookup, split=None):
     if split is None:
-      metadata = moma.metadata.values()
-      anns_act = moma.id_act_to_ann_act.values()
-      anns_sact = moma.id_sact_to_ann_sact.values()
-      anns_hoi = moma.id_hoi_to_ann_hoi.values()
+      metadata = lookup.retrieve('metadata')
+      anns_act = lookup.retrieve('anns_act')
+      anns_sact = lookup.retrieve('anns_sact')
+      anns_hoi = lookup.retrieve('anns_hoi')
     else:
-      assert split in moma.split_to_ids_act
-      ids_act = moma.split_to_ids_act[split]
-      metadata = moma.get_metadata(ids_act=ids_act)
-      anns_act = moma.get_anns_act(ids_act=ids_act)
-      ids_sact = moma.get_ids_sact(ids_act=ids_act)
-      anns_sact = moma.get_anns_sact(ids_sact=ids_sact)
-      ids_hoi = moma.get_ids_hoi(ids_act=ids_act)
-      anns_hoi = moma.get_anns_hoi(ids_hoi=ids_hoi)
+      ids_act = lookup.retrieve('ids_act', split)
+      metadata = [lookup.retrieve('metadatum', id_act) for id_act in ids_act]
+      anns_act = [lookup.retrieve('ann_act', id_act) for id_act in ids_act]
+      ids_sact = list(itertools.chain(*[lookup.trace('ids_sact', id_act=id_act) for id_act in ids_act]))
+      anns_sact = [lookup.retrieve('ann_sact', id_sact) for id_sact in ids_sact]
+      ids_hoi = list(itertools.chain(*[lookup.trace('ids_hoi', id_sact=id_sact) for id_sact in ids_sact]))
+      anns_hoi = [lookup.retrieve('ann_hoi', id_hoi) for id_hoi in ids_hoi]
 
     num_acts = len(anns_act)
-    num_classes_act = len(moma.taxonomy['act'])
+    num_classes_act = len(taxonomy['act'])
     num_sacts = len(anns_sact)
-    num_classes_sact = len(moma.taxonomy['sact'])
+    num_classes_sact = len(taxonomy['sact'])
     num_hois = len(anns_hoi)
 
     num_actors_image = sum([len(ann_hoi.actors) for ann_hoi in anns_hoi])
     num_actors_video = sum([len(ann_sact.ids_actor) for ann_sact in anns_sact])
-    num_classes_actor = len(moma.taxonomy['actor'])
+    num_classes_actor = len(taxonomy['actor'])
     num_objects_image = sum([len(ann_hoi.objects) for ann_hoi in anns_hoi])
     num_objects_video = sum([len(ann_sact.ids_object) for ann_sact in anns_sact])
-    num_classes_object = len(moma.taxonomy['object'])
+    num_classes_object = len(taxonomy['object'])
 
     num_ias = sum([len(ann_hoi.ias) for ann_hoi in anns_hoi])
-    num_classes_ia = len(moma.taxonomy['ia'])
+    num_classes_ia = len(taxonomy['ia'])
     num_tas = sum([len(ann_hoi.tas) for ann_hoi in anns_hoi])
-    num_classes_ta = len(moma.taxonomy['ta'])
+    num_classes_ta = len(taxonomy['ta'])
     num_atts = sum([len(ann_hoi.atts) for ann_hoi in anns_hoi])
-    num_classes_att = len(moma.taxonomy['att'])
+    num_classes_att = len(taxonomy['att'])
     num_rels = sum([len(ann_hoi.rels) for ann_hoi in anns_hoi])
-    num_classes_rel = len(moma.taxonomy['rel'])
+    num_classes_rel = len(taxonomy['rel'])
 
     duration_total_raw = sum(metadatum.duration for metadatum in metadata)
     duration_total_act, duration_avg_act, duration_min_act, duration_max_act = self.get_duration(anns_act)
@@ -155,6 +158,12 @@ class Statistics(dict):
 
   def keys(self):
     return self.statistics.keys()
+
+  def values(self):
+    raise NotImplementedError
+
+  def items(self):
+    raise NotImplementedError
 
   def __getitem__(self, key):
     return self.statistics[key]

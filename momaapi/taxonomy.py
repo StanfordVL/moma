@@ -5,9 +5,11 @@ import os
 from .data import bidict
 
 
-class IO:
+class Taxonomy(dict):
   def __init__(self, dir_moma):
+    super().__init__()
     self.dir_moma = dir_moma
+    self.taxonomy = self.read_taxonomy()
 
   def read_taxonomy(self):
     with open(os.path.join(self.dir_moma, 'anns/taxonomy/actor.json'), 'r') as f:
@@ -35,7 +37,7 @@ class IO:
       taxonomy_sact_to_act = bidict({cname_sact: cname_act for cname_act, cnames_sact in taxonomy_act_sact.items()
                                                            for cname_sact in cnames_sact})
     with open(os.path.join(self.dir_moma, 'anns/taxonomy/lvis.json'), 'r') as f:
-      lvis_mapper = json.load(f)
+      lvis = json.load(f)
     with open(os.path.join(self.dir_moma, 'anns/taxonomy/few_shot.json'), 'r') as f:
       taxonomy_fs = json.load(f)
       taxonomy_act_train = sorted(taxonomy_fs['train'])
@@ -48,18 +50,6 @@ class IO:
       taxonomy_sact_val = sorted(itertools.chain(*taxonomy_sact_val))
       taxonomy_sact_test = sorted(itertools.chain(*taxonomy_sact_test))
 
-    taxonomy = {
-      'actor': taxonomy_actor,
-      'object': taxonomy_object,
-      'ia': taxonomy_ia,
-      'ta': taxonomy_ta,
-      'att': taxonomy_att,
-      'rel': taxonomy_rel,
-      'act': taxonomy_act,
-      'sact': taxonomy_sact,
-      'sact_to_act': taxonomy_sact_to_act
-    }
-
     taxonomy_fs = {
       'act_train': taxonomy_act_train,
       'act_val': taxonomy_act_val,
@@ -69,4 +59,30 @@ class IO:
       'sact_test': taxonomy_sact_test
     }
 
-    return taxonomy, taxonomy_fs, lvis_mapper
+    taxonomy = {
+      'actor': taxonomy_actor,
+      'object': taxonomy_object,
+      'ia': taxonomy_ia,
+      'ta': taxonomy_ta,
+      'att': taxonomy_att,
+      'rel': taxonomy_rel,
+      'act': taxonomy_act,
+      'sact': taxonomy_sact,
+      'sact_to_act': taxonomy_sact_to_act,
+      'fs': taxonomy_fs,
+      'lvis': lvis
+    }
+
+    return taxonomy
+
+  def keys(self):
+    return self.taxonomy.keys()
+
+  def __getitem__(self, key):
+    return self.taxonomy[key]
+
+  def __len__(self):
+    return len(self.taxonomy.keys())
+
+  def __repr__(self):
+    return repr(self.taxonomy)

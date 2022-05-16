@@ -5,6 +5,22 @@ import pickle
 
 from .data import bidict, lazydict, Metadatum, Act, SAct, HOI
 
+"""
+The Lookup class implements the following lookups:
+ - split -> ids_act (one-to-many): retrieve(kind='id_act', key=split)
+ - id_act -> ann_act, metadatum (one-to-one): retrieve(kind='ann_act' or 'metadatum', key=id_act)
+ - id_sact -> ann_sact (one-to-one): retrieve(kind='ann_sact', key=id_sact)
+ - id_hoi -> ann_hoi, window (one-to-one): retrieve(kind='ann_hoi' or 'window', key=id_hoi)
+
+These keys can be traced across the MOMA hierarchy:
+ - id_act -> ids_sact (one-to-many): trace(id_act=id_act, level='sact')
+ - id_act -> ids_hoi (one-to-many): trace(id_act=id_act, level='hoi')
+ - id_sact -> id_act (one-to-one): trace(id_sact=id_sact, level='act')
+ - id_sact -> ids_hoi (one-to-many): trace(id_sact=id_sact, level='hoi')
+ - id_hoi -> id_sact (one-to-one): trace(id_hoi=id_hoi, level='sact')
+ - id_hoi -> id_act (one-to-one): trace(id_hoi=id_hoi, level='act')
+"""
+
 
 class Lookup:
   def __init__(self, dir_moma, taxonomy, few_shot=False, load_val=False):
@@ -23,9 +39,7 @@ class Lookup:
     self.read_anns()
     self.read_splits(few_shot, load_val)
 
-  @staticmethod
-  def save_cache(dir_moma,
-                 id_act_to_metadatum, id_act_to_ann_act, id_sact_to_ann_sact, id_hoi_to_ann_hoi,
+  def save_cache(self, id_act_to_metadatum, id_act_to_ann_act, id_sact_to_ann_sact, id_hoi_to_ann_hoi,
                  id_sact_to_id_act, id_hoi_to_id_sact, id_hoi_to_window):
     named_variables = {
       'id_act_to_metadatum': id_act_to_metadatum,
@@ -37,32 +51,31 @@ class Lookup:
       'id_hoi_to_window': id_hoi_to_window
     }
 
-    os.makedirs(os.path.join(dir_moma, 'anns/cache'), exist_ok=True)
-    os.makedirs(os.path.join(dir_moma, 'anns/cache/id_hoi_to_ann_hoi'), exist_ok=True)
+    os.makedirs(os.path.join(self.dir_moma, 'anns/cache'), exist_ok=True)
+    os.makedirs(os.path.join(self.dir_moma, 'anns/cache/id_hoi_to_ann_hoi'), exist_ok=True)
 
     for name, variable in named_variables.items():
       assert variable is not None
 
       if name == 'id_hoi_to_ann_hoi':
         for id_hoi, ann_hoi in variable.items():
-          with open(os.path.join(dir_moma, 'anns/cache/id_hoi_to_ann_hoi', id_hoi), 'wb') as f:
+          with open(os.path.join(self.dir_moma, 'anns/cache/id_hoi_to_ann_hoi', id_hoi), 'wb') as f:
             pickle.dump(ann_hoi, f)
 
       else:
-        with open(os.path.join(dir_moma, 'anns/cache', name), 'wb') as f:
+        with open(os.path.join(self.dir_moma, 'anns/cache', name), 'wb') as f:
           pickle.dump(variable, f)
 
-  @staticmethod
-  def load_cache(dir_moma):
+  def load_cache(self):
     variables = []
     for name in ['id_act_to_metadatum', 'id_act_to_ann_act', 'id_sact_to_ann_sact',
                  'id_sact_to_id_act', 'id_hoi_to_id_sact', 'id_hoi_to_window']:
-      with open(os.path.join(dir_moma, 'anns/cache', name), 'rb') as f:
+      with open(os.path.join(self.dir_moma, 'anns/cache', name), 'rb') as f:
         variable = pickle.load(f)
       variables.append(variable)
 
     ids_hoi = variables[4].keys()
-    id_hoi_to_ann_hoi = lazydict(ids_hoi, os.path.join(dir_moma, 'anns/cache/id_hoi_to_ann_hoi'))
+    id_hoi_to_ann_hoi = lazydict(ids_hoi, os.path.join(self.dir_moma, 'anns/cache/id_hoi_to_ann_hoi'))
     variables.insert(3, id_hoi_to_ann_hoi)
 
     return variables
@@ -70,7 +83,7 @@ class Lookup:
   def read_anns(self):
     try:
       id_act_to_metadatum, id_act_to_ann_act, id_sact_to_ann_sact, id_hoi_to_ann_hoi, \
-      id_sact_to_id_act, id_hoi_to_id_sact, id_hoi_to_window = self.load_cache(self.dir_moma)
+      id_sact_to_id_act, id_hoi_to_id_sact, id_hoi_to_window = self.load_cache()
 
     except FileNotFoundError:
       print('FileNotFoundError')
@@ -101,8 +114,7 @@ class Lookup:
       with open(os.path.join(self.dir_moma, f'videos/interaction_frames/timestamps.json'), 'r') as f:
         id_hoi_to_window = json.load(f)
 
-      self.save_cache(self.dir_moma,
-                      id_act_to_metadatum, id_act_to_ann_act, id_sact_to_ann_sact, id_hoi_to_ann_hoi,
+      self.save_cache(id_act_to_metadatum, id_act_to_ann_act, id_sact_to_ann_sact, id_hoi_to_ann_hoi,
                       id_sact_to_id_act, id_hoi_to_id_sact, id_hoi_to_window)
 
     id_sact_to_id_act = bidict(id_sact_to_id_act)
@@ -132,74 +144,80 @@ class Lookup:
     else:
       self.split_to_ids_act = {'train': ids_act_train+ids_act_val, 'test': ids_act_test}
 
-  def get_splits(self):
-    return self.split_to_ids_act.keys()
+  def retrieve(self, kind, key=None):
+    if key is None:
+      assert kind in ['splits', 'ids_act', 'ids_sact', 'ids_hoi',
+                      'anns_act', 'metadata', 'anns_sact', 'anns_hoi', 'windows']
 
-  def get_ids(self, level, split=None):
-    assert level in ['act', 'sact', 'hoi']
-    assert split is None or (split in self.get_splits() and level == 'act')
+      if kind == 'splits':
+        return self.split_to_ids_act.keys()
+      elif kind == 'ids_act':
+        return self.id_act_to_ann_act.keys()
+      elif kind == 'ids_sact':
+        return self.id_sact_to_ann_sact.keys()
+      elif kind == 'ids_hoi':
+        return self.id_hoi_to_ann_hoi.keys()
+      elif kind == 'anns_act':
+        return self.id_act_to_ann_act.values()
+      elif kind == 'metadata':
+        return self.id_act_to_metadatum.values()
+      elif kind == 'anns_sact':
+        return self.id_sact_to_ann_sact.values()
+      elif kind == 'anns_hoi':
+        return self.id_hoi_to_ann_hoi.values()
+      elif kind == 'windows':
+        return self.id_hoi_to_window.values()
 
-    if split is not None:
-      return self.split_to_ids_act[split]
-    elif level == 'act':
-      return self.id_act_to_ann_act.keys()
-    elif level == 'sact':
-      return self.id_sact_to_ann_sact.keys()
-    elif level == 'hoi':
-      return self.id_hoi_to_ann_hoi.keys()
     else:
-      raise ValueError
+      assert kind in ['ids_act', 'ann_act', 'metadatum', 'ann_sact', 'ann_hoi', 'window']
 
-  def get_ann(self, id_act=None, id_sact=None, id_hoi=None):
+      if kind == 'ids_act':
+        return self.split_to_ids_act[key]
+      elif kind == 'ann_act':
+        return self.id_act_to_ann_act[key]
+      elif kind == 'metadatum':
+        return self.id_act_to_metadatum[key]
+      elif kind == 'ann_sact':
+        return self.id_sact_to_ann_sact[key]
+      elif kind == 'ann_hoi':
+        return self.id_hoi_to_ann_hoi[key]
+      elif kind == 'window':
+        return self.id_hoi_to_window[key]
+
+    raise ValueError(f'retrieve(kind={kind}, key={key})')
+
+  def trace(self, kind, id_act=None, id_sact=None, id_hoi=None):
     assert sum([x is not None for x in [id_act, id_sact, id_hoi]]) == 1
-
-    if id_act is not None:
-      return self.id_act_to_ann_act[id_act]
-    elif id_sact is not None:
-      return self.id_sact_to_ann_sact[id_sact]
-    elif id_hoi is not None:
-      return self.id_hoi_to_ann_hoi[id_hoi]
-    else:
-      raise ValueError
-
-  def get_metadatum(self, id_act):
-    return self.id_act_to_metadatum[id_act]
-
-  def get_window(self, id_hoi):
-    return self.id_hoi_to_window[id_hoi]
-
-  def trace_id(self, id_act=None, id_sact=None, id_hoi=None, level=None):
-    assert sum([x is not None for x in [id_act, id_sact, id_hoi]]) == 1
-    assert level in ['act', 'sact', 'hoi']
+    assert kind in ['id_act', 'id_sact', 'ids_sact', 'id_hoi', 'ids_hoi']
 
     if id_hoi is not None:
-      assert level != 'hoi'
+      assert kind in ['id_act', 'id_sact']
 
-      if level == 'sact':
+      if kind == 'id_sact':
         id_sact = self.id_hoi_to_id_sact[id_hoi]
         return id_sact
-      elif level == 'act':
+      elif kind == 'id_act':
         id_sact = self.id_hoi_to_id_sact[id_hoi]
         id_act = self.id_sact_to_id_act[id_sact]
         return id_act
 
     elif id_sact is not None:
-      assert level != 'sact'
+      assert kind in ['id_act', 'ids_hoi']
 
-      if level == 'act':
+      if kind == 'id_act':
         id_act = self.id_sact_to_id_act[id_sact]
         return id_act
-      elif level == 'hoi':
+      elif kind == 'ids_hoi':
         ids_hoi = self.id_hoi_to_id_sact.inverse[id_sact]
         return ids_hoi
 
     elif id_act is not None:
-      assert level != 'act'
+      assert kind in ['ids_sact', 'ids_hoi']
 
-      if level == 'sact':
+      if kind == 'ids_sact':
         ids_sact = self.id_sact_to_id_act.inverse[id_act]
         return ids_sact
-      elif level == 'hoi':
+      elif kind == 'ids_hoi':
         ids_hoi = itertools.chain(*[self.id_hoi_to_id_sact.inverse[id_sact]
                                     for id_sact in self.id_sact_to_id_act.inverse[id_act]])
         return ids_hoi

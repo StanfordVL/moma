@@ -2,30 +2,30 @@ import itertools
 import numpy as np
 import os
 
-from .io import IO
+from .taxonomy import Taxonomy
 from .lookup import Lookup
 from .statistics import Statistics
 
 
 """
 The following functions are defined:
- - get_taxonomy: Get the taxonomy of a concept ('act', 'sact', etc.)
- - get_cnames: Get the class name of a concept ('act', 'sact', etc.) that satisfy certain conditions
- - is_sact: Check whether a certain time in an activity is a sub-activity
- - get_ids_act: Get the unique activity instance IDs that satisfy certain conditions
- - get_ids_sact: Get the unique sub-activity instance IDs that satisfy certain conditions
- - get_ids_hoi: Get the unique higher-order interaction instance IDs that satisfy certain conditions
- - get_metadata: Given activity instance IDs, return the metadata of the associated raw videos
- - get_anns_act: Given activity instance IDs, return their annotations
- - get_anns_sact: Given sub-activity instance IDs, return their annotations
- - get_anns_hoi: Given higher-order interaction instance IDs, return their annotations
- - get_paths: Given instance IDs, return data paths
- - get_paths_window: Given an HOI instance ID, return window paths
- - sort: Given sub-activity or higher-order interaction instance IDs, return them in sorted order
- - get_cid_fs： Get the consecutive few-shot class id given a class id
+ - get_cnames(): Get the class name of a concept ('act', 'sact', etc.) that satisfy certain conditions
+ - is_sact(): Check whether a certain time in an activity is a sub-activity
+ - get_ids_act(): Get the unique activity instance IDs that satisfy certain conditions
+ - get_ids_sact(): Get the unique sub-activity instance IDs that satisfy certain conditions
+ - get_ids_hoi(): Get the unique higher-order interaction instance IDs that satisfy certain conditions
+ - get_metadata(): Given activity instance IDs, return the metadata of the associated raw videos
+ - get_anns_act(): Given activity instance IDs, return their annotations
+ - get_anns_sact(): Given sub-activity instance IDs, return their annotations
+ - get_anns_hoi(): Given higher-order interaction instance IDs, return their annotations
+ - get_paths(): Given instance IDs, return data paths
+ - get_paths_window(): Given an HOI instance ID, return window paths
+ - sort(): Given sub-activity or higher-order interaction instance IDs, return them in sorted order
+ - get_cid_fs(): Get the consecutive few-shot class id given a class id
  
 The following attributes are defined:
  - statistics: an object that stores dataset statistics; please see statistics.py:95 for details
+ - taxonomy: an object that stores dataset taxonomy; please see taxonomy.py:53 for details
  
 Acronyms:
  - act: activity
@@ -66,14 +66,9 @@ class MOMA:
     self.full_res = full_res
     self.load_val = load_val
 
-    io = IO(dir_moma)
-    self.taxonomy, self.taxonomy_fs, self.lvis_mapper = io.read_taxonomy()
+    self.taxonomy = Taxonomy(dir_moma)
     self.lookup = Lookup(dir_moma, self.taxonomy, few_shot, load_val)
-    self.statistics = Statistics(self)
-
-  def get_taxonomy(self, concept):
-    assert concept in self.taxonomy
-    return self.taxonomy[concept]
+    self.statistics = Statistics(dir_moma, self.taxonomy, self.lookup)
 
   def get_cnames(self, concept, threshold=None, split=None):
     """
@@ -84,20 +79,22 @@ class MOMA:
     assert concept in ['actor', 'object']
 
     if threshold is None:
-      return self.get_taxonomy(concept)
+      return self.taxonomy[concept]
 
     assert split is not None
     if split == 'either':  # exclude if < threshold in either one split
-      distribution = np.stack([self.statistics[split][concept]['distribution'] for split in self.lookup.get_splits()])
+      distribution = np.stack([self.statistics[split][concept]['distribution'] 
+                               for split in self.lookup.retrieve('splits')])
       distribution = np.amin(distribution, axis=0).tolist()
-    elif split == 'both':  # exclude if < threshold in all splits
-      distribution = np.stack([self.statistics[split][concept]['distribution'] for split in self.lookup.get_splits()])
+    elif split == 'all':  # exclude if < threshold in all splits
+      distribution = np.stack([self.statistics[split][concept]['distribution'] 
+                               for split in self.lookup.retrieve('splits')])
       distribution = np.amax(distribution, axis=0).tolist()
     else:
       distribution = self.statistics[split][concept]['distribution']
 
     cnames = []
-    for i, cname in enumerate(self.get_taxonomy(concept)):
+    for i, cname in enumerate(self.taxonomy[concept]):
       if distribution[i] >= threshold:
         cnames.append(cname)
 
@@ -110,13 +107,13 @@ class MOMA:
      - absolute: relative to the full video (True) or relative to the activity video (False)
     """
     if not absolute:
-      ann_act = self.lookup.get_ann(id_act=id_act)
+      ann_act = self.lookup.retrieve('ann_act', id_act)
       time = ann_act.start+time
 
     is_sact = False
-    ids_sact = self.lookup.trace_id(id_act=id_act, level='sact')
+    ids_sact = self.lookup.trace('ids_sact', id_act=id_act)
     for id_sact in ids_sact:
-      ann_sact = self.lookup.get_ann(id_sact=id_sact)
+      ann_sact = self.lookup.retrieve('ann_sact', id_sact)
       if ann_sact.start <= time < ann_sact.end:
         is_sact = True
 
@@ -134,32 +131,32 @@ class MOMA:
      - ids_hoi: get activity IDs [ids_act] for given higher-order interaction IDs [ids_hoi]
     """
     if all(x is None for x in [split, cnames_act, ids_sact, ids_hoi]):
-      return sorted(self.lookup.get_ids('act'))
+      return sorted(self.lookup.retrieve('ids_act'))
 
     ids_act_intersection = []
 
     # split
     if split is not None:
-      assert split in self.lookup.get_splits()
-      ids_act_intersection.append(self.lookup.get_ids('act', split))
+      assert split in self.lookup.retrieve('splits')
+      ids_act_intersection.append(self.lookup.retrieve('ids_act', split))
 
     # cnames_act
     if cnames_act is not None:
       ids_act = []
-      for id_act in self.lookup.get_ids('act'):
-        ann_act = self.lookup.get_ann(id_act=id_act)
+      for id_act in self.lookup.retrieve('ids_act'):
+        ann_act = self.lookup.retrieve('ann_act', id_act)
         if ann_act.cname in cnames_act:
           ids_act.append(id_act)
       ids_act_intersection.append(ids_act)
 
     # ids_sact
     if ids_sact is not None:
-      ids_act = [self.lookup.trace_id(id_sact=id_sact, level='act') for id_sact in ids_sact]
+      ids_act = [self.lookup.trace('id_act', id_sact=id_sact) for id_sact in ids_sact]
       ids_act_intersection.append(ids_act)
 
     # ids_hoi
     if ids_hoi is not None:
-      ids_act = [self.lookup.trace_id(id_hoi=id_hoi, level='act')for id_hoi in ids_hoi]
+      ids_act = [self.lookup.trace('id_act', id_hoi=id_hoi) for id_hoi in ids_hoi]
       ids_act_intersection.append(ids_act)
 
     ids_act_intersection = sorted(set.intersection(*map(set, ids_act_intersection)))
@@ -188,33 +185,33 @@ class MOMA:
     """
     if all(x is None for x in [split, cnames_sact, ids_act, ids_hoi, cnames_actor, cnames_object,
                                cnames_ia, cnames_ta, cnames_att, cnames_rel]):
-      return sorted(self.lookup.get_ids('sact'))
+      return sorted(self.lookup.retrieve('ids_sact'))
 
     ids_sact_intersection = []
 
     # split
     if split is not None:
-      assert split in self.lookup.get_splits()
-      ids_sact = self.get_ids_sact(ids_act=self.lookup.get_ids('act', split))
+      assert split in self.lookup.retrieve('splits')
+      ids_sact = self.get_ids_sact(ids_act=self.lookup.retrieve('ids_act', split))
       ids_sact_intersection.append(ids_sact)
 
     # cnames_sact
     if cnames_sact is not None:
       ids_sact = []
-      for id_sact in self.lookup.get_ids('sact'):
-        ann_sact = self.lookup.get_ann(id_sact=id_sact)
+      for id_sact in self.lookup.retrieve('ids_sact'):
+        ann_sact = self.lookup.retrieve('ann_sact', id_sact)
         if ann_sact.cname in cnames_sact:
           ids_sact.append(id_sact)
       ids_sact_intersection.append(ids_sact)
 
     # ids_act
     if ids_act is not None:
-      ids_sact = itertools.chain(*[self.lookup.trace_id(id_act=id_act, level='sact') for id_act in ids_act])
+      ids_sact = itertools.chain(*[self.lookup.trace('ids_sact', id_act=id_act) for id_act in ids_act])
       ids_sact_intersection.append(ids_sact)
 
     # ids_hoi
     if ids_hoi is not None:
-      ids_sact = [self.lookup.trace_id(id_hoi=id_hoi, level='sact') for id_hoi in ids_hoi]
+      ids_sact = [self.lookup.trace('id_sact', id_hoi=id_hoi) for id_hoi in ids_hoi]
       ids_sact_intersection.append(ids_sact)
 
     # cnames_actor, cnames_object, cnames_ia, cnames_ta, cnames_att, cnames_rel
@@ -222,7 +219,7 @@ class MOMA:
       kwargs = {'cnames_actor': cnames_actor, 'cnames_object': cnames_object,
                 'cnames_ia': cnames_ia, 'cnames_ta': cnames_ta,
                 'cnames_att': cnames_att, 'cnames_rel': cnames_rel}
-      ids_sact = [self.lookup.trace_id(id_hoi=id_hoi, level='sact') for id_hoi in self.get_ids_hoi(**kwargs)]
+      ids_sact = [self.lookup.trace('id_sact', id_hoi=id_hoi) for id_hoi in self.get_ids_hoi(**kwargs)]
       ids_sact_intersection.append(ids_sact)
 
     ids_sact_intersection = sorted(set.intersection(*map(set, ids_sact_intersection)))
@@ -249,24 +246,24 @@ class MOMA:
     """
     if all(x is None for x in [split, ids_act, ids_sact, cnames_actor, cnames_object,
                                cnames_ia, cnames_ta, cnames_att, cnames_rel]):
-      return sorted(self.lookup.get_ids('hoi'))
+      return sorted(self.lookup.retrieve('ids_hoi'))
 
     ids_hoi_intersection = []
 
     # split
     if split is not None:
-      assert split in self.lookup.get_splits()
-      ids_hoi = self.get_ids_hoi(ids_act=self.lookup.get_ids('act', split))
+      assert split in self.lookup.retrieve('splits')
+      ids_hoi = self.get_ids_hoi(ids_act=self.lookup.retrieve('ids_act', split))
       ids_hoi_intersection.append(ids_hoi)
 
     # ids_act
     if ids_act is not None:
-      ids_hoi = itertools.chain(*[self.lookup.trace_id(id_act=id_act, level='hoi') for id_act in ids_act])
+      ids_hoi = itertools.chain(*[self.lookup.trace('ids_hoi', id_act=id_act) for id_act in ids_act])
       ids_hoi_intersection.append(ids_hoi)
 
     # ids_sact
     if ids_sact is not None:
-      ids_hoi = itertools.chain(*[self.lookup.trace_id(id_sact=id_sact, level='hoi') for id_sact in ids_sact])
+      ids_hoi = itertools.chain(*[self.lookup.trace('ids_hoi', id_sact=id_sact) for id_sact in ids_sact])
       ids_hoi_intersection.append(ids_hoi)
 
     # cnames_actor, cnames_object, cnames_ia, cnames_ta, cnames_att, cnames_rel
@@ -276,8 +273,8 @@ class MOMA:
     for var, cnames in cnames_dict.items():
       if cnames is not None:
         ids_hoi = []
-        for id_hoi in self.lookup.get_ids('hoi'):
-          ann_hoi = self.lookup.get_ann(id_hoi=id_hoi)
+        for id_hoi in self.lookup.retrieve('ids_hoi'):
+          ann_hoi = self.lookup.retrieve('ann_hoi', id_hoi)
           if not set(cnames).isdisjoint([x.cname for x in getattr(ann_hoi, var)]):
             ids_hoi.append(id_hoi)
         ids_hoi_intersection.append(ids_hoi)
@@ -286,16 +283,16 @@ class MOMA:
     return ids_hoi_intersection
 
   def get_metadata(self, ids_act: list) -> list:
-    return [self.lookup.get_metadatum(id_act=id_act) for id_act in ids_act]
+    return [self.lookup.retrieve('metadatum', id_act) for id_act in ids_act]
 
   def get_anns_act(self, ids_act: list) -> list:
-    return [self.lookup.get_ann(id_act=id_act) for id_act in ids_act]
+    return [self.lookup.retrieve('ann_act', id_act) for id_act in ids_act]
   
   def get_anns_sact(self, ids_sact: list) -> list:
-     return [self.lookup.get_ann(id_sact=id_sact) for id_sact in ids_sact]
+     return [self.lookup.retrieve('ann_sact', id_sact) for id_sact in ids_sact]
     
   def get_anns_hoi(self, ids_hoi: list) -> list:
-     return [self.lookup.get_ann(id_hoi=id_hoi) for id_hoi in ids_hoi]
+     return [self.lookup.retrieve('ann_hoi', id_hoi) for id_hoi in ids_hoi]
 
   def get_paths(self,
                 ids_act: list=None,
@@ -324,7 +321,7 @@ class MOMA:
      - a path to the 1s video clip centered at the higher-order interaction (<1s if exceeds the raw video boundary)
      - paths to 5 frames centered at the higher-order interaction (<5 frames if exceeds the raw video boundary)
     """
-    window = self.lookup.get_window(id_hoi=id_hoi)
+    window = self.lookup.retrieve('window', id_hoi)
     now = self.get_anns_hoi(ids_hoi=[id_hoi])[0].time
     window = [[os.path.join(self.dir_moma, f'videos/interaction_frames/{fname}.jpg'), time] for fname, time in window]+\
              [[os.path.join(self.dir_moma, f'videos/interaction/{id_hoi}.jpg'), now]]
@@ -356,9 +353,9 @@ class MOMA:
   def get_cid_fs(self, cid, concept, split):
     assert concept in ['act', 'sact']
     cname = self.taxonomy[concept][cid]
-    if cname in self.taxonomy_fs[f'{concept}_val'] and not self.load_val:
-      cid_fs = self.taxonomy_fs[f'{concept}_val'].index(cname)
-      cid_fs += len(self.taxonomy_fs[f'{concept}_train'])
+    if cname in self.taxonomy['fs'][f'{concept}_val'] and not self.load_val:
+      cid_fs = self.taxonomy['fs'][f'{concept}_val'].index(cname)
+      cid_fs += len(self.taxonomy['fs'][f'{concept}_train'])
     else:
-      cid_fs = self.taxonomy_fs[f'{concept}_{split}'].index(cname)
+      cid_fs = self.taxonomy['fs'][f'{concept}_{split}'].index(cname)
     return cid_fs

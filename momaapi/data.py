@@ -37,6 +37,12 @@ class lazydict(dict):
   def keys(self):
     return self._keys
 
+  def values(self):
+    return [self.__getitem__(key) for key in self._keys]
+
+  def items(self):
+    raise NotImplementedError
+
   def __getitem__(self, key):
     if key in self.buffer:
       return self.buffer[key]
