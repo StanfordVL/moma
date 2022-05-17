@@ -23,7 +23,7 @@ These keys can be traced across the MOMA hierarchy:
 
 
 class Lookup:
-  def __init__(self, dir_moma, taxonomy, few_shot=False, load_val=False):
+  def __init__(self, dir_moma, taxonomy, mode, load_val):
     self.dir_moma = dir_moma
     self.taxonomy = taxonomy
 
@@ -37,7 +37,7 @@ class Lookup:
     self.split_to_ids_act = None
 
     self.read_anns()
-    self.read_splits(few_shot, load_val)
+    self.read_mode_and_splits(mode, load_val)
 
   def save_cache(self, id_act_to_metadatum, id_act_to_ann_act, id_sact_to_ann_sact, id_hoi_to_ann_hoi,
                  id_sact_to_id_act, id_hoi_to_id_sact, id_hoi_to_window):
@@ -127,12 +127,11 @@ class Lookup:
     self.id_hoi_to_id_sact = id_hoi_to_id_sact
     self.id_hoi_to_window = id_hoi_to_window
 
-  def read_splits(self, few_shot, load_val):
+  def read_mode_and_splits(self, mode, load_val):
     # load split
-    path_split = os.path.join(self.dir_moma, 'anns/split_fs.json' if few_shot else 'anns/split.json')
-    if not os.path.isfile(path_split):
-      print(f'Dataset split file does not exist: {path_split}')
-      return
+    suffixes = {'standard': 'std', 'few-shot': 'fs'}
+    path_split = os.path.join(self.dir_moma, f'anns/split_{suffixes[mode]}.json')
+    assert os.path.isfile(path_split), f'Dataset split file does not exist: {path_split}'
     with open(path_split, 'r') as f:
       ids_act_splits = json.load(f)
 

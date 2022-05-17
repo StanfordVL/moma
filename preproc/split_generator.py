@@ -32,7 +32,7 @@ class SplitGenerator:
     ids_act_val = ids_act[size_train:(size_train+size_val)]
     ids_act_test = ids_act[(size_train+size_val):]
 
-    path_split = os.path.join(self.dir_moma, 'anns/split.json')
+    path_split = os.path.join(self.dir_moma, 'anns/split_std.json')
     with open(path_split, 'w') as f:
       json.dump({'train': ids_act_train, 'val': ids_act_val, 'test': ids_act_test}, f, indent=2, sort_keys=False)
 

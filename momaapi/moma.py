@@ -10,7 +10,7 @@ from .statistics import Statistics
 """
 The following functions are defined:
  - get_cnames(): Get the class name of a concept ('act', 'sact', etc.) that satisfy certain conditions
- - is_sact(): Check whether a certain time in an activity is a sub-activity
+ - is_sact(): Check whether a certain time in an activity has a sub-activity
  - get_ids_act(): Get the unique activity instance IDs that satisfy certain conditions
  - get_ids_sact(): Get the unique sub-activity instance IDs that satisfy certain conditions
  - get_ids_hoi(): Get the unique higher-order interaction instance IDs that satisfy certain conditions
@@ -20,9 +20,12 @@ The following functions are defined:
  - get_anns_hoi(): Given higher-order interaction instance IDs, return their annotations
  - get_paths(): Given instance IDs, return data paths
  - get_paths_window(): Given an HOI instance ID, return window paths
- - sort(): Given sub-activity or higher-order interaction instance IDs, return them in sorted order
- - get_cid_fs(): Get the consecutive few-shot class id given a class id
- 
+ - sort(): Given a list of sub-activity or higher-order interaction instance IDs, return them in sorted order
+
+The following modes are defined:
+ - 'standard': Different splits share the same sets of activity classes and sub-activity classes
+ - 'few-shot': Different splits have non-overlapping activity classes and sub-activity classes
+
 The following attributes are defined:
  - statistics: an object that stores dataset statistics; please see statistics.py:95 for details
  - taxonomy: an object that stores dataset taxonomy; please see taxonomy.py:53 for details
@@ -49,15 +52,11 @@ Definitions:
 
 
 class MOMA:
-  def __init__(self,
-               dir_moma: str,
-               full_res: bool=False,
-               few_shot: bool=False,
-               load_val: bool=False):
+  def __init__(self, dir_moma: str, mode: str='standard', full_res: bool=False, load_val: bool=False):
     """
      - dir_moma: directory of the MOMA dataset
+     - mode: 'standard' or 'few-shot'
      - full_res: whether to load full-resolution videos
-     - few_shot: whether to load few-shot splits
      - load_val: whether to load the validation set separately
     """
     assert os.path.isdir(os.path.join(dir_moma, 'anns')) and os.path.isdir(os.path.join(dir_moma, 'videos'))
@@ -67,7 +66,7 @@ class MOMA:
     self.load_val = load_val
 
     self.taxonomy = Taxonomy(dir_moma)
-    self.lookup = Lookup(dir_moma, self.taxonomy, few_shot, load_val)
+    self.lookup = Lookup(dir_moma, self.taxonomy, mode, load_val)
     self.statistics = Statistics(dir_moma, self.taxonomy, self.lookup)
 
   def get_cnames(self, concept, threshold=None, split=None):
@@ -101,7 +100,7 @@ class MOMA:
     return cnames
 
   def is_sact(self, id_act, time, absolute=False):
-    """ Check whether a certain time in an activity is a sub-activity
+    """ Check whether a certain time in an activity has a sub-activity
      - id_act: activity ID
      - time: time in seconds
      - absolute: relative to the full video (True) or relative to the activity video (False)
@@ -333,6 +332,8 @@ class MOMA:
     return path_video, paths_frame
 
   def sort(self, ids_sact: list=None, ids_hoi: list=None, sanity_check: bool=True):
+    """ Given a list of sub-activity or higher-order interaction instance IDs, return them in sorted order
+    """
     assert sum([x is not None for x in [ids_sact, ids_hoi]]) == 1
 
     if ids_sact is not None:
@@ -349,13 +350,3 @@ class MOMA:
         assert set(ids_hoi).issubset(set(ids_hoi_all))
       ids_hoi = sorted(ids_hoi, key=lambda x: self.get_anns_hoi(ids_hoi=[x])[0].time)
       return ids_hoi
-
-  def get_cid_fs(self, cid, concept, split):
-    assert concept in ['act', 'sact']
-    cname = self.taxonomy[concept][cid]
-    if cname in self.taxonomy['fs'][f'{concept}_val'] and not self.load_val:
-      cid_fs = self.taxonomy['fs'][f'{concept}_val'].index(cname)
-      cid_fs += len(self.taxonomy['fs'][f'{concept}_train'])
-    else:
-      cid_fs = self.taxonomy['fs'][f'{concept}_{split}'].index(cname)
-    return cid_fs

@@ -224,7 +224,7 @@ class VideoProcessor:
       timestamps = defaultdict(list)
 
     if split is not None:
-      with open(os.path.join(self.dir_moma, 'anns/split.json'), 'r') as f:
+      with open(os.path.join(self.dir_moma, 'anns/split_std.json'), 'r') as f:
         ids_act = json.load(f)[split]
       anns = [ann for ann in self.anns if ann['activity']['id'] in ids_act]
     else:

@@ -69,7 +69,7 @@ class Taxonomy(dict):
       'act': taxonomy_act,
       'sact': taxonomy_sact,
       'sact_to_act': taxonomy_sact_to_act,
-      'fs': taxonomy_fs,
+      'few_shot': taxonomy_fs,
       'lvis': lvis
     }
 
