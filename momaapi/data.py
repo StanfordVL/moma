@@ -2,13 +2,13 @@ import os
 import pickle
 
 
-class bidict(dict):
+class Bidict(dict):
   """
   A many-to-one bidirectional dictionary
   Reference: https://stackoverflow.com/questions/3318625/how-to-implement-an-efficient-bidirectional-hash-table
   """
   def __init__(self, *args, **kwargs):
-    super(bidict, self).__init__(*args, **kwargs)
+    super(Bidict, self).__init__(*args, **kwargs)
     self.inverse = {}
     for key, value in self.items():
       self.inverse.setdefault(value, set()).add(key)
@@ -16,14 +16,33 @@ class bidict(dict):
   def __setitem__(self, key, value):
     if key in self:
       self.inverse[self[key]].remove(key)
-    super(bidict, self).__setitem__(key, value)
+    super(Bidict, self).__setitem__(key, value)
     self.inverse.setdefault(value, set()).add(key)
 
   def __delitem__(self, key):
     self.inverse[self[key]].remove(key)
     if len(self.inverse[self[key]]) == 0:
       del self.inverse[self[key]]
-    super(bidict, self).__delitem__(key)
+    super(Bidict, self).__delitem__(key)
+
+
+class OrderedBidict(dict):
+  """
+  A one-to-many bidirectional dictionary whose value is a list instead of a set
+  """
+  def __init__(self, *args, **kwargs):
+    super(OrderedBidict, self).__init__(*args, **kwargs)
+    self.inverse = {}
+    for key, values in self.items():
+      for value in values:
+        assert value not in self.inverse  # no duplicates
+        self.inverse[value] = key
+
+  def __setitem__(self, key, value):
+    raise NotImplementedError
+
+  def __delitem__(self, key):
+    raise NotImplementedError
 
 
 class lazydict(dict):
@@ -83,10 +102,10 @@ class Metadatum:
 
 
 class Act:
-  def __init__(self, ann, taxonomy):
+  def __init__(self, ann, cid):
     self.id = ann['id']
     self.cname = ann['class_name']
-    self.cid = taxonomy.index(self.cname)
+    self.cid = cid
     self.start = ann['start_time']
     self.end = ann['end_time']
     self.ids_sact = [x['id'] for x in ann['sub_activities']]
@@ -96,10 +115,10 @@ class Act:
 
 
 class SAct:
-  def __init__(self, ann, taxonomy):
+  def __init__(self, ann, cid):
     self.id = ann['id']
     self.cname = ann['class_name']
-    self.cid = taxonomy.index(self.cname)
+    self.cid = cid
     self.start = ann['start_time']
     self.end = ann['end_time']
     self.ids_hoi = [x['id'] for x in ann['higher_order_interactions']]

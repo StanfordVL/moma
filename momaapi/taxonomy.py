@@ -2,7 +2,7 @@ import itertools
 import json
 import os
 
-from .data import bidict
+from .data import Bidict, OrderedBidict
 
 
 class Taxonomy(dict):
@@ -34,7 +34,7 @@ class Taxonomy(dict):
       taxonomy_act_sact = json.load(f)
       taxonomy_act = sorted(taxonomy_act_sact.keys())
       taxonomy_sact = sorted(itertools.chain(*taxonomy_act_sact.values()))
-      taxonomy_sact_to_act = bidict({cname_sact: cname_act for cname_act, cnames_sact in taxonomy_act_sact.items()
+      taxonomy_sact_to_act = Bidict({cname_sact: cname_act for cname_act, cnames_sact in taxonomy_act_sact.items()
                                                            for cname_sact in cnames_sact})
     with open(os.path.join(self.dir_moma, 'anns/taxonomy/lvis.json'), 'r') as f:
       lvis = json.load(f)
@@ -43,20 +43,13 @@ class Taxonomy(dict):
       taxonomy_act_train = sorted(taxonomy_fs['train'])
       taxonomy_act_val = sorted(taxonomy_fs['val'])
       taxonomy_act_test = sorted(taxonomy_fs['test'])
-      taxonomy_sact_train = [list(taxonomy_sact_to_act.inverse[x]) for x in taxonomy_act_train]
-      taxonomy_sact_val = [list(taxonomy_sact_to_act.inverse[x]) for x in taxonomy_act_val]
-      taxonomy_sact_test = [list(taxonomy_sact_to_act.inverse[x]) for x in taxonomy_act_test]
-      taxonomy_sact_train = sorted(itertools.chain(*taxonomy_sact_train))
-      taxonomy_sact_val = sorted(itertools.chain(*taxonomy_sact_val))
-      taxonomy_sact_test = sorted(itertools.chain(*taxonomy_sact_test))
+      taxonomy_sact_train = sorted(itertools.chain(*[taxonomy_sact_to_act.inverse[x] for x in taxonomy_act_train]))
+      taxonomy_sact_val = sorted(itertools.chain(*[taxonomy_sact_to_act.inverse[x] for x in taxonomy_act_val]))
+      taxonomy_sact_test = sorted(itertools.chain(*[taxonomy_sact_to_act.inverse[x] for x in taxonomy_act_test]))
 
     taxonomy_fs = {
-      'act_train': taxonomy_act_train,
-      'act_val': taxonomy_act_val,
-      'act_test': taxonomy_act_test,
-      'sact_train': taxonomy_sact_train,
-      'sact_val': taxonomy_sact_val,
-      'sact_test': taxonomy_sact_test
+      'act': OrderedBidict({'train': taxonomy_act_train, 'val': taxonomy_act_val, 'test': taxonomy_act_test}),
+      'sact': OrderedBidict({'train': taxonomy_sact_train, 'val': taxonomy_sact_val, 'test': taxonomy_sact_test})
     }
 
     taxonomy = {
@@ -74,6 +67,15 @@ class Taxonomy(dict):
     }
 
     return taxonomy
+
+  def get_num_classes(self, mode, level, split=None):
+    if mode == 'standard':
+      return len(self.taxonomy[level])
+    elif mode == 'few-shot':
+      assert split is not None
+      return len(self.taxonomy[mode][level][split])
+    else:
+      raise NotImplementedError
 
   def keys(self):
     return self.taxonomy.keys()

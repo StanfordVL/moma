@@ -9,7 +9,7 @@ from .statistics import Statistics
 
 """
 The following functions are defined:
- - get_cnames(): Get the class name of a concept ('act', 'sact', etc.) that satisfy certain conditions
+ - get_cnames(): Get the class name of a kind ('act', 'sact', etc.) that satisfy certain conditions
  - is_sact(): Check whether a certain time in an activity has a sub-activity
  - get_ids_act(): Get the unique activity instance IDs that satisfy certain conditions
  - get_ids_sact(): Get the unique sub-activity instance IDs that satisfy certain conditions
@@ -29,6 +29,7 @@ The following modes are defined:
 The following attributes are defined:
  - statistics: an object that stores dataset statistics; please see statistics.py:95 for details
  - taxonomy: an object that stores dataset taxonomy; please see taxonomy.py:53 for details
+ - num_classes: number of activity and sub-activity classes
  
 Acronyms:
  - act: activity
@@ -45,55 +46,76 @@ Acronyms:
  - cid: class ID
  
 Definitions:
- - concept: ['act', 'sact', 'hoi', 'actor', 'object', 'ia', 'ta', 'att', 'rel']
- - kind: for entity, ['actor', 'object']; 
-         for predicate ['ia', 'ta', 'att', 'rel']
+ - kind: ['act', 'sact', 'hoi', 'actor', 'object', 'ia', 'ta', 'att', 'rel']
 """
 
 
 class MOMA:
-  def __init__(self, dir_moma: str, mode: str='standard', full_res: bool=False, load_val: bool=False):
+  def __init__(self, dir_moma: str, mode: str='standard', load_val: bool=False, full_res: bool=False):
     """
      - dir_moma: directory of the MOMA dataset
      - mode: 'standard' or 'few-shot'
-     - full_res: whether to load full-resolution videos
      - load_val: whether to load the validation set separately
+     - full_res: whether to load full-resolution videos
     """
     assert os.path.isdir(os.path.join(dir_moma, 'anns')) and os.path.isdir(os.path.join(dir_moma, 'videos'))
 
     self.dir_moma = dir_moma
-    self.full_res = full_res
+    self.mode = mode
     self.load_val = load_val
+    self.full_res = full_res
 
     self.taxonomy = Taxonomy(dir_moma)
     self.lookup = Lookup(dir_moma, self.taxonomy, mode, load_val)
     self.statistics = Statistics(dir_moma, self.taxonomy, self.lookup)
 
-  def get_cnames(self, concept, threshold=None, split=None):
+  @property
+  def num_classes(self):
+    levels = ['act', 'sact']
+    if self.mode == 'standard':
+      output = {level: self.taxonomy.get_num_classes(self.mode, level) for level in levels}
+
+    elif self.mode == 'few-shot':
+      output = {}
+      for level in levels:
+        if self.load_val:
+          output[f'{level}_train'] = self.taxonomy.get_num_classes(self.mode, level, 'train')
+          output[f'{level}_val'] = self.taxonomy.get_num_classes(self.mode, level, 'val')
+        else:
+          output[f'{level}_train'] = self.taxonomy.get_num_classes(self.mode, level, 'train')+\
+                                     self.taxonomy.get_num_classes(self.mode, level, 'val')
+        output[f'{level}_test'] = self.taxonomy.get_num_classes(self.mode, level, 'test')
+
+    else:
+      raise ValueError
+
+    return output
+
+  def get_cnames(self, kind, threshold=None, split=None):
     """
-     - concept: currently only support 'actor' and 'object'
+     - kind: currently only support 'actor' and 'object'
      - threshold: exclude classes with fewer than this number of instances
      - split: 'train', 'val', 'test', 'all', 'either'
     """
-    assert concept in ['actor', 'object']
+    assert kind in ['actor', 'object']
 
     if threshold is None:
-      return self.taxonomy[concept]
+      return self.taxonomy[kind]
 
     assert split is not None
     if split == 'either':  # exclude if < threshold in either one split
-      distribution = np.stack([self.statistics[split][concept]['distribution'] 
+      distribution = np.stack([self.statistics[split][kind]['distribution'] 
                                for split in self.lookup.retrieve('splits')])
       distribution = np.amin(distribution, axis=0).tolist()
     elif split == 'all':  # exclude if < threshold in all splits
-      distribution = np.stack([self.statistics[split][concept]['distribution'] 
+      distribution = np.stack([self.statistics[split][kind]['distribution'] 
                                for split in self.lookup.retrieve('splits')])
       distribution = np.amax(distribution, axis=0).tolist()
     else:
-      distribution = self.statistics[split][concept]['distribution']
+      distribution = self.statistics[split][kind]['distribution']
 
     cnames = []
-    for i, cname in enumerate(self.taxonomy[concept]):
+    for i, cname in enumerate(self.taxonomy[kind]):
       if distribution[i] >= threshold:
         cnames.append(cname)
 

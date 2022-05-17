@@ -3,7 +3,7 @@ import json
 import os
 import pickle
 
-from .data import bidict, lazydict, Metadatum, Act, SAct, HOI
+from .data import Bidict, lazydict, Metadatum, Act, SAct, HOI
 
 """
 The Lookup class implements the following lookups:
@@ -19,6 +19,9 @@ These keys can be traced across the MOMA hierarchy:
  - id_sact -> ids_hoi (one-to-many): trace(id_sact=id_sact, level='hoi')
  - id_hoi -> id_sact (one-to-one): trace(id_hoi=id_hoi, level='sact')
  - id_hoi -> id_act (one-to-one): trace(id_hoi=id_hoi, level='act')
+ 
+The following variables can be mapped:
+ - cid_fs+split <-> cid_std: get_cid()
 """
 
 
@@ -26,7 +29,10 @@ class Lookup:
   def __init__(self, dir_moma, taxonomy, mode, load_val):
     self.dir_moma = dir_moma
     self.taxonomy = taxonomy
+    self.mode = mode
+    self.load_val = load_val
 
+    self.split_to_ids_act = None
     self.id_act_to_metadatum = None
     self.id_act_to_ann_act = None
     self.id_sact_to_ann_sact = None
@@ -34,10 +40,9 @@ class Lookup:
     self.id_sact_to_id_act = None
     self.id_hoi_to_id_sact = None
     self.id_hoi_to_window = None
-    self.split_to_ids_act = None
 
+    self.read_splits()
     self.read_anns()
-    self.read_mode_and_splits(mode, load_val)
 
   def save_cache(self, id_act_to_metadatum, id_act_to_ann_act, id_sact_to_ann_sact, id_hoi_to_ann_hoi,
                  id_sact_to_id_act, id_hoi_to_id_sact, id_hoi_to_window):
@@ -80,6 +85,30 @@ class Lookup:
 
     return variables
 
+  def get_cid(self, kind, split=None, cid_act=None, cid_sact=None):
+    assert sum([x is not None for x in [cid_act, cid_sact]]) == 1
+    if cid_act is not None:
+      level = 'act'
+      cid_src = cid_act
+    elif cid_sact is not None:
+      level = 'sact'
+      cid_src = cid_sact
+    else:
+      raise ValueError
+
+    if kind == 'standard':
+      assert split is not None
+      cname = self.taxonomy['few_shot'][level][split][cid_src]
+      cid_trg = self.taxonomy[level].index(cname)
+    elif kind == 'few-shot':
+      cname = self.taxonomy[level][cid_src]
+      split = self.taxonomy['few_shot'][level].inverse[cname]
+      cid_trg = self.taxonomy['few_shot'][level][split].index(cname)
+    else:
+      raise ValueError
+
+    return cid_trg
+
   def read_anns(self):
     try:
       id_act_to_metadatum, id_act_to_ann_act, id_sact_to_ann_sact, id_hoi_to_ann_hoi, \
@@ -95,11 +124,15 @@ class Lookup:
       for ann_raw in anns_raw:
         ann_act_raw = ann_raw['activity']
         id_act_to_metadatum[ann_act_raw['id']] = Metadatum(ann_raw)
-        id_act_to_ann_act[ann_act_raw['id']] = Act(ann_act_raw, self.taxonomy['act'])
+        cid_act = self.taxonomy['act'].index(ann_act_raw['class_name'])
+        cid_act = self.get_cid(self.mode, cid_act=cid_act) if self.mode == 'few-shot' else cid_act
+        id_act_to_ann_act[ann_act_raw['id']] = Act(ann_act_raw, cid_act)
         anns_sact_raw = ann_act_raw['sub_activities']
 
         for ann_sact_raw in anns_sact_raw:
-          id_sact_to_ann_sact[ann_sact_raw['id']] = SAct(ann_sact_raw, self.taxonomy['sact'])
+          cid_sact = self.taxonomy['sact'].index(ann_sact_raw['class_name'])
+          cid_sact = self.get_cid(self.mode, cid_sact=cid_sact) if self.mode == 'few-shot' else cid_sact
+          id_sact_to_ann_sact[ann_sact_raw['id']] = SAct(ann_sact_raw, cid_sact)
           id_sact_to_id_act[ann_sact_raw['id']] = ann_act_raw['id']
           anns_hoi_raw = ann_sact_raw['higher_order_interactions']
 
@@ -116,8 +149,8 @@ class Lookup:
       self.save_cache(id_act_to_metadatum, id_act_to_ann_act, id_sact_to_ann_sact, id_hoi_to_ann_hoi,
                       id_sact_to_id_act, id_hoi_to_id_sact, id_hoi_to_window)
 
-    id_sact_to_id_act = bidict(id_sact_to_id_act)
-    id_hoi_to_id_sact = bidict(id_hoi_to_id_sact)
+    id_sact_to_id_act = Bidict(id_sact_to_id_act)
+    id_hoi_to_id_sact = Bidict(id_hoi_to_id_sact)
 
     self.id_act_to_metadatum = id_act_to_metadatum
     self.id_act_to_ann_act = id_act_to_ann_act
@@ -127,17 +160,17 @@ class Lookup:
     self.id_hoi_to_id_sact = id_hoi_to_id_sact
     self.id_hoi_to_window = id_hoi_to_window
 
-  def read_mode_and_splits(self, mode, load_val):
+  def read_splits(self):
     # load split
     suffixes = {'standard': 'std', 'few-shot': 'fs'}
-    path_split = os.path.join(self.dir_moma, f'anns/split_{suffixes[mode]}.json')
+    path_split = os.path.join(self.dir_moma, f'anns/split_{suffixes[self.mode]}.json')
     assert os.path.isfile(path_split), f'Dataset split file does not exist: {path_split}'
     with open(path_split, 'r') as f:
       ids_act_splits = json.load(f)
 
     ids_act_train, ids_act_val, ids_act_test = ids_act_splits['train'], ids_act_splits['val'], ids_act_splits['test']
 
-    if load_val:
+    if self.load_val:
       self.split_to_ids_act = {'train': ids_act_train, 'val': ids_act_val, 'test': ids_act_test}
     else:
       self.split_to_ids_act = {'train': ids_act_train+ids_act_val, 'test': ids_act_test}
