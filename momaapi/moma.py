@@ -22,7 +22,7 @@ The following functions are defined:
  - get_paths_window(): Given an HOI instance ID, return window paths
  - sort(): Given a list of sub-activity or higher-order interaction instance IDs, return them in sorted order
 
-The following modes are defined:
+The following paradigms are defined:
  - 'standard': Different splits share the same sets of activity classes and sub-activity classes
  - 'few-shot': Different splits have non-overlapping activity classes and sub-activity classes
 
@@ -51,40 +51,40 @@ Definitions:
 
 
 class MOMA:
-  def __init__(self, dir_moma: str, mode: str='standard', load_val: bool=False, full_res: bool=False):
+  def __init__(self, dir_moma: str, paradigm: str='standard', load_val: bool=False, full_res: bool=False):
     """
      - dir_moma: directory of the MOMA dataset
-     - mode: 'standard' or 'few-shot'
+     - paradigm: 'standard' or 'few-shot'
      - load_val: whether to load the validation set separately
      - full_res: whether to load full-resolution videos
     """
     assert os.path.isdir(os.path.join(dir_moma, 'anns')) and os.path.isdir(os.path.join(dir_moma, 'videos'))
 
     self.dir_moma = dir_moma
-    self.mode = mode
+    self.paradigm = paradigm
     self.load_val = load_val
     self.full_res = full_res
 
     self.taxonomy = Taxonomy(dir_moma)
-    self.lookup = Lookup(dir_moma, self.taxonomy, mode, load_val)
+    self.lookup = Lookup(dir_moma, self.taxonomy, paradigm, load_val)
     self.statistics = Statistics(dir_moma, self.taxonomy, self.lookup)
 
   @property
   def num_classes(self):
     levels = ['act', 'sact']
-    if self.mode == 'standard':
-      output = {level: self.taxonomy.get_num_classes(self.mode, level) for level in levels}
+    if self.paradigm == 'standard':
+      output = {level: self.taxonomy.get_num_classes(self.paradigm, level) for level in levels}
 
-    elif self.mode == 'few-shot':
+    elif self.paradigm == 'few-shot':
       output = {}
       for level in levels:
         if self.load_val:
-          output[f'{level}_train'] = self.taxonomy.get_num_classes(self.mode, level, 'train')
-          output[f'{level}_val'] = self.taxonomy.get_num_classes(self.mode, level, 'val')
+          output[f'{level}_train'] = self.taxonomy.get_num_classes(self.paradigm, level, 'train')
+          output[f'{level}_val'] = self.taxonomy.get_num_classes(self.paradigm, level, 'val')
         else:
-          output[f'{level}_train'] = self.taxonomy.get_num_classes(self.mode, level, 'train')+\
-                                     self.taxonomy.get_num_classes(self.mode, level, 'val')
-        output[f'{level}_test'] = self.taxonomy.get_num_classes(self.mode, level, 'test')
+          output[f'{level}_train'] = self.taxonomy.get_num_classes(self.paradigm, level, 'train')+\
+                                     self.taxonomy.get_num_classes(self.paradigm, level, 'val')
+        output[f'{level}_test'] = self.taxonomy.get_num_classes(self.paradigm, level, 'test')
 
     else:
       raise ValueError

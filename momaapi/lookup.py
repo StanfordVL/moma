@@ -26,10 +26,10 @@ The following variables can be mapped:
 
 
 class Lookup:
-  def __init__(self, dir_moma, taxonomy, mode, load_val):
+  def __init__(self, dir_moma, taxonomy, paradigm, load_val):
     self.dir_moma = dir_moma
     self.taxonomy = taxonomy
-    self.mode = mode
+    self.paradigm = paradigm
     self.load_val = load_val
 
     self.split_to_ids_act = None
@@ -125,13 +125,13 @@ class Lookup:
         ann_act_raw = ann_raw['activity']
         id_act_to_metadatum[ann_act_raw['id']] = Metadatum(ann_raw)
         cid_act = self.taxonomy['act'].index(ann_act_raw['class_name'])
-        cid_act = self.get_cid(self.mode, cid_act=cid_act) if self.mode == 'few-shot' else cid_act
+        cid_act = self.get_cid(self.paradigm, cid_act=cid_act) if self.paradigm == 'few-shot' else cid_act
         id_act_to_ann_act[ann_act_raw['id']] = Act(ann_act_raw, cid_act)
         anns_sact_raw = ann_act_raw['sub_activities']
 
         for ann_sact_raw in anns_sact_raw:
           cid_sact = self.taxonomy['sact'].index(ann_sact_raw['class_name'])
-          cid_sact = self.get_cid(self.mode, cid_sact=cid_sact) if self.mode == 'few-shot' else cid_sact
+          cid_sact = self.get_cid(self.paradigm, cid_sact=cid_sact) if self.paradigm == 'few-shot' else cid_sact
           id_sact_to_ann_sact[ann_sact_raw['id']] = SAct(ann_sact_raw, cid_sact)
           id_sact_to_id_act[ann_sact_raw['id']] = ann_act_raw['id']
           anns_hoi_raw = ann_sact_raw['higher_order_interactions']
@@ -163,7 +163,7 @@ class Lookup:
   def read_splits(self):
     # load split
     suffixes = {'standard': 'std', 'few-shot': 'fs'}
-    path_split = os.path.join(self.dir_moma, f'anns/split_{suffixes[self.mode]}.json')
+    path_split = os.path.join(self.dir_moma, f'anns/split_{suffixes[self.paradigm]}.json')
     assert os.path.isfile(path_split), f'Dataset split file does not exist: {path_split}'
     with open(path_split, 'r') as f:
       ids_act_splits = json.load(f)
