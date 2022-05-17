@@ -71,20 +71,20 @@ class MOMA:
 
   @property
   def num_classes(self):
-    levels = ['act', 'sact']
+    kinds = ['act', 'sact']
     if self.paradigm == 'standard':
-      output = {level: self.taxonomy.get_num_classes(self.paradigm, level) for level in levels}
+      output = {kind: self.taxonomy.get_num_classes(self.paradigm, kind) for kind in kinds}
 
     elif self.paradigm == 'few-shot':
       output = {}
-      for level in levels:
+      for kind in kinds:
         if self.load_val:
-          output[f'{level}_train'] = self.taxonomy.get_num_classes(self.paradigm, level, 'train')
-          output[f'{level}_val'] = self.taxonomy.get_num_classes(self.paradigm, level, 'val')
+          output[f'{kind}_train'] = self.taxonomy.get_num_classes(self.paradigm, kind, 'train')
+          output[f'{kind}_val'] = self.taxonomy.get_num_classes(self.paradigm, kind, 'val')
         else:
-          output[f'{level}_train'] = self.taxonomy.get_num_classes(self.paradigm, level, 'train')+\
-                                     self.taxonomy.get_num_classes(self.paradigm, level, 'val')
-        output[f'{level}_test'] = self.taxonomy.get_num_classes(self.paradigm, level, 'test')
+          output[f'{kind}_train'] = self.taxonomy.get_num_classes(self.paradigm, kind, 'train')+\
+                                    self.taxonomy.get_num_classes(self.paradigm, kind, 'val')
+        output[f'{kind}_test'] = self.taxonomy.get_num_classes(self.paradigm, kind, 'test')
 
     else:
       raise ValueError

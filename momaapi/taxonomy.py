@@ -68,12 +68,12 @@ class Taxonomy(dict):
 
     return taxonomy
 
-  def get_num_classes(self, paradigm, level, split=None):
+  def get_num_classes(self, paradigm, kind, split=None):
     if paradigm == 'standard':
-      return len(self.taxonomy[level])
+      return len(self.taxonomy[kind])
     elif paradigm == 'few-shot':
       assert split is not None
-      return len(self.taxonomy['few_shot'][level][split])
+      return len(self.taxonomy['few_shot'][kind][split])
     else:
       raise NotImplementedError
 

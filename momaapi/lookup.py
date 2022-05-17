@@ -13,12 +13,12 @@ The Lookup class implements the following lookups:
  - id_hoi -> ann_hoi, window (one-to-one): retrieve(kind='ann_hoi' or 'window', key=id_hoi)
 
 These keys can be traced across the MOMA hierarchy:
- - id_act -> ids_sact (one-to-many): trace(id_act=id_act, level='sact')
- - id_act -> ids_hoi (one-to-many): trace(id_act=id_act, level='hoi')
- - id_sact -> id_act (one-to-one): trace(id_sact=id_sact, level='act')
- - id_sact -> ids_hoi (one-to-many): trace(id_sact=id_sact, level='hoi')
- - id_hoi -> id_sact (one-to-one): trace(id_hoi=id_hoi, level='sact')
- - id_hoi -> id_act (one-to-one): trace(id_hoi=id_hoi, level='act')
+ - id_act -> ids_sact (one-to-many): trace(id_act=id_act, kind='sact')
+ - id_act -> ids_hoi (one-to-many): trace(id_act=id_act, kind='hoi')
+ - id_sact -> id_act (one-to-one): trace(id_sact=id_sact, kind='act')
+ - id_sact -> ids_hoi (one-to-many): trace(id_sact=id_sact, kind='hoi')
+ - id_hoi -> id_sact (one-to-one): trace(id_hoi=id_hoi, kind='sact')
+ - id_hoi -> id_act (one-to-one): trace(id_hoi=id_hoi, kind='act')
  
 The following variables can be mapped:
  - cid_fs+split <-> cid_std: get_cid()
@@ -85,25 +85,25 @@ class Lookup:
 
     return variables
 
-  def get_cid(self, kind, split=None, cid_act=None, cid_sact=None):
+  def get_cid(self, paradigm, split=None, cid_act=None, cid_sact=None):
     assert sum([x is not None for x in [cid_act, cid_sact]]) == 1
     if cid_act is not None:
-      level = 'act'
+      kind = 'act'
       cid_src = cid_act
     elif cid_sact is not None:
-      level = 'sact'
+      kind = 'sact'
       cid_src = cid_sact
     else:
       raise ValueError
 
-    if kind == 'standard':
+    if paradigm == 'standard':
       assert split is not None
-      cname = self.taxonomy['few_shot'][level][split][cid_src]
-      cid_trg = self.taxonomy[level].index(cname)
-    elif kind == 'few-shot':
-      cname = self.taxonomy[level][cid_src]
-      split = self.taxonomy['few_shot'][level].inverse[cname]
-      cid_trg = self.taxonomy['few_shot'][level][split].index(cname)
+      cname = self.taxonomy['few_shot'][kind][split][cid_src]
+      cid_trg = self.taxonomy[kind].index(cname)
+    elif paradigm == 'few-shot':
+      cname = self.taxonomy[kind][cid_src]
+      split = self.taxonomy['few_shot'][kind].inverse[cname]
+      cid_trg = self.taxonomy['few_shot'][kind][split].index(cname)
     else:
       raise ValueError
 
