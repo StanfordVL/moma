@@ -14,17 +14,18 @@ class Statistics(dict):
     splits = lookup.retrieve('splits')
     suffix = '_'.join(splits)
 
-    if os.path.exists(os.path.join(self.dir_moma, f'anns/cache/statistics_{suffix}.json')):
-      with open(os.path.join(self.dir_moma, f'anns/cache/statistics_{suffix}.json'), 'r') as f:
+    if os.path.exists(os.path.join(self.dir_moma, f'anns/cache/{lookup.paradigm}/statistics_{suffix}.json')):
+      print('Statistics: load cache')
+      with open(os.path.join(self.dir_moma, f'anns/cache/{lookup.paradigm}/statistics_{suffix}.json'), 'r') as f:
         statistics = json.load(f)
 
     else:
+      print('Statistics: save cache')
       statistics = {'all': self.get_statistic(taxonomy, lookup)}
       for split in splits:
         statistics[split] = self.get_statistic(taxonomy, lookup, split)
 
-      os.makedirs(os.path.join(self.dir_moma, 'cache'), exist_ok=True)
-      with open(os.path.join(self.dir_moma, f'anns/cache/statistics_{suffix}.json'), 'w') as f:
+      with open(os.path.join(self.dir_moma, f'anns/cache/{lookup.paradigm}/statistics_{suffix}.json'), 'w') as f:
         json.dump(statistics, f, indent=2, sort_keys=False)
 
     return statistics

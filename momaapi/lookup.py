@@ -46,6 +46,7 @@ class Lookup:
 
   def save_cache(self, id_act_to_metadatum, id_act_to_ann_act, id_sact_to_ann_sact, id_hoi_to_ann_hoi,
                  id_sact_to_id_act, id_hoi_to_id_sact, id_hoi_to_window):
+    print('Lookup: save cache')
     named_variables = {
       'id_act_to_metadatum': id_act_to_metadatum,
       'id_act_to_ann_act': id_act_to_ann_act,
@@ -56,31 +57,31 @@ class Lookup:
       'id_hoi_to_window': id_hoi_to_window
     }
 
-    os.makedirs(os.path.join(self.dir_moma, 'anns/cache'), exist_ok=True)
-    os.makedirs(os.path.join(self.dir_moma, 'anns/cache/id_hoi_to_ann_hoi'), exist_ok=True)
+    os.makedirs(os.path.join(self.dir_moma, f'anns/cache/{self.paradigm}/id_hoi_to_ann_hoi'), exist_ok=True)
 
     for name, variable in named_variables.items():
       assert variable is not None
 
       if name == 'id_hoi_to_ann_hoi':
         for id_hoi, ann_hoi in variable.items():
-          with open(os.path.join(self.dir_moma, 'anns/cache/id_hoi_to_ann_hoi', id_hoi), 'wb') as f:
+          with open(os.path.join(self.dir_moma, f'anns/cache/{self.paradigm}/id_hoi_to_ann_hoi', id_hoi), 'wb') as f:
             pickle.dump(ann_hoi, f)
 
       else:
-        with open(os.path.join(self.dir_moma, 'anns/cache', name), 'wb') as f:
+        with open(os.path.join(self.dir_moma, f'anns/cache/{self.paradigm}', name), 'wb') as f:
           pickle.dump(variable, f)
 
   def load_cache(self):
+    print('Lookup: load cache')
     variables = []
     for name in ['id_act_to_metadatum', 'id_act_to_ann_act', 'id_sact_to_ann_sact',
                  'id_sact_to_id_act', 'id_hoi_to_id_sact', 'id_hoi_to_window']:
-      with open(os.path.join(self.dir_moma, 'anns/cache', name), 'rb') as f:
+      with open(os.path.join(self.dir_moma, f'anns/cache/{self.paradigm}', name), 'rb') as f:
         variable = pickle.load(f)
       variables.append(variable)
 
     ids_hoi = variables[4].keys()
-    id_hoi_to_ann_hoi = lazydict(ids_hoi, os.path.join(self.dir_moma, 'anns/cache/id_hoi_to_ann_hoi'))
+    id_hoi_to_ann_hoi = lazydict(ids_hoi, os.path.join(self.dir_moma, f'anns/cache/{self.paradigm}/id_hoi_to_ann_hoi'))
     variables.insert(3, id_hoi_to_ann_hoi)
 
     return variables
