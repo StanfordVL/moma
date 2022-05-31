@@ -5,6 +5,7 @@ import math
 from matplotlib import font_manager
 import matplotlib.pyplot as plt
 import os
+import os.path as osp
 import PIL.Image as Image
 import PIL.ImageDraw as ImageDraw
 import PIL.ImageFont as ImageFont
@@ -59,17 +60,17 @@ class AnnVisualizer:
     return image.convert('RGB')
 
   def show_hoi(self, id_hoi, vstack=True):
-    if os.path.isfile(os.path.join(self.dir_vis, f'hoi/{id_hoi}.png')):
+    if osp.isfile(osp.join(self.dir_vis, f'hoi/{id_hoi}.png')):
       return
 
-    os.makedirs(os.path.join(self.dir_vis, 'hoi'), exist_ok=True)
+    os.makedirs(osp.join(self.dir_vis, 'hoi'), exist_ok=True)
 
     ann_hoi = self.moma.get_anns_hoi(ids_hoi=[id_hoi])[0]
     palette = self.get_palette(ann_hoi.ids_actor+ann_hoi.ids_object, alpha=150)
 
     """ bbox """
     image = self.draw_bbox(ann_hoi, palette)
-    path_bbox = os.path.join(self.dir_vis, f'hoi/bbox_{id_hoi}.png')
+    path_bbox = osp.join(self.dir_vis, f'hoi/bbox_{id_hoi}.png')
     image.save(path_bbox)
 
     """ graph """
@@ -89,7 +90,7 @@ class AnnVisualizer:
     G.layout('neato')
     G.node_attr['fontname'] = 'Arial'
     G.edge_attr['fontname'] = 'Arial'
-    path_graph = os.path.join(self.dir_vis, f'hoi/graph_{id_hoi}.eps')
+    path_graph = osp.join(self.dir_vis, f'hoi/graph_{id_hoi}.eps')
     G.draw(path_graph)
 
     """ save """
@@ -117,7 +118,7 @@ class AnnVisualizer:
       image.paste(image_bbox, (0, 0))
       image.paste(image_graph, (image_bbox.width, 0))
 
-    image.save(os.path.join(self.dir_vis, f'hoi/{id_hoi}.png'))
+    image.save(osp.join(self.dir_vis, f'hoi/{id_hoi}.png'))
 
     # cleanup
     os.remove(path_bbox)
@@ -127,10 +128,10 @@ class AnnVisualizer:
     plt.close('all')
 
   def show_sact(self, id_sact, vstack=True):
-    if os.path.isfile(os.path.join(self.dir_vis, f'sact/{id_sact}.gif')):
+    if osp.isfile(osp.join(self.dir_vis, f'sact/{id_sact}.gif')):
       return
 
-    os.makedirs(os.path.join(self.dir_vis, 'sact', id_sact), exist_ok=True)
+    os.makedirs(osp.join(self.dir_vis, 'sact', id_sact), exist_ok=True)
 
     ann_sact = self.moma.get_anns_sact(ids_sact=[id_sact])[0]
     ids_hoi = self.moma.get_ids_hoi(ids_sact=[id_sact])
@@ -141,7 +142,7 @@ class AnnVisualizer:
     for i, id_hoi in enumerate(ids_hoi):
       ann_hoi = self.moma.get_anns_hoi(ids_hoi=[id_hoi])[0]
       image = self.draw_bbox(ann_hoi, palette)
-      image.save(os.path.join(self.dir_vis, f'sact/{id_sact}/bbox_{str(i).zfill(2)}.png'))
+      image.save(osp.join(self.dir_vis, f'sact/{id_sact}/bbox_{str(i).zfill(2)}.png'))
 
     """ graph """
     # get node & edge positions
@@ -211,18 +212,18 @@ class AnnVisualizer:
         pos = pos_edge[(node_src, node_trg, label)]
         G.add_edge((node_src, node_trg), label=label, pos=pos, color=color, fontcolor=color, fontsize='10', len=2)
 
-      G.draw(os.path.join(self.dir_vis, f'sact/{id_sact}/graph_{str(i).zfill(2)}.eps'))
+      G.draw(osp.join(self.dir_vis, f'sact/{id_sact}/graph_{str(i).zfill(2)}.eps'))
       G.remove_nodes_from([info_node[0] for info_node in info_nodes])
 
       id_act = self.moma.get_ids_act(ids_sact=[id_sact])[0]
       id_hoi = ann_hoi.id
-      path_timeline = os.path.join(self.dir_vis, f'sact/{id_sact}/timeline_{str(i).zfill(2)}.png')
+      path_timeline = osp.join(self.dir_vis, f'sact/{id_sact}/timeline_{str(i).zfill(2)}.png')
       self.timeline_visualizer.show(id_act=id_act, id_sact=id_sact, id_hoi=id_hoi, path=path_timeline)
 
     """ save """
-    paths_bbox = sorted(glob.glob(os.path.join(self.dir_vis, f'sact/{id_sact}/bbox_*.png')))
-    paths_graph = sorted(glob.glob(os.path.join(self.dir_vis, f'sact/{id_sact}/graph_*.eps')))
-    paths_timeline = sorted(glob.glob(os.path.join(self.dir_vis, f'sact/{id_sact}/timeline_*.png')))
+    paths_bbox = sorted(glob.glob(osp.join(self.dir_vis, f'sact/{id_sact}/bbox_*.png')))
+    paths_graph = sorted(glob.glob(osp.join(self.dir_vis, f'sact/{id_sact}/graph_*.eps')))
+    paths_timeline = sorted(glob.glob(osp.join(self.dir_vis, f'sact/{id_sact}/timeline_*.png')))
 
     images_bbox = [Image.open(path_bbox) for path_bbox in paths_bbox]
     images_graph = [Image.open(path_graph) for path_graph in paths_graph]
@@ -267,11 +268,11 @@ class AnnVisualizer:
         image.paste(image_timeline, (0, image_bbox.height))
         images.append(image)
 
-    images[0].save(os.path.join(self.dir_vis, f'sact/{id_sact}.gif'), format='GIF', append_images=images[1:],
+    images[0].save(osp.join(self.dir_vis, f'sact/{id_sact}.gif'), format='GIF', append_images=images[1:],
                    save_all=True, duration=250, loop=0)
 
     # cleanup
-    shutil.rmtree(os.path.join(self.dir_vis, 'sact', id_sact))
+    shutil.rmtree(osp.join(self.dir_vis, 'sact', id_sact))
     [image_bbox.close() for image_bbox in images_bbox]
     [image_graph.close() for image_graph in images_graph]
     [image_timeline.close() for image_timeline in images_timeline]

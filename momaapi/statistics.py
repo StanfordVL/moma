@@ -1,7 +1,7 @@
 import itertools
 import json
 import numpy as np
-import os
+import os.path as osp
 
 
 class Statistics(dict):
@@ -14,9 +14,9 @@ class Statistics(dict):
     splits = lookup.retrieve('splits')
     suffix = '_'.join(splits)
 
-    if os.path.exists(os.path.join(self.dir_moma, f'anns/cache/{lookup.paradigm}/statistics_{suffix}.json')):
+    if osp.exists(osp.join(self.dir_moma, f'anns/cache/{lookup.paradigm}/statistics_{suffix}.json')):
       print('Statistics: load cache')
-      with open(os.path.join(self.dir_moma, f'anns/cache/{lookup.paradigm}/statistics_{suffix}.json'), 'r') as f:
+      with open(osp.join(self.dir_moma, f'anns/cache/{lookup.paradigm}/statistics_{suffix}.json'), 'r') as f:
         statistics = json.load(f)
 
     else:
@@ -25,7 +25,7 @@ class Statistics(dict):
       for split in splits:
         statistics[split] = self.get_statistic(taxonomy, lookup, split)
 
-      with open(os.path.join(self.dir_moma, f'anns/cache/{lookup.paradigm}/statistics_{suffix}.json'), 'w') as f:
+      with open(osp.join(self.dir_moma, f'anns/cache/{lookup.paradigm}/statistics_{suffix}.json'), 'w') as f:
         json.dump(statistics, f, indent=2, sort_keys=False)
 
     return statistics

@@ -1,6 +1,7 @@
 import itertools
 import json
 import os
+import os.path as osp
 import pickle
 
 from .data import Bidict, lazydict, Metadatum, Act, SAct, HOI
@@ -64,24 +65,24 @@ class Lookup:
 
       if name == 'id_hoi_to_ann_hoi':
         for id_hoi, ann_hoi in variable.items():
-          with open(os.path.join(self.dir_moma, f'anns/cache/{self.paradigm}/id_hoi_to_ann_hoi', id_hoi), 'wb') as f:
+          with open(osp.join(self.dir_moma, f'anns/cache/id_hoi_to_ann_hoi', id_hoi), 'wb') as f:
             pickle.dump(ann_hoi, f)
 
       else:
-        with open(os.path.join(self.dir_moma, f'anns/cache/{self.paradigm}', name), 'wb') as f:
+        with open(osp.join(self.dir_moma, f'anns/cache', name), 'wb') as f:
           pickle.dump(variable, f)
 
   def load_cache(self):
     print('Lookup: load cache')
     variables = []
     for name in ['id_act_to_metadatum', 'id_act_to_ann_act', 'id_sact_to_ann_sact',
-                 'id_sact_to_id_act', 'id_hoi_to_id_sact', 'id_hoi_to_window']:
-      with open(os.path.join(self.dir_moma, f'anns/cache/{self.paradigm}', name), 'rb') as f:
+                 'id_sact_to_id_act', 'id_hoi_to_id_sact', 'id_hoi_to_clip']:
+      with open(osp.join(self.dir_moma, f'anns/cache/', name), 'rb') as f:
         variable = pickle.load(f)
       variables.append(variable)
 
     ids_hoi = variables[4].keys()
-    id_hoi_to_ann_hoi = lazydict(ids_hoi, os.path.join(self.dir_moma, f'anns/cache/{self.paradigm}/id_hoi_to_ann_hoi'))
+    id_hoi_to_ann_hoi = lazydict(ids_hoi, osp.join(self.dir_moma, f'anns/cache/id_hoi_to_ann_hoi'))
     variables.insert(3, id_hoi_to_ann_hoi)
 
     return variables
@@ -116,8 +117,10 @@ class Lookup:
       id_sact_to_id_act, id_hoi_to_id_sact, id_hoi_to_window = self.load_cache()
 
     except FileNotFoundError:
-      with open(os.path.join(self.dir_moma, f'anns/anns.json'), 'r') as f:
+      with open(osp.join(self.dir_moma, f'anns/anns.json'), 'r') as f:
         anns_raw = json.load(f)
+      with open(osp.join(self.dir_moma, f'videos/interaction_frames/timestamps.json'), 'r') as f:
+        timestamps = json.load(f)
 
       id_act_to_metadatum, id_act_to_ann_act, id_sact_to_ann_sact, id_hoi_to_ann_hoi = {}, {}, {}, {}
       id_sact_to_id_act, id_hoi_to_id_sact = {}, {}
@@ -164,8 +167,8 @@ class Lookup:
   def read_splits(self):
     # load split
     suffixes = {'standard': 'std', 'few-shot': 'fs'}
-    path_split = os.path.join(self.dir_moma, f'anns/split_{suffixes[self.paradigm]}.json')
-    assert os.path.isfile(path_split), f'Dataset split file does not exist: {path_split}'
+    path_split = osp.join(self.dir_moma, f'anns/split_{suffixes[self.paradigm]}.json')
+    assert osp.isfile(path_split), f'Dataset split file does not exist: {path_split}'
     with open(path_split, 'r') as f:
       ids_act_splits = json.load(f)
 

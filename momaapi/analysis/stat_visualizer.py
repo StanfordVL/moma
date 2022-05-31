@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import os
+import os.path as osp
 from pprint import pprint
 import seaborn as sns
 
@@ -10,7 +11,7 @@ class StatVisualizer:
     self.dir_vis = dir_vis
 
   def show(self, with_split):
-    os.makedirs(os.path.join(self.dir_vis, 'stats'), exist_ok=True)
+    os.makedirs(osp.join(self.dir_vis, 'stats'), exist_ok=True)
 
     if with_split:
       distributions, hues = {}, {}
@@ -45,4 +46,4 @@ class StatVisualizer:
       ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha='right')
       ax.set_ylim(bottom=1)
       plt.tight_layout()
-      plt.savefig(os.path.join(self.dir_vis, 'stats', fname))
+      plt.savefig(osp.join(self.dir_vis, 'stats', fname))

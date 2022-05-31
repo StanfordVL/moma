@@ -4,6 +4,7 @@ from distinctipy import distinctipy
 import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
 import os
+import os.path as osp
 
 
 def to_dt(sec):
@@ -28,7 +29,7 @@ class TimelineVisualizer:
     return self.palette[num_colors]
 
   def show(self, id_act, id_sact=None, id_hoi=None, path=None):
-    os.makedirs(os.path.join(self.dir_vis, 'timeline'), exist_ok=True)
+    os.makedirs(osp.join(self.dir_vis, 'timeline'), exist_ok=True)
 
     metadatum = self.moma.get_metadata(ids_act=[id_act])[0]
     ann_act = self.moma.get_anns_act(ids_act=[id_act])[0]
@@ -105,5 +106,5 @@ class TimelineVisualizer:
 
     if path is None:
       fname = f'{id_act}'+('' if index_sact is None else f'{id_sact}')+('' if index_hoi is None else f'{id_hoi}')+'.png'
-      path = os.path.join(self.dir_vis, f'timeline/{fname}')
+      path = osp.join(self.dir_vis, f'timeline/{fname}')
     plt.savefig(path)

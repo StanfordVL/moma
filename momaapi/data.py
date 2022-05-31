@@ -1,4 +1,5 @@
 import os
+import os.path as osp
 import pickle
 
 
@@ -66,7 +67,7 @@ class lazydict(dict):
     if key in self.buffer:
       return self.buffer[key]
     else:
-      with open(os.path.join(self.dir_pickle, key), 'rb') as f:
+      with open(osp.join(self.dir_pickle, key), 'rb') as f:
         value = pickle.load(f)
         self.buffer[key] = value
         return value

@@ -1,6 +1,6 @@
 import itertools
 import numpy as np
-import os
+import os.path as osp
 
 from .taxonomy import Taxonomy
 from .lookup import Lookup
@@ -58,7 +58,7 @@ class MOMA:
      - load_val: whether to load the validation set separately
      - full_res: whether to load full-resolution videos
     """
-    assert os.path.isdir(os.path.join(dir_moma, 'anns')) and os.path.isdir(os.path.join(dir_moma, 'videos'))
+    assert osp.isdir(osp.join(dir_moma, 'anns')) and osp.isdir(osp.join(dir_moma, 'videos'))
 
     self.dir_moma = dir_moma
     self.paradigm = paradigm
@@ -323,18 +323,26 @@ class MOMA:
     assert sum([x is not None for x in [ids_act, ids_sact, ids_hoi]]) == 1
 
     if ids_act is not None:
-      paths = [os.path.join(self.dir_moma, f"videos/activity{'_fr' if self.full_res else ''}/{id_act}.mp4")
+      paths = [osp.join(self.dir_moma, f"videos/activity{'_fr' if self.full_res else ''}/{id_act}.mp4")
                for id_act in ids_act]
     elif ids_sact is not None:
-      paths = [os.path.join(self.dir_moma, f"videos/sub_activity{'_fr' if self.full_res else ''}/{id_sact}.mp4")
+      paths = [osp.join(self.dir_moma, f"videos/sub_activity{'_fr' if self.full_res else ''}/{id_sact}.mp4")
                for id_sact in ids_sact]
-    else:  # hoi
-      paths = [os.path.join(self.dir_moma, f'videos/interaction/{id_hoi}.jpg') for id_hoi in ids_hoi]
+    elif ids_hoi is not None:
+      paths = [osp.join(self.dir_moma, f'videos/interaction/{id_hoi}.jpg') for id_hoi in ids_hoi]
+    else:
+      assert id_hoi_clip is not None
+      clip = self.get_clips(ids_hoi=[id_hoi_clip])[0]
+      times = [x[1] for x in clip.neighbors]+[clip.time]
+      paths = [osp.join(self.dir_moma, f'videos/interaction_frames/{x[0]}.jpg') for x in clip.neighbors]+ \
+              [osp.join(self.dir_moma, f'videos/interaction/{id_hoi_clip}.jpg')]
+      paths = [x for _, x in sorted(zip(times, paths))]
 
-    if sanity_check and not all(os.path.exists(path) for path in paths):
-      paths_missing = [path for path in paths if not os.path.exists(path)]
+    if sanity_check and not all(osp.exists(path) for path in paths):
+      paths_missing = [path for path in paths if not osp.exists(path)]
       paths_missing = paths_missing[:5] if len(paths_missing) > 5 else paths_missing
       assert False, f'{len(paths_missing)} paths do not exist: {paths_missing}'
+
     return paths
 
   def get_paths_window(self, id_hoi):
