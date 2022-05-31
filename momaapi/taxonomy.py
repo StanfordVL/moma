@@ -77,23 +77,14 @@ class Taxonomy(dict):
     else:
       raise NotImplementedError
 
-  def get_num_classes(self, paradigm, load_val):
+  def get_num_classes(self):
     kinds = ['act', 'sact']
-    if paradigm == 'standard':
-      output = {kind: self.__get_num_classes(paradigm, kind) for kind in kinds}
+    splits = ['train', 'val', 'test']
 
-    elif paradigm == 'few-shot':
-      output = {}
-      for kind in kinds:
-        output[f'{kind}_train'] = self.__get_num_classes(paradigm, kind, 'train')
-        if load_val:
-          output[f'{kind}_val'] = self.__get_num_classes(paradigm, kind, 'val')
-        else:
-          output[f'{kind}_train'] += self.__get_num_classes(paradigm, kind, 'val')
-        output[f'{kind}_test'] = self.__get_num_classes(paradigm, kind, 'test')
-
-    else:
-      raise ValueError
+    output = {}
+    output['standard'] = {kind: self.__get_num_classes('standard', kind) for kind in kinds}
+    output['few-shot'] = {f'{kind}_{split}':self.__get_num_classes('few-shot', kind, split)
+                          for kind, split in itertools.product(kinds, splits)}
 
     return output
 

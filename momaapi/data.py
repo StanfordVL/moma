@@ -46,13 +46,14 @@ class OrderedBidict(dict):
     raise NotImplementedError
 
 
-class lazydict(dict):
-  def __init__(self, keys, dir_pickle):
+class Lazydict(dict):
+  def __init__(self, keys, dir_pickle, prefix):
     super().__init__()
     self._keys = keys
     self.buffer = {}
     self.dir_pickle = dir_pickle
-    assert set(keys) == set(os.listdir(dir_pickle))
+    self.prefix = prefix
+    assert all(osp.exists(osp.join(dir_pickle, prefix+'_'+key)) for key in keys)
 
   def keys(self):
     return self._keys
@@ -67,7 +68,7 @@ class lazydict(dict):
     if key in self.buffer:
       return self.buffer[key]
     else:
-      with open(osp.join(self.dir_pickle, key), 'rb') as f:
+      with open(osp.join(self.dir_pickle, prefix+'_'+key), 'rb') as f:
         value = pickle.load(f)
         self.buffer[key] = value
         return value

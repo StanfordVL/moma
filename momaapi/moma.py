@@ -51,29 +51,24 @@ Definitions:
 
 
 class MOMA:
-  def __init__(self, dir_moma: str, paradigm: str='standard', load_val: bool=False, full_res: bool=False,
-               reset_cache: bool=False):
+  def __init__(self, dir_moma: str, paradigm: str='standard', reset_cache: bool=False):
     """
      - dir_moma: directory of the MOMA dataset
      - paradigm: 'standard' or 'few-shot'
-     - load_val: whether to load the validation set separately
-     - full_res: whether to load full-resolution videos
      - reset_cache: whether to regenerate cache
     """
     assert osp.isdir(osp.join(dir_moma, 'anns')) and osp.isdir(osp.join(dir_moma, 'videos'))
 
     self.dir_moma = dir_moma
     self.paradigm = paradigm
-    self.load_val = load_val
-    self.full_res = full_res
 
     self.taxonomy = Taxonomy(dir_moma)
-    self.lookup = Lookup(dir_moma, self.taxonomy, paradigm, load_val, reset_cache)
+    self.lookup = Lookup(dir_moma, self.taxonomy, reset_cache)
     self.statistics = Statistics(dir_moma, self.taxonomy, self.lookup, reset_cache)
 
   @property
   def num_classes(self):
-    return self.taxonomy.get_num_classes(self.paradigm, self.load_val)
+    return self.taxonomy.get_num_classes()[self.paradigm]
 
   def get_cnames(self, kind, threshold=None, split=None):
     """
@@ -91,11 +86,11 @@ class MOMA:
 
     assert split is not None
     if split == 'either':  # exclude if < threshold in either one split
-      distribution = np.stack([self.statistics[split][kind]['distribution'] 
+      distribution = np.stack([self.statistics[split][kind]['distribution']
                                for split in self.lookup.retrieve('splits')])
       distribution = np.amin(distribution, axis=0).tolist()
     elif split == 'all':  # exclude if < threshold in all splits
-      distribution = np.stack([self.statistics[split][kind]['distribution'] 
+      distribution = np.stack([self.statistics[split][kind]['distribution']
                                for split in self.lookup.retrieve('splits')])
       distribution = np.amax(distribution, axis=0).tolist()
     else:
@@ -146,7 +141,7 @@ class MOMA:
     # split
     if split is not None:
       assert split in self.lookup.retrieve('splits')
-      ids_act_intersection.append(self.lookup.retrieve('ids_act', split))
+      ids_act_intersection.append(self.lookup.retrieve('ids_act', (self.paradigm, split)))
 
     # cnames_act
     if cnames_act is not None:
@@ -200,7 +195,7 @@ class MOMA:
     # split
     if split is not None:
       assert split in self.lookup.retrieve('splits')
-      ids_sact = self.get_ids_sact(ids_act=self.lookup.retrieve('ids_act', split))
+      ids_sact = self.get_ids_sact(ids_act=self.lookup.retrieve('ids_act', (self.paradigm, split)))
       ids_sact_intersection.append(ids_sact)
 
     # cnames_sact
@@ -261,7 +256,7 @@ class MOMA:
     # split
     if split is not None:
       assert split in self.lookup.retrieve('splits')
-      ids_hoi = self.get_ids_hoi(ids_act=self.lookup.retrieve('ids_act', split))
+      ids_hoi = self.get_ids_hoi(ids_act=self.lookup.retrieve('ids_act', (self.paradigm, split)))
       ids_hoi_intersection.append(ids_hoi)
 
     # ids_act
@@ -295,10 +290,10 @@ class MOMA:
 
   def get_anns_act(self, ids_act: list) -> list:
     return [self.lookup.retrieve('ann_act', id_act) for id_act in ids_act]
-  
+
   def get_anns_sact(self, ids_sact: list) -> list:
      return [self.lookup.retrieve('ann_sact', id_sact) for id_sact in ids_sact]
-    
+
   def get_anns_hoi(self, ids_hoi: list) -> list:
      return [self.lookup.retrieve('ann_hoi', id_hoi) for id_hoi in ids_hoi]
 
@@ -310,14 +305,15 @@ class MOMA:
                 ids_sact: list=None,
                 ids_hoi: list=None,
                 id_hoi_clip: str=None,
+                full_res: bool=False,
                 sanity_check: bool=True) -> list:
     assert sum([x is not None for x in [ids_act, ids_sact, ids_hoi, id_hoi_clip]]) == 1
 
     if ids_act is not None:
-      paths = [osp.join(self.dir_moma, f"videos/activity{'_fr' if self.full_res else ''}/{id_act}.mp4")
+      paths = [osp.join(self.dir_moma, f"videos/activity{'_fr' if full_res else ''}/{id_act}.mp4")
                for id_act in ids_act]
     elif ids_sact is not None:
-      paths = [osp.join(self.dir_moma, f"videos/sub_activity{'_fr' if self.full_res else ''}/{id_sact}.mp4")
+      paths = [osp.join(self.dir_moma, f"videos/sub_activity{'_fr' if full_res else ''}/{id_sact}.mp4")
                for id_sact in ids_sact]
     elif ids_hoi is not None:
       paths = [osp.join(self.dir_moma, f'videos/interaction/{id_hoi}.jpg') for id_hoi in ids_hoi]
