@@ -81,6 +81,7 @@ class lazydict(dict):
 
 class Metadatum:
   def __init__(self, ann):
+    self.id = ann['activity']['id']
     self.fname = ann['file_name']
     self.num_frames = ann['num_frames']
     self.width = ann['width']
@@ -98,15 +99,15 @@ class Metadatum:
     raise NotImplementedError
 
   def __repr__(self):
-    return f'Metadatum(fname={self.fname}, size=({self.num_frames}, {self.height}, {self.width}, 3), ' \
+    return f'Metadatum(id={self.id}, fname={self.fname}, size=({self.num_frames}, {self.height}, {self.width}, 3), ' \
            f'duration={self.duration}'
 
 
 class Act:
-  def __init__(self, ann, cid):
+  def __init__(self, ann, taxonomy):
     self.id = ann['id']
     self.cname = ann['class_name']
-    self.cid = cid
+    self.cid = taxonomy.index(ann['class_name'])
     self.start = ann['start_time']
     self.end = ann['end_time']
     self.ids_sact = [x['id'] for x in ann['sub_activities']]
@@ -116,10 +117,10 @@ class Act:
 
 
 class SAct:
-  def __init__(self, ann, cid):
+  def __init__(self, ann, taxonomy):
     self.id = ann['id']
     self.cname = ann['class_name']
-    self.cid = cid
+    self.cid = taxonomy.index(ann['class_name'])
     self.start = ann['start_time']
     self.end = ann['end_time']
     self.ids_hoi = [x['id'] for x in ann['higher_order_interactions']]
@@ -165,6 +166,16 @@ class HOI:
            f'num_ias={len(self.ias)}, num_tas={len(self.tas)}, ' \
            f'num_atts={len(self.atts)}, num_rels={len(self.rels)}, ' \
            f'ids_actor={self.ids_actor}, ids_object={self.ids_object})'
+
+
+class Clip:
+  """ A clip corresponds to a 1 second/5 frames video clip centered at the higher-order interaction;
+  <1 second/5 frames if exceeds the raw video boundary
+  """
+  def __init__(self, ann, neighbors):
+    self.id = ann['id']
+    self.time = ann['time']
+    self.neighbors = neighbors
 
 
 class BBox:

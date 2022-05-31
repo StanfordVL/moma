@@ -18,8 +18,8 @@ The following functions are defined:
  - get_anns_act(): Given activity instance IDs, return their annotations
  - get_anns_sact(): Given sub-activity instance IDs, return their annotations
  - get_anns_hoi(): Given higher-order interaction instance IDs, return their annotations
+ - get_clip(): Given higher-order interaction instance IDs, return their clips
  - get_paths(): Given instance IDs, return data paths
- - get_paths_window(): Given an HOI instance ID, return window paths
  - sort(): Given a list of sub-activity or higher-order interaction instance IDs, return them in sorted order
 
 The following paradigms are defined:
@@ -67,7 +67,7 @@ class MOMA:
 
     self.taxonomy = Taxonomy(dir_moma)
     self.lookup = Lookup(dir_moma, self.taxonomy, paradigm, load_val)
-    self.statistics = Statistics(dir_moma, self.taxonomy, self.lookup)
+    # self.statistics = Statistics(dir_moma, self.taxonomy, self.lookup)
 
   @property
   def num_classes(self):
@@ -315,12 +315,16 @@ class MOMA:
   def get_anns_hoi(self, ids_hoi: list) -> list:
      return [self.lookup.retrieve('ann_hoi', id_hoi) for id_hoi in ids_hoi]
 
+  def get_clips(self, ids_hoi: list) -> list:
+    return [self.lookup.retrieve('clip', id_hoi) for id_hoi in ids_hoi]
+
   def get_paths(self,
                 ids_act: list=None,
                 ids_sact: list=None,
                 ids_hoi: list=None,
+                id_hoi_clip: str=None,
                 sanity_check: bool=True) -> list:
-    assert sum([x is not None for x in [ids_act, ids_sact, ids_hoi]]) == 1
+    assert sum([x is not None for x in [ids_act, ids_sact, ids_hoi, id_hoi_clip]]) == 1
 
     if ids_act is not None:
       paths = [osp.join(self.dir_moma, f"videos/activity{'_fr' if self.full_res else ''}/{id_act}.mp4")
@@ -344,22 +348,6 @@ class MOMA:
       assert False, f'{len(paths_missing)} paths do not exist: {paths_missing}'
 
     return paths
-
-  def get_paths_window(self, id_hoi):
-    """ Given a higher-order interaction ID, return
-     - a path to the 1s video clip centered at the higher-order interaction (<1s if exceeds the raw video boundary)
-     - paths to 5 frames centered at the higher-order interaction (<5 frames if exceeds the raw video boundary)
-    """
-    window = self.lookup.retrieve('window', id_hoi)
-    now = self.get_anns_hoi(ids_hoi=[id_hoi])[0].time
-    window = [[os.path.join(self.dir_moma, f'videos/interaction_frames/{fname}.jpg'), time] for fname, time in window]+\
-             [[os.path.join(self.dir_moma, f'videos/interaction/{id_hoi}.jpg'), now]]
-    window = sorted(window, key=lambda x: x[1])
-
-    path_video = os.path.join(self.dir_moma, f'videos/interaction_video/{id_hoi}.mp4')
-    paths_frame = [path_frame for path_frame, time in window]
-
-    return path_video, paths_frame
 
   def sort(self, ids_sact: list=None, ids_hoi: list=None, sanity_check: bool=True):
     """ Given a list of sub-activity or higher-order interaction instance IDs, return them in sorted order

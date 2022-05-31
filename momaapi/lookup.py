@@ -4,14 +4,14 @@ import os
 import os.path as osp
 import pickle
 
-from .data import Bidict, lazydict, Metadatum, Act, SAct, HOI
+from .data import Bidict, lazydict, Metadatum, Act, SAct, HOI, Clip
 
 """
 The Lookup class implements the following lookups:
  - split -> ids_act (one-to-many): retrieve(kind='id_act', key=split)
  - id_act -> ann_act, metadatum (one-to-one): retrieve(kind='ann_act' or 'metadatum', key=id_act)
  - id_sact -> ann_sact (one-to-one): retrieve(kind='ann_sact', key=id_sact)
- - id_hoi -> ann_hoi, window (one-to-one): retrieve(kind='ann_hoi' or 'window', key=id_hoi)
+ - id_hoi -> ann_hoi, clip (one-to-one): retrieve(kind='ann_hoi' or 'clip', key=id_hoi)
 
 These keys can be traced across the MOMA hierarchy:
  - id_act -> ids_sact (one-to-many): trace(id_act=id_act, kind='sact')
@@ -21,8 +21,9 @@ These keys can be traced across the MOMA hierarchy:
  - id_hoi -> id_sact (one-to-one): trace(id_hoi=id_hoi, kind='sact')
  - id_hoi -> id_act (one-to-one): trace(id_hoi=id_hoi, kind='act')
  
-The following variables can be mapped:
- - cid_fs+split <-> cid_std: get_cid()
+Mapping activity and sub-activity class IDs between few-shot and standard paradigms:
+ - cid_fs -> cid_std: get_cid(split=split, cid_act=cid_fs or cid_sact=cid_fs)
+ - cid_std -> cid_fs: get_cid(split=split, cid_act=cid_std or cid_sact=cid_std)
 """
 
 
@@ -40,13 +41,13 @@ class Lookup:
     self.id_hoi_to_ann_hoi = None
     self.id_sact_to_id_act = None
     self.id_hoi_to_id_sact = None
-    self.id_hoi_to_window = None
+    self.id_hoi_to_clip = None
 
     self.read_splits()
     self.read_anns()
 
   def save_cache(self, id_act_to_metadatum, id_act_to_ann_act, id_sact_to_ann_sact, id_hoi_to_ann_hoi,
-                 id_sact_to_id_act, id_hoi_to_id_sact, id_hoi_to_window):
+                 id_sact_to_id_act, id_hoi_to_id_sact, id_hoi_to_clip):
     print('Lookup: save cache')
     named_variables = {
       'id_act_to_metadatum': id_act_to_metadatum,
@@ -55,10 +56,10 @@ class Lookup:
       'id_hoi_to_ann_hoi': id_hoi_to_ann_hoi,
       'id_sact_to_id_act': id_sact_to_id_act,
       'id_hoi_to_id_sact': id_hoi_to_id_sact,
-      'id_hoi_to_window': id_hoi_to_window
+      'id_hoi_to_clip': id_hoi_to_clip
     }
 
-    os.makedirs(os.path.join(self.dir_moma, f'anns/cache/{self.paradigm}/id_hoi_to_ann_hoi'), exist_ok=True)
+    os.makedirs(osp.join(self.dir_moma, 'anns/cache/id_hoi_to_ann_hoi'), exist_ok=True)
 
     for name, variable in named_variables.items():
       assert variable is not None
@@ -87,7 +88,7 @@ class Lookup:
 
     return variables
 
-  def get_cid(self, paradigm, split=None, cid_act=None, cid_sact=None):
+  def get_cid(self, split=None, cid_act=None, cid_sact=None):
     assert sum([x is not None for x in [cid_act, cid_sact]]) == 1
     if cid_act is not None:
       kind = 'act'
@@ -98,11 +99,11 @@ class Lookup:
     else:
       raise ValueError
 
-    if paradigm == 'standard':
+    if self.paradigm == 'standard':
       assert split is not None
       cname = self.taxonomy['few_shot'][kind][split][cid_src]
       cid_trg = self.taxonomy[kind].index(cname)
-    elif paradigm == 'few-shot':
+    elif self.paradigm == 'few-shot':
       cname = self.taxonomy[kind][cid_src]
       split = self.taxonomy['few_shot'][kind].inverse[cname]
       cid_trg = self.taxonomy['few_shot'][kind][split].index(cname)
@@ -113,8 +114,8 @@ class Lookup:
 
   def read_anns(self):
     try:
-      id_act_to_metadatum, id_act_to_ann_act, id_sact_to_ann_sact, id_hoi_to_ann_hoi, \
-      id_sact_to_id_act, id_hoi_to_id_sact, id_hoi_to_window = self.load_cache()
+      id_act_to_metadatum, id_act_to_ann_act, id_sact_to_ann_sact, id_hoi_to_ann_hoi, id_hoi_to_clip, \
+      id_sact_to_id_act, id_hoi_to_id_sact = self.load_cache()
 
     except FileNotFoundError:
       with open(osp.join(self.dir_moma, f'anns/anns.json'), 'r') as f:
@@ -122,21 +123,19 @@ class Lookup:
       with open(osp.join(self.dir_moma, f'videos/interaction_frames/timestamps.json'), 'r') as f:
         timestamps = json.load(f)
 
-      id_act_to_metadatum, id_act_to_ann_act, id_sact_to_ann_sact, id_hoi_to_ann_hoi = {}, {}, {}, {}
+      id_act_to_metadatum, id_act_to_ann_act = {}, {}
+      id_sact_to_ann_sact = {}
+      id_hoi_to_ann_hoi, id_hoi_to_clip = {}, {}
       id_sact_to_id_act, id_hoi_to_id_sact = {}, {}
 
       for ann_raw in anns_raw:
         ann_act_raw = ann_raw['activity']
         id_act_to_metadatum[ann_act_raw['id']] = Metadatum(ann_raw)
-        cid_act = self.taxonomy['act'].index(ann_act_raw['class_name'])
-        cid_act = self.get_cid(self.paradigm, cid_act=cid_act) if self.paradigm == 'few-shot' else cid_act
-        id_act_to_ann_act[ann_act_raw['id']] = Act(ann_act_raw, cid_act)
+        id_act_to_ann_act[ann_act_raw['id']] = Act(ann_act_raw, self.taxonomy['act'])
         anns_sact_raw = ann_act_raw['sub_activities']
 
         for ann_sact_raw in anns_sact_raw:
-          cid_sact = self.taxonomy['sact'].index(ann_sact_raw['class_name'])
-          cid_sact = self.get_cid(self.paradigm, cid_sact=cid_sact) if self.paradigm == 'few-shot' else cid_sact
-          id_sact_to_ann_sact[ann_sact_raw['id']] = SAct(ann_sact_raw, cid_sact)
+          id_sact_to_ann_sact[ann_sact_raw['id']] = SAct(ann_sact_raw, self.taxonomy['sact'])
           id_sact_to_id_act[ann_sact_raw['id']] = ann_act_raw['id']
           anns_hoi_raw = ann_sact_raw['higher_order_interactions']
 
@@ -145,13 +144,11 @@ class Lookup:
                                                        self.taxonomy['actor'], self.taxonomy['object'],
                                                        self.taxonomy['ia'], self.taxonomy['ta'],
                                                        self.taxonomy['att'], self.taxonomy['rel'])
+            id_hoi_to_clip[ann_hoi_raw['id']] = Clip(ann_hoi_raw, timestamps[ann_hoi_raw['id']])
             id_hoi_to_id_sact[ann_hoi_raw['id']] = ann_sact_raw['id']
 
-      with open(os.path.join(self.dir_moma, f'videos/interaction_frames/timestamps.json'), 'r') as f:
-        id_hoi_to_window = json.load(f)
-
-      self.save_cache(id_act_to_metadatum, id_act_to_ann_act, id_sact_to_ann_sact, id_hoi_to_ann_hoi,
-                      id_sact_to_id_act, id_hoi_to_id_sact, id_hoi_to_window)
+      self.save_cache(id_act_to_metadatum, id_act_to_ann_act, id_sact_to_ann_sact, id_hoi_to_ann_hoi, id_hoi_to_clip,
+                      id_sact_to_id_act, id_hoi_to_id_sact)
 
     id_sact_to_id_act = Bidict(id_sact_to_id_act)
     id_hoi_to_id_sact = Bidict(id_hoi_to_id_sact)
@@ -162,7 +159,7 @@ class Lookup:
     self.id_hoi_to_ann_hoi = id_hoi_to_ann_hoi
     self.id_sact_to_id_act = id_sact_to_id_act
     self.id_hoi_to_id_sact = id_hoi_to_id_sact
-    self.id_hoi_to_window = id_hoi_to_window
+    self.id_hoi_to_clip = id_hoi_to_clip
 
   def read_splits(self):
     # load split
@@ -182,7 +179,7 @@ class Lookup:
   def retrieve(self, kind, key=None):
     if key is None:
       assert kind in ['splits', 'ids_act', 'ids_sact', 'ids_hoi',
-                      'anns_act', 'metadata', 'anns_sact', 'anns_hoi', 'windows']
+                      'anns_act', 'metadata', 'anns_sact', 'anns_hoi', 'clips']
 
       if kind == 'splits':
         return self.split_to_ids_act.keys()
@@ -200,11 +197,11 @@ class Lookup:
         return self.id_sact_to_ann_sact.values()
       elif kind == 'anns_hoi':
         return self.id_hoi_to_ann_hoi.values()
-      elif kind == 'windows':
-        return self.id_hoi_to_window.values()
+      elif kind == 'clips':
+        return self.id_hoi_to_clip.values()
 
     else:
-      assert kind in ['ids_act', 'ann_act', 'metadatum', 'ann_sact', 'ann_hoi', 'window']
+      assert kind in ['ids_act', 'ann_act', 'metadatum', 'ann_sact', 'ann_hoi', 'clip']
 
       if kind == 'ids_act':
         return self.split_to_ids_act[key]
@@ -216,8 +213,8 @@ class Lookup:
         return self.id_sact_to_ann_sact[key]
       elif kind == 'ann_hoi':
         return self.id_hoi_to_ann_hoi[key]
-      elif kind == 'window':
-        return self.id_hoi_to_window[key]
+      elif kind == 'clip':
+        return self.id_hoi_to_clip[key]
 
     raise ValueError(f'retrieve(kind={kind}, key={key})')
 
