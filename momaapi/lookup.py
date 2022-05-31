@@ -3,10 +3,16 @@ import json
 import os
 import os.path as osp
 import pickle
+import shutil
 
 from .data import Bidict, lazydict, Metadatum, Act, SAct, HOI, Clip
 
 """
+The following functions are publicly available:
+ - retrieve()
+ - trace()
+ - get_cid()
+
 The Lookup class implements the following lookups:
  - split -> ids_act (one-to-many): retrieve(kind='id_act', key=split)
  - id_act -> ann_act, metadatum (one-to-one): retrieve(kind='ann_act' or 'metadatum', key=id_act)
@@ -28,99 +34,78 @@ Mapping activity and sub-activity class IDs between few-shot and standard paradi
 
 
 class Lookup:
-  def __init__(self, dir_moma, taxonomy, paradigm, load_val):
-    self.dir_moma = dir_moma
+  def __init__(self, dir_moma, taxonomy, paradigm, load_val, reset_cache):
     self.taxonomy = taxonomy
     self.paradigm = paradigm
-    self.load_val = load_val
 
-    self.split_to_ids_act = None
     self.id_act_to_metadatum = None
     self.id_act_to_ann_act = None
     self.id_sact_to_ann_sact = None
     self.id_hoi_to_ann_hoi = None
+    self.id_hoi_to_clip = None
     self.id_sact_to_id_act = None
     self.id_hoi_to_id_sact = None
-    self.id_hoi_to_clip = None
+    self.split_to_ids_act = None
 
-    self.read_splits()
-    self.read_anns()
+    self.__read_anns(dir_moma)
+    self.__read_splits()
 
-  def save_cache(self, id_act_to_metadatum, id_act_to_ann_act, id_sact_to_ann_sact, id_hoi_to_ann_hoi,
-                 id_sact_to_id_act, id_hoi_to_id_sact, id_hoi_to_clip):
+  @staticmethod
+  def __save_cache(dir_moma, id_act_to_metadatum, id_act_to_ann_act, id_sact_to_ann_sact, id_hoi_to_ann_hoi,
+                   id_hoi_to_clip, id_sact_to_id_act, id_hoi_to_id_sact):
     print('Lookup: save cache')
     named_variables = {
       'id_act_to_metadatum': id_act_to_metadatum,
       'id_act_to_ann_act': id_act_to_ann_act,
       'id_sact_to_ann_sact': id_sact_to_ann_sact,
       'id_hoi_to_ann_hoi': id_hoi_to_ann_hoi,
+      'id_hoi_to_clip': id_hoi_to_clip,
       'id_sact_to_id_act': id_sact_to_id_act,
       'id_hoi_to_id_sact': id_hoi_to_id_sact,
-      'id_hoi_to_clip': id_hoi_to_clip
     }
 
-    os.makedirs(osp.join(self.dir_moma, 'anns/cache/id_hoi_to_ann_hoi'), exist_ok=True)
+    os.makedirs(osp.join(dir_moma, 'anns/cache/id_hoi_to_ann_hoi'), exist_ok=True)
 
     for name, variable in named_variables.items():
       assert variable is not None
 
       if name == 'id_hoi_to_ann_hoi':
         for id_hoi, ann_hoi in variable.items():
-          with open(osp.join(self.dir_moma, f'anns/cache/id_hoi_to_ann_hoi', id_hoi), 'wb') as f:
+          with open(osp.join(dir_moma, f'anns/cache/{name}', id_hoi), 'wb') as f:
             pickle.dump(ann_hoi, f)
 
       else:
-        with open(osp.join(self.dir_moma, f'anns/cache', name), 'wb') as f:
+        with open(osp.join(dir_moma, f'anns/cache', name), 'wb') as f:
           pickle.dump(variable, f)
 
-  def load_cache(self):
+  @staticmethod
+  def __load_cache(dir_moma):
     print('Lookup: load cache')
     variables = []
-    for name in ['id_act_to_metadatum', 'id_act_to_ann_act', 'id_sact_to_ann_sact',
-                 'id_sact_to_id_act', 'id_hoi_to_id_sact', 'id_hoi_to_clip']:
-      with open(osp.join(self.dir_moma, f'anns/cache/', name), 'rb') as f:
+    for name in ['id_act_to_metadatum', 'id_act_to_ann_act', 'id_sact_to_ann_sact', 'id_hoi_to_clip',
+                 'id_sact_to_id_act', 'id_hoi_to_id_sact']:
+      with open(osp.join(dir_moma, f'anns/cache/', name), 'rb') as f:
         variable = pickle.load(f)
       variables.append(variable)
 
-    ids_hoi = variables[4].keys()
-    id_hoi_to_ann_hoi = lazydict(ids_hoi, osp.join(self.dir_moma, f'anns/cache/id_hoi_to_ann_hoi'))
+    ids_hoi = variables[3].keys()
+    id_hoi_to_ann_hoi = lazydict(ids_hoi, osp.join(dir_moma, f'anns/cache/id_hoi_to_ann_hoi'))
     variables.insert(3, id_hoi_to_ann_hoi)
 
     return variables
 
-  def get_cid(self, split=None, cid_act=None, cid_sact=None):
-    assert sum([x is not None for x in [cid_act, cid_sact]]) == 1
-    if cid_act is not None:
-      kind = 'act'
-      cid_src = cid_act
-    elif cid_sact is not None:
-      kind = 'sact'
-      cid_src = cid_sact
-    else:
-      raise ValueError
+  def __read_anns(self, dir_moma):
+    if reset_cache:
+      shutil.rmtree(osp.join(dir_moma, 'anns/cache'))
 
-    if self.paradigm == 'standard':
-      assert split is not None
-      cname = self.taxonomy['few_shot'][kind][split][cid_src]
-      cid_trg = self.taxonomy[kind].index(cname)
-    elif self.paradigm == 'few-shot':
-      cname = self.taxonomy[kind][cid_src]
-      split = self.taxonomy['few_shot'][kind].inverse[cname]
-      cid_trg = self.taxonomy['few_shot'][kind][split].index(cname)
-    else:
-      raise ValueError
-
-    return cid_trg
-
-  def read_anns(self):
     try:
       id_act_to_metadatum, id_act_to_ann_act, id_sact_to_ann_sact, id_hoi_to_ann_hoi, id_hoi_to_clip, \
-      id_sact_to_id_act, id_hoi_to_id_sact = self.load_cache()
+      id_sact_to_id_act, id_hoi_to_id_sact = self.__load_cache(dir_moma)
 
     except FileNotFoundError:
-      with open(osp.join(self.dir_moma, f'anns/anns.json'), 'r') as f:
+      with open(osp.join(dir_moma, f'anns/anns.json'), 'r') as f:
         anns_raw = json.load(f)
-      with open(osp.join(self.dir_moma, f'videos/interaction_frames/timestamps.json'), 'r') as f:
+      with open(osp.join(dir_moma, f'videos/interaction_frames/timestamps.json'), 'r') as f:
         timestamps = json.load(f)
 
       id_act_to_metadatum, id_act_to_ann_act = {}, {}
@@ -147,8 +132,8 @@ class Lookup:
             id_hoi_to_clip[ann_hoi_raw['id']] = Clip(ann_hoi_raw, timestamps[ann_hoi_raw['id']])
             id_hoi_to_id_sact[ann_hoi_raw['id']] = ann_sact_raw['id']
 
-      self.save_cache(id_act_to_metadatum, id_act_to_ann_act, id_sact_to_ann_sact, id_hoi_to_ann_hoi, id_hoi_to_clip,
-                      id_sact_to_id_act, id_hoi_to_id_sact)
+      self.__save_cache(dir_moma, id_act_to_metadatum, id_act_to_ann_act, id_sact_to_ann_sact, id_hoi_to_ann_hoi,
+                        id_hoi_to_clip, id_sact_to_id_act, id_hoi_to_id_sact)
 
     id_sact_to_id_act = Bidict(id_sact_to_id_act)
     id_hoi_to_id_sact = Bidict(id_hoi_to_id_sact)
@@ -161,17 +146,17 @@ class Lookup:
     self.id_hoi_to_id_sact = id_hoi_to_id_sact
     self.id_hoi_to_clip = id_hoi_to_clip
 
-  def read_splits(self):
+  def __read_splits(self, dir_moma, paradigm, load_val):
     # load split
     suffixes = {'standard': 'std', 'few-shot': 'fs'}
-    path_split = osp.join(self.dir_moma, f'anns/split_{suffixes[self.paradigm]}.json')
+    path_split = osp.join(dir_moma, f'anns/split_{suffixes[paradigm]}.json')
     assert osp.isfile(path_split), f'Dataset split file does not exist: {path_split}'
     with open(path_split, 'r') as f:
       ids_act_splits = json.load(f)
 
     ids_act_train, ids_act_val, ids_act_test = ids_act_splits['train'], ids_act_splits['val'], ids_act_splits['test']
 
-    if self.load_val:
+    if load_val:
       self.split_to_ids_act = {'train': ids_act_train, 'val': ids_act_val, 'test': ids_act_test}
     else:
       self.split_to_ids_act = {'train': ids_act_train+ids_act_val, 'test': ids_act_test}
@@ -255,3 +240,29 @@ class Lookup:
         return ids_hoi
 
     raise ValueError
+
+  def get_cid(self, split=None, cid_act=None, cid_sact=None):
+    assert sum([x is not None for x in [cid_act, cid_sact]]) == 1
+    if cid_act is not None:
+      kind = 'act'
+      cid_src = cid_act
+    elif cid_sact is not None:
+      kind = 'sact'
+      cid_src = cid_sact
+    else:
+      raise ValueError
+
+    if self.paradigm == 'standard':
+      assert split is not None
+      cname = self.taxonomy['few_shot'][kind][split][cid_src]
+      cid_trg = self.taxonomy[kind].index(cname)
+
+    elif self.paradigm == 'few-shot':
+      cname = self.taxonomy[kind][cid_src]
+      split = self.taxonomy['few_shot'][kind].inverse[cname]
+      cid_trg = self.taxonomy['few_shot'][kind][split].index(cname)
+
+    else:
+      raise ValueError
+
+    return cid_trg

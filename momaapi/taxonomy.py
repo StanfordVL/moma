@@ -8,37 +8,37 @@ from .data import Bidict, OrderedBidict
 class Taxonomy(dict):
   def __init__(self, dir_moma):
     super().__init__()
-    self.dir_moma = dir_moma
-    self.taxonomy = self.read_taxonomy()
+    self.taxonomy = self.__read_taxonomy(dir_moma)
 
-  def read_taxonomy(self):
-    with open(osp.join(self.dir_moma, 'anns/taxonomy/actor.json'), 'r') as f:
+  @staticmethod
+  def __read_taxonomy(dir_moma):
+    with open(osp.join(dir_moma, 'anns/taxonomy/actor.json'), 'r') as f:
       taxonomy_actor = json.load(f)
       taxonomy_actor = sorted(itertools.chain(*taxonomy_actor.values()))
-    with open(osp.join(self.dir_moma, 'anns/taxonomy/object.json'), 'r') as f:
+    with open(osp.join(dir_moma, 'anns/taxonomy/object.json'), 'r') as f:
       taxonomy_object = json.load(f)
       taxonomy_object = sorted(itertools.chain(*taxonomy_object.values()))
-    with open(osp.join(self.dir_moma, 'anns/taxonomy/intransitive_action.json'), 'r') as f:
+    with open(osp.join(dir_moma, 'anns/taxonomy/intransitive_action.json'), 'r') as f:
       taxonomy_ia = json.load(f)
       taxonomy_ia = sorted(map(tuple, itertools.chain(*taxonomy_ia.values())))
-    with open(osp.join(self.dir_moma, 'anns/taxonomy/transitive_action.json'), 'r') as f:
+    with open(osp.join(dir_moma, 'anns/taxonomy/transitive_action.json'), 'r') as f:
       taxonomy_ta = json.load(f)
       taxonomy_ta = sorted(map(tuple, itertools.chain(*taxonomy_ta.values())))
-    with open(osp.join(self.dir_moma, 'anns/taxonomy/attribute.json'), 'r') as f:
+    with open(osp.join(dir_moma, 'anns/taxonomy/attribute.json'), 'r') as f:
       taxonomy_att = json.load(f)
       taxonomy_att = sorted(map(tuple, itertools.chain(*taxonomy_att.values())))
-    with open(osp.join(self.dir_moma, 'anns/taxonomy/relationship.json'), 'r') as f:
+    with open(osp.join(dir_moma, 'anns/taxonomy/relationship.json'), 'r') as f:
       taxonomy_rel = json.load(f)
       taxonomy_rel = sorted(map(tuple, itertools.chain(*taxonomy_rel.values())))
-    with open(osp.join(self.dir_moma, 'anns/taxonomy/act_sact.json'), 'r') as f:
+    with open(osp.join(dir_moma, 'anns/taxonomy/act_sact.json'), 'r') as f:
       taxonomy_act_sact = json.load(f)
       taxonomy_act = sorted(taxonomy_act_sact.keys())
       taxonomy_sact = sorted(itertools.chain(*taxonomy_act_sact.values()))
       taxonomy_sact_to_act = Bidict({cname_sact: cname_act for cname_act, cnames_sact in taxonomy_act_sact.items()
                                                            for cname_sact in cnames_sact})
-    with open(osp.join(self.dir_moma, 'anns/taxonomy/lvis.json'), 'r') as f:
+    with open(osp.join(dir_moma, 'anns/taxonomy/lvis.json'), 'r') as f:
       lvis = json.load(f)
-    with open(osp.join(self.dir_moma, 'anns/taxonomy/few_shot.json'), 'r') as f:
+    with open(osp.join(dir_moma, 'anns/taxonomy/few_shot.json'), 'r') as f:
       taxonomy_fs = json.load(f)
       taxonomy_act_train = sorted(taxonomy_fs['train'])
       taxonomy_act_val = sorted(taxonomy_fs['val'])
@@ -68,7 +68,7 @@ class Taxonomy(dict):
 
     return taxonomy
 
-  def get_num_classes(self, paradigm, kind, split=None):
+  def __get_num_classes(self, paradigm, kind, split=None):
     if paradigm == 'standard':
       return len(self.taxonomy[kind])
     elif paradigm == 'few-shot':
@@ -76,6 +76,26 @@ class Taxonomy(dict):
       return len(self.taxonomy['few_shot'][kind][split])
     else:
       raise NotImplementedError
+
+  def get_num_classes(self, paradigm, load_val):
+    kinds = ['act', 'sact']
+    if paradigm == 'standard':
+      output = {kind: self.__get_num_classes(paradigm, kind) for kind in kinds}
+
+    elif paradigm == 'few-shot':
+      output = {}
+      for kind in kinds:
+        output[f'{kind}_train'] = self.__get_num_classes(paradigm, kind, 'train')
+        if load_val:
+          output[f'{kind}_val'] = self.__get_num_classes(paradigm, kind, 'val')
+        else:
+          output[f'{kind}_train'] += self.__get_num_classes(paradigm, kind, 'val')
+        output[f'{kind}_test'] = self.__get_num_classes(paradigm, kind, 'test')
+
+    else:
+      raise ValueError
+
+    return output
 
   def keys(self):
     return self.taxonomy.keys()

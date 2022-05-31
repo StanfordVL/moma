@@ -51,12 +51,14 @@ Definitions:
 
 
 class MOMA:
-  def __init__(self, dir_moma: str, paradigm: str='standard', load_val: bool=False, full_res: bool=False):
+  def __init__(self, dir_moma: str, paradigm: str='standard', load_val: bool=False, full_res: bool=False,
+               reset_cache: bool=False):
     """
      - dir_moma: directory of the MOMA dataset
      - paradigm: 'standard' or 'few-shot'
      - load_val: whether to load the validation set separately
      - full_res: whether to load full-resolution videos
+     - reset_cache: whether to regenerate cache
     """
     assert osp.isdir(osp.join(dir_moma, 'anns')) and osp.isdir(osp.join(dir_moma, 'videos'))
 
@@ -66,30 +68,12 @@ class MOMA:
     self.full_res = full_res
 
     self.taxonomy = Taxonomy(dir_moma)
-    self.lookup = Lookup(dir_moma, self.taxonomy, paradigm, load_val)
-    # self.statistics = Statistics(dir_moma, self.taxonomy, self.lookup)
+    self.lookup = Lookup(dir_moma, self.taxonomy, paradigm, load_val, reset_cache)
+    self.statistics = Statistics(dir_moma, self.taxonomy, self.lookup, reset_cache)
 
   @property
   def num_classes(self):
-    kinds = ['act', 'sact']
-    if self.paradigm == 'standard':
-      output = {kind: self.taxonomy.get_num_classes(self.paradigm, kind) for kind in kinds}
-
-    elif self.paradigm == 'few-shot':
-      output = {}
-      for kind in kinds:
-        if self.load_val:
-          output[f'{kind}_train'] = self.taxonomy.get_num_classes(self.paradigm, kind, 'train')
-          output[f'{kind}_val'] = self.taxonomy.get_num_classes(self.paradigm, kind, 'val')
-        else:
-          output[f'{kind}_train'] = self.taxonomy.get_num_classes(self.paradigm, kind, 'train')+\
-                                    self.taxonomy.get_num_classes(self.paradigm, kind, 'val')
-        output[f'{kind}_test'] = self.taxonomy.get_num_classes(self.paradigm, kind, 'test')
-
-    else:
-      raise ValueError
-
-    return output
+    return self.taxonomy.get_num_classes(self.paradigm, self.load_val)
 
   def get_cnames(self, kind, threshold=None, split=None):
     """
@@ -97,6 +81,9 @@ class MOMA:
      - threshold: exclude classes with fewer than this number of instances
      - split: 'train', 'val', 'test', 'all', 'either'
     """
+
+    # TODO: add act and sact supporting different paradigms
+
     assert kind in ['actor', 'object']
 
     if threshold is None:

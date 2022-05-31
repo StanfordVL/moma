@@ -5,40 +5,39 @@ import os.path as osp
 
 
 class Statistics(dict):
-  def __init__(self, dir_moma, taxonomy, lookup):
+  def __init__(self, dir_moma, taxonomy, lookup, reset_cache):
     super().__init__()
-    self.dir_moma = dir_moma
-    self.statistics = self.get_statistics(taxonomy, lookup)
+    self.statistics = self.__get_statistics(taxonomy, lookup, reset_cache)
 
-  def get_statistics(self, taxonomy, lookup):
+  def get_statistics(self, dir_moma, taxonomy, lookup, reset_cache):
     splits = lookup.retrieve('splits')
     suffix = '_'.join(splits)
 
-    if osp.exists(osp.join(self.dir_moma, f'anns/cache/{lookup.paradigm}/statistics_{suffix}.json')):
+    if osp.exists(osp.join(dir_moma, f'anns/cache/{lookup.paradigm}/statistics_{suffix}.json')):
       print('Statistics: load cache')
-      with open(osp.join(self.dir_moma, f'anns/cache/{lookup.paradigm}/statistics_{suffix}.json'), 'r') as f:
+      with open(osp.join(dir_moma, f'anns/cache/{lookup.paradigm}/statistics_{suffix}.json'), 'r') as f:
         statistics = json.load(f)
 
     else:
-      print('Statistics: save cache')
-      statistics = {'all': self.get_statistic(taxonomy, lookup)}
+      statistics = {'all': self.__get_statistics(taxonomy, lookup)}
       for split in splits:
-        statistics[split] = self.get_statistic(taxonomy, lookup, split)
+        statistics[split] = self.__get_statistics(taxonomy, lookup, split)
 
-      with open(osp.join(self.dir_moma, f'anns/cache/{lookup.paradigm}/statistics_{suffix}.json'), 'w') as f:
+      print('Statistics: save cache')
+      with open(osp.join(dir_moma, f'anns/cache/{lookup.paradigm}/statistics_{suffix}.json'), 'w') as f:
         json.dump(statistics, f, indent=2, sort_keys=False)
 
     return statistics
 
   @staticmethod
-  def get_duration(anns):
+  def __get_duration(anns):
     duration_total = sum(ann.end-ann.start for ann in anns)
     duration_avg = duration_total/len(anns)
     duration_min = min(ann.end-ann.start for ann in anns)
     duration_max = max(ann.end-ann.start for ann in anns)
     return duration_total, duration_avg, duration_min, duration_max
 
-  def get_statistic(self, taxonomy, lookup, split=None):
+  def __get_statistics(self, taxonomy, lookup, split=None):
     if split is None:
       metadata = lookup.retrieve('metadata')
       anns_act = lookup.retrieve('anns_act')
@@ -76,8 +75,8 @@ class Statistics(dict):
     num_classes_rel = len(taxonomy['rel'])
 
     duration_total_raw = sum(metadatum.duration for metadatum in metadata)
-    duration_total_act, duration_avg_act, duration_min_act, duration_max_act = self.get_duration(anns_act)
-    duration_total_sact, duration_avg_sact, duration_min_sact, duration_max_sact = self.get_duration(anns_sact)
+    duration_total_act, duration_avg_act, duration_min_act, duration_max_act = self.__get_duration(anns_act)
+    duration_total_sact, duration_avg_sact, duration_min_sact, duration_max_sact = self.__get_duration(anns_sact)
 
     bincount_act = np.bincount([ann_act.cid for ann_act in anns_act], minlength=num_classes_act).tolist()
     bincount_sact = np.bincount([ann_sact.cid for ann_sact in anns_sact], minlength=num_classes_sact).tolist()
