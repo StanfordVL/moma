@@ -11,7 +11,7 @@ from .data import Bidict, LazyDict, Metadatum, Act, SAct, HOI, Clip
 The following functions are publicly available:
  - retrieve()
  - trace()
- - get_cid()
+ - map_cid()
 
 The Lookup class implements the following lookups:
  - split -> ids_act (one-to-many): retrieve(kind='id_act', key=split)
@@ -28,8 +28,8 @@ These keys can be traced across the MOMA hierarchy:
  - id_hoi -> id_act (one-to-one): trace(id_hoi=id_hoi, kind='act')
  
 Mapping activity and sub-activity class IDs between few-shot and standard paradigms:
- - cid_fs -> cid_std: get_cid(split=split, cid_act=cid_fs or cid_sact=cid_fs)
- - cid_std -> cid_fs: get_cid(split=split, cid_act=cid_std or cid_sact=cid_std)
+ - cid_fs -> cid_std: map_cid(split=split, cid_act=cid_fs or cid_sact=cid_fs)
+ - cid_std -> cid_fs: map_cid(split=split, cid_act=cid_std or cid_sact=cid_std)
 """
 
 
@@ -253,7 +253,7 @@ class Lookup:
 
     raise ValueError
 
-  def get_cid(self, paradigm, split=None, cid_act=None, cid_sact=None):
+  def map_cid(self, paradigm, split=None, cid_act=None, cid_sact=None):
     assert sum([x is not None for x in [cid_act, cid_sact]]) == 1
     if cid_act is not None:
       kind = 'act'

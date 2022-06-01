@@ -14,7 +14,7 @@ class Statistics(dict):
     self.statistics = self.__read_statistics(dir_moma, reset_cache)
     self.__sanity_check()
     
-  def get_cids(self, kind, threshold, paradigm, split):
+  def filter_cids(self, kind, threshold, paradigm, split):
     assert paradigm in self.lookup.retrieve('paradigms')
     assert split in self.lookup.retrieve('splits')+['either', 'all', 'combined']
     

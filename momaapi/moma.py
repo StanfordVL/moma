@@ -70,13 +70,13 @@ class MOMA:
   def num_classes(self):
     return self.taxonomy.get_num_classes()[self.paradigm]
 
-  def get_cnames(self, kind, threshold=None, split=None):
+  def filter_cnames(self, kind, threshold=None, split=None):
     """
      - kind: currently only support 'actor' and 'object'
      - threshold: exclude classes with fewer than this number of instances
      - split: 'train', 'val', 'test', 'either', 'all', 'combined'
     """
-    cids = self.statistics.get_cids(kind, threshold, self.paradigm, split)
+    cids = self.statistics.filter_cids(kind, threshold, self.paradigm, split)
     cnames = [self.taxonomy[kind][cid] for cid in cids]
     return cnames
 
