@@ -5,7 +5,7 @@ import os.path as osp
 import pickle
 import shutil
 
-from .data import Bidict, lazydict, Metadatum, Act, SAct, HOI, Clip
+from .data import Bidict, Lazydict, Metadatum, Act, SAct, HOI, Clip
 
 """
 The following functions are publicly available:
@@ -46,13 +46,15 @@ class Lookup:
     self.id_hoi_to_id_sact = None
     self.paradigm_and_split_to_ids_act = None
 
-    self.__read_anns(dir_moma)
+    self.__read_anns(dir_moma, reset_cache)
     self.__read_paradigms_and_splits(dir_moma)
 
   @staticmethod
   def __save_cache(dir_moma, id_act_to_metadatum, id_act_to_ann_act, id_sact_to_ann_sact, id_hoi_to_ann_hoi,
                    id_hoi_to_clip, id_sact_to_id_act, id_hoi_to_id_sact):
-    print('Lookup: save cache')
+    dir_lookup = osp.join(dir_moma, 'anns/cache/lookup')
+    os.makedirs(osp.join(dir_lookup, 'id_hoi'), exist_ok=True)
+
     named_variables = {
       'id_act_to_metadatum': id_act_to_metadatum,
       'id_act_to_ann_act': id_act_to_ann_act,
@@ -63,41 +65,45 @@ class Lookup:
       'id_hoi_to_id_sact': id_hoi_to_id_sact,
     }
 
-    os.makedirs(osp.join(dir_moma, 'anns/cache/id_hoi'), exist_ok=True)
-
     for name, variable in named_variables.items():
       assert variable is not None
 
-      if name == 'id_hoi_to_ann_hoi' or 'id_hoi_to_clip':
+      if name == 'id_hoi_to_ann_hoi' or name == 'id_hoi_to_clip':
         for id_hoi, value in variable.items():
-          with open(osp.join(dir_moma, f'anns/cache/{name.replace("_to_", "/")}_{id_hoi}'), 'wb') as f:
+          with open(osp.join(dir_lookup, f'{name.replace("_to_", "/")}_{id_hoi}'), 'wb') as f:
             pickle.dump(value, f)
 
       else:
-        with open(osp.join(dir_moma, f'anns/cache', name), 'wb') as f:
+        with open(osp.join(dir_lookup, name), 'wb') as f:
           pickle.dump(variable, f)
+
+    print('Lookup: save cache')
 
   @staticmethod
   def __load_cache(dir_moma):
-    print('Lookup: load cache')
+    dir_lookup = osp.join(dir_moma, 'anns/cache/lookup')
+
     variables = []
     for name in ['id_act_to_metadatum', 'id_act_to_ann_act', 'id_sact_to_ann_sact',
                  'id_sact_to_id_act', 'id_hoi_to_id_sact']:
-      with open(osp.join(dir_moma, f'anns/cache/', name), 'rb') as f:
+      with open(osp.join(dir_lookup, name), 'rb') as f:
         variable = pickle.load(f)
       variables.append(variable)
 
-    ids_hoi = variables[-1].keys()
-    id_hoi_to_ann_hoi = Lazydict(ids_hoi, osp.join(dir_moma, 'anns/cache/id_hoi', 'clip'))
-    id_hoi_to_clip = Lazydict(ids_hoi, osp.join(dir_moma, 'anns/cache/id_hoi', 'ann_hoi'))
+    id_hoi_to_ann_hoi = Lazydict(osp.join(dir_lookup, 'id_hoi'), 'ann_hoi')
+    id_hoi_to_clip = Lazydict(osp.join(dir_lookup, 'id_hoi'), 'clip')
     variables.insert(3, id_hoi_to_ann_hoi)
     variables.insert(4, id_hoi_to_clip)
 
+    assert len(id_hoi_to_ann_hoi.keys()) == len(variables[-1].keys()), \
+        f'{len(id_hoi_to_ann_hoi.keys())} vs {len(variables[-1].keys())}'
+    print('Lookup: load cache')
     return variables
 
-  def __read_anns(self, dir_moma):
-    if reset_cache:
-      shutil.rmtree(osp.join(dir_moma, 'anns/cache'))
+  def __read_anns(self, dir_moma, reset_cache):
+    dir_lookup = osp.join(dir_moma, 'anns/cache/lookup')
+    if reset_cache and osp.exists(dir_lookup):
+      shutil.rmtree(dir_lookup)
 
     try:
       id_act_to_metadatum, id_act_to_ann_act, id_sact_to_ann_sact, id_hoi_to_ann_hoi, id_hoi_to_clip, \
@@ -106,8 +112,8 @@ class Lookup:
     except FileNotFoundError:
       with open(osp.join(dir_moma, f'anns/anns.json'), 'r') as f:
         anns_raw = json.load(f)
-      with open(osp.join(dir_moma, f'videos/interaction_frames/timestamps.json'), 'r') as f:
-        timestamps = json.load(f)
+      with open(osp.join(dir_moma, f'anns/clips.json'), 'r') as f:
+        info_clips = json.load(f)
 
       id_act_to_metadatum, id_act_to_ann_act = {}, {}
       id_sact_to_ann_sact = {}
@@ -121,7 +127,8 @@ class Lookup:
         anns_sact_raw = ann_act_raw['sub_activities']
 
         for ann_sact_raw in anns_sact_raw:
-          id_sact_to_ann_sact[ann_sact_raw['id']] = SAct(ann_sact_raw, self.taxonomy['sact'])
+          id_sact_to_ann_sact[ann_sact_raw['id']] = SAct(ann_sact_raw, self.taxonomy['sact'], 
+                                                         self.taxonomy['actor'], self.taxonomy['object'])
           id_sact_to_id_act[ann_sact_raw['id']] = ann_act_raw['id']
           anns_hoi_raw = ann_sact_raw['higher_order_interactions']
 
@@ -130,7 +137,8 @@ class Lookup:
                                                        self.taxonomy['actor'], self.taxonomy['object'],
                                                        self.taxonomy['ia'], self.taxonomy['ta'],
                                                        self.taxonomy['att'], self.taxonomy['rel'])
-            id_hoi_to_clip[ann_hoi_raw['id']] = Clip(ann_hoi_raw, timestamps[ann_hoi_raw['id']])
+            if ann_hoi_raw['id'] in info_clips:  # Currently, only clips from the test set have been generated
+              id_hoi_to_clip[ann_hoi_raw['id']] = Clip(ann_hoi_raw, info_clips[ann_hoi_raw['id']])
             id_hoi_to_id_sact[ann_hoi_raw['id']] = ann_sact_raw['id']
 
       self.__save_cache(dir_moma, id_act_to_metadatum, id_act_to_ann_act, id_sact_to_ann_sact, id_hoi_to_ann_hoi,
@@ -148,17 +156,20 @@ class Lookup:
     self.id_hoi_to_clip = id_hoi_to_clip
 
   def __read_paradigms_and_splits(self, dir_moma):
-    paradigms = ['standoard', 'few-shot']
+    paradigms = ['standard', 'few-shot']
     splits = ['train', 'val', 'test']
     suffixes = {'standard': 'std', 'few-shot': 'fs'}
 
+    paradigm_and_split_to_ids_act = {}
     for paradigm in paradigms:
       path_split = osp.join(dir_moma, f'anns/split_{suffixes[paradigm]}.json')
       assert osp.isfile(path_split), f'Dataset split file does not exist: {path_split}'
       with open(path_split, 'r') as f:
         ids_act = json.load(f)
       for split in splits:
-        self.paradigm_and_split_to_ids_act[(paradigm, split)] = ids_act[split]
+        paradigm_and_split_to_ids_act[(paradigm, split)] = ids_act[split]
+
+    self.paradigm_and_split_to_ids_act = paradigm_and_split_to_ids_act
 
   def retrieve(self, kind, key=None):
     if key is None:

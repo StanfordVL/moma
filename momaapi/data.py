@@ -1,3 +1,4 @@
+import glob 
 import os
 import os.path as osp
 import pickle
@@ -47,13 +48,12 @@ class OrderedBidict(dict):
 
 
 class Lazydict(dict):
-  def __init__(self, keys, dir_pickle, prefix):
+  def __init__(self, dir_cache, prefix):
     super().__init__()
-    self._keys = keys
     self.buffer = {}
-    self.dir_pickle = dir_pickle
-    self.prefix = prefix
-    assert all(osp.exists(osp.join(dir_pickle, prefix+'_'+key)) for key in keys)
+    self.dir_cache = dir_cache
+    self.path_prefix = osp.join(dir_cache, f'{prefix}_')
+    self._keys = [x.removeprefix(self.path_prefix) for x in glob.glob(self.path_prefix+'*')]
 
   def keys(self):
     return self._keys
@@ -68,7 +68,7 @@ class Lazydict(dict):
     if key in self.buffer:
       return self.buffer[key]
     else:
-      with open(osp.join(self.dir_pickle, prefix+'_'+key), 'rb') as f:
+      with open(self.path_prefix+key, 'rb') as f:
         value = pickle.load(f)
         self.buffer[key] = value
         return value
@@ -118,25 +118,43 @@ class Act:
 
 
 class SAct:
-  def __init__(self, ann, taxonomy):
+  def __init__(self, ann, taxonomy_sact, taxonomy_actor, taxonomy_object):
     self.id = ann['id']
     self.cname = ann['class_name']
-    self.cid = taxonomy.index(ann['class_name'])
+    self.cid = taxonomy_sact.index(ann['class_name'])
     self.start = ann['start_time']
     self.end = ann['end_time']
     self.ids_hoi = [x['id'] for x in ann['higher_order_interactions']]
 
     # unique entity instances in this sub-activity
-    info_actor = set([(y['id'], y['class_name']) for x in ann['higher_order_interactions'] for y in x['actors']])
-    info_object = set([(y['id'], y['class_name']) for x in ann['higher_order_interactions'] for y in x['objects']])
-    id_actor_to_cname_actor = dict(info_actor)
-    id_object_to_cname_object = dict(info_object)
-    self.ids_actor = sorted(id_actor_to_cname_actor.keys())
-    self.ids_object = sorted(id_object_to_cname_object.keys(), key=int)
-    self.__id_entity_to_cname_entity = dict(list(id_actor_to_cname_actor.items()) + list(id_object_to_cname_object.items()))
+    self.__id_actor_to_cid_actor = dict(set([
+      (y['id'], taxonomy_actor.index(y['class_name'])) for x in ann['higher_order_interactions'] for y in x['actors']
+    ]))
+    self.__id_object_to_cid_object = dict(set([
+      (y['id'], taxonomy_object.index(y['class_name'])) for x in ann['higher_order_interactions'] for y in x['objects']
+    ]))
 
-  def get_cname_entity(self, id_entity):
-    return self.__id_entity_to_cname_entity[id_entity]
+  @property
+  def ids_actor(self):
+    return sorted(self.__id_actor_to_cid_actor.keys())
+
+  @property
+  def ids_object(self):
+    return sorted(self.__id_object_to_cid_object.keys(), key=int)
+
+  @property
+  def cids_actor(self):
+    return sorted(self.__id_actor_to_cid_actor.values())
+
+  @property
+  def cids_object(self):
+    return sorted(self.__id_object_to_cid_object.values())
+
+  def get_cid_actor(self, id_actor):
+    return self.__id_actor_to_cid_actor[id_actor]
+
+  def get_cid_object(self, id_object):
+    return self.__id_object_to_cid_object[id_object]
 
   def __repr__(self):
     return f'SAct(id={self.id}, cname={self.cname}, time=[{self.start}, end={self.end}), num_hois={len(self.ids_hoi)})'
@@ -170,8 +188,9 @@ class HOI:
 
 
 class Clip:
-  """ A clip corresponds to a 1 second/5 frames video clip centered at the higher-order interaction;
-  <1 second/5 frames if exceeds the raw video boundary
+  """ A clip corresponds to a 1 second/5 frames video clip centered at the higher-order interaction
+   - <1 second/5 frames if exceeds the raw video boundary
+   - Currently, only clips from the test set have been generated
   """
   def __init__(self, ann, neighbors):
     self.id = ann['id']

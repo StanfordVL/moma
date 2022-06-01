@@ -68,22 +68,13 @@ class Taxonomy(dict):
 
     return taxonomy
 
-  def __get_num_classes(self, paradigm, kind, split=None):
-    if paradigm == 'standard':
-      return len(self.taxonomy[kind])
-    elif paradigm == 'few-shot':
-      assert split is not None
-      return len(self.taxonomy['few_shot'][kind][split])
-    else:
-      raise NotImplementedError
-
   def get_num_classes(self):
     kinds = ['act', 'sact']
     splits = ['train', 'val', 'test']
 
     output = {}
-    output['standard'] = {kind: self.__get_num_classes('standard', kind) for kind in kinds}
-    output['few-shot'] = {f'{kind}_{split}':self.__get_num_classes('few-shot', kind, split)
+    output['standard'] = {kind: len(self.taxonomy[kind]) for kind in kinds}
+    output['few-shot'] = {f'{kind}_{split}':len(self.taxonomy['few_shot'][kind][split])
                           for kind, split in itertools.product(kinds, splits)}
 
     return output

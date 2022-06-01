@@ -63,7 +63,7 @@ class MOMA:
     self.paradigm = paradigm
 
     self.taxonomy = Taxonomy(dir_moma)
-    self.lookup = Lookup(dir_moma, self.taxonomy, reset_cache)
+    self.lookup = Lookup(dir_moma, self.taxonomy, reset_cache=False)
     self.statistics = Statistics(dir_moma, self.taxonomy, self.lookup, reset_cache)
 
   @property
@@ -78,6 +78,7 @@ class MOMA:
     """
 
     # TODO: add act and sact supporting different paradigms
+    # merge with lookup.get_cid?
 
     assert kind in ['actor', 'object']
 

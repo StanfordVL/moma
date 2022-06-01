@@ -213,15 +213,15 @@ class VideoProcessor:
         os.remove(path_exist)
 
   def sample_hoi_frames(self, num_frames=5, overwrite=False, split='test'):
-    dir_out = os.path.join(self.dir_moma, 'videos/interaction_frames')
-    os.makedirs(dir_out, exist_ok=True)
+    dir_hoi_frames = os.path.join(self.dir_moma, 'videos/interaction_frames')
+    os.makedirs(dir_hoi_frames, exist_ok=True)
     assert num_frames%2 == 1  # odd number
 
-    if os.path.exists(os.path.join(dir_out, 'timestamps.json')):
-      with open(os.path.join(dir_out, 'timestamps.json'), 'r') as f:
-        timestamps = json.load(f)
+    if os.path.exists(os.path.join(self.dir_moma, 'anns/clips.json')):
+      with open(os.path.join(self.dir_moma, 'anns/clips.json'), 'r') as f:
+        info_clips = json.load(f)
     else:
-      timestamps = defaultdict(list)
+      info_clips = defaultdict(list)
 
     if split is not None:
       with open(os.path.join(self.dir_moma, 'anns/split_std.json'), 'r') as f:
@@ -267,20 +267,20 @@ class VideoProcessor:
               info.append([id_hoi, time])
           info = sorted(info, key=lambda x: x[1])
 
-          timestamps[ann_hoi['id']] = info
+          info_clips[ann_hoi['id']] = info
 
           for id_hoi, time in info:
-            path_trg = os.path.join(dir_out, f"{id_hoi}.jpg")
+            path_trg = os.path.join(dir_hoi_frames, f"{id_hoi}.jpg")
             if not os.path.exists(path_trg) or overwrite:
               self.sample_image(path_src, path_trg, time)
             paths_trg.append(path_trg)
 
     print('Done extracting frames')
 
-    paths_exist = glob.glob(os.path.join(dir_out, '*.jpg'))
+    paths_exist = glob.glob(os.path.join(dir_hoi_frames, '*.jpg'))
     for path_exist in paths_exist:
       if path_exist not in paths_trg:
         os.remove(path_exist)
 
-    with open(os.path.join(dir_out, 'timestamps.json'), 'w') as f:
-      json.dump(timestamps, f, indent=2, sort_keys=True)
+    with open(os.path.join(self.dir_moma, 'anns/clips.json'), 'w') as f:
+      json.dump(info_clips, f, indent=2, sort_keys=True)
