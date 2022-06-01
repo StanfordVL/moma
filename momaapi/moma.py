@@ -74,34 +74,10 @@ class MOMA:
     """
      - kind: currently only support 'actor' and 'object'
      - threshold: exclude classes with fewer than this number of instances
-     - split: 'train', 'val', 'test', 'all', 'either'
+     - split: 'train', 'val', 'test', 'either', 'all', 'combined'
     """
-
-    # TODO: add act and sact supporting different paradigms
-    # merge with lookup.get_cid?
-
-    assert kind in ['actor', 'object']
-
-    if threshold is None:
-      return self.taxonomy[kind]
-
-    assert split is not None
-    if split == 'either':  # exclude if < threshold in either one split
-      distribution = np.stack([self.statistics[split][kind]['distribution']
-                               for split in self.lookup.retrieve('splits')])
-      distribution = np.amin(distribution, axis=0).tolist()
-    elif split == 'all':  # exclude if < threshold in all splits
-      distribution = np.stack([self.statistics[split][kind]['distribution']
-                               for split in self.lookup.retrieve('splits')])
-      distribution = np.amax(distribution, axis=0).tolist()
-    else:
-      distribution = self.statistics[split][kind]['distribution']
-
-    cnames = []
-    for i, cname in enumerate(self.taxonomy[kind]):
-      if distribution[i] >= threshold:
-        cnames.append(cname)
-
+    cids = self.statistics.get_cids(kind, threshold, self.paradigm, split)
+    cnames = [self.taxonomy[kind][cid] for cid in cids]
     return cnames
 
   def is_sact(self, id_act, time, absolute=False):
