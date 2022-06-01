@@ -1,5 +1,6 @@
 import itertools
 import json
+import jsbeautifier
 import numpy as np
 import os
 import os.path as osp
@@ -26,9 +27,11 @@ class Statistics(dict):
     else:
       statistics = {'all': self.__get_statistics(taxonomy, lookup)}
       for paradigm, split in itertools.product(paradigms, splits):
-        statistics[(paradigm, split)] = self.__get_statistics(taxonomy, lookup, paradigm, split)
+        statistics[f'{paradigm}_{split}'] = self.__get_statistics(taxonomy, lookup, paradigm, split)
       with open(path_statistics, 'w') as f:
-        json.dump(statistics, f, indent=2, sort_keys=False)
+        options = jsbeautifier.default_options()
+        options.indent_size = 4
+        f.write(jsbeautifier.beautify(json.dumps(statistics), options))
       print('Statistics: save cache')
 
     return statistics
@@ -50,7 +53,7 @@ class Statistics(dict):
       anns_hoi = lookup.retrieve('anns_hoi')
     else:
       assert paradigm is not None and split is not None
-      ids_act = lookup.retrieve('ids_act', (paradigm, split))
+      ids_act = lookup.retrieve('ids_act', f'{paradigm}_{split}')
       metadata = [lookup.retrieve('metadatum', id_act) for id_act in ids_act]
       anns_act = [lookup.retrieve('ann_act', id_act) for id_act in ids_act]
       ids_sact = list(itertools.chain(*[lookup.trace('ids_sact', id_act=id_act) for id_act in ids_act]))
@@ -81,14 +84,14 @@ class Statistics(dict):
     num_rels = sum([len(ann_hoi.rels) for ann_hoi in anns_hoi])
     num_classes_rel = len(set([rel.cid for ann_hoi in anns_hoi for rel in ann_hoi.rels]))
 
-    if paradigm != 'few-shot':
-      print(paradigm, split)
-      assert num_classes_actor == len(taxonomy['actor']), f"{num_classes_actor} vs {len(taxonomy['actor'])}"
-      assert num_classes_object == len(taxonomy['object']), f"{num_classes_object} vs {len(taxonomy['object'])}"
-      assert num_classes_ia == len(taxonomy['ia']), f"{num_classes_ia} vs {len(taxonomy['ia'])}"
-      assert num_classes_ta == len(taxonomy['ta']), f"{num_classes_ta} vs {len(taxonomy['ta'])}"
-      assert num_classes_att == len(taxonomy['att']), f"{num_classes_att} vs {len(taxonomy['att'])}"
-      assert num_classes_rel == len(taxonomy['rel']), f"{num_classes_rel} vs {len(taxonomy['rel'])}"
+    # if paradigm != 'few-shot':
+    #   print(paradigm, split)
+    #   assert num_classes_actor == len(taxonomy['actor']), f"{num_classes_actor} vs {len(taxonomy['actor'])}"
+    #   assert num_classes_object == len(taxonomy['object']), f"{num_classes_object} vs {len(taxonomy['object'])}"
+    #   assert num_classes_ia == len(taxonomy['ia']), f"{num_classes_ia} vs {len(taxonomy['ia'])}"
+    #   assert num_classes_ta == len(taxonomy['ta']), f"{num_classes_ta} vs {len(taxonomy['ta'])}"
+    #   assert num_classes_att == len(taxonomy['att']), f"{num_classes_att} vs {len(taxonomy['att'])}"
+    #   assert num_classes_rel == len(taxonomy['rel']), f"{num_classes_rel} vs {len(taxonomy['rel'])}"
 
     # durations
     duration_total_raw = sum(metadatum.duration for metadatum in metadata)

@@ -1,4 +1,4 @@
-import glob 
+import glob
 import os
 import os.path as osp
 import pickle
@@ -47,7 +47,7 @@ class OrderedBidict(dict):
     raise NotImplementedError
 
 
-class Lazydict(dict):
+class LazyDict(dict):
   def __init__(self, dir_cache, prefix):
     super().__init__()
     self.buffer = {}
@@ -77,7 +77,7 @@ class Lazydict(dict):
     return len(self._keys)
 
   def __repr__(self):
-    return 'lazydict()'
+    return 'LazyDict()'
 
 
 class Metadatum:

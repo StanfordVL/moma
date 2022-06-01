@@ -63,7 +63,7 @@ class MOMA:
     self.paradigm = paradigm
 
     self.taxonomy = Taxonomy(dir_moma)
-    self.lookup = Lookup(dir_moma, self.taxonomy, reset_cache=False)
+    self.lookup = Lookup(dir_moma, self.taxonomy, reset_cache)
     self.statistics = Statistics(dir_moma, self.taxonomy, self.lookup, reset_cache)
 
   @property
@@ -142,7 +142,7 @@ class MOMA:
     # split
     if split is not None:
       assert split in self.lookup.retrieve('splits')
-      ids_act_intersection.append(self.lookup.retrieve('ids_act', (self.paradigm, split)))
+      ids_act_intersection.append(self.lookup.retrieve('ids_act', f'{self.paradigm}_{split}'))
 
     # cnames_act
     if cnames_act is not None:
@@ -196,7 +196,7 @@ class MOMA:
     # split
     if split is not None:
       assert split in self.lookup.retrieve('splits')
-      ids_sact = self.get_ids_sact(ids_act=self.lookup.retrieve('ids_act', (self.paradigm, split)))
+      ids_sact = self.get_ids_sact(ids_act=self.lookup.retrieve('ids_act', f'{self.paradigm}_{split}'))
       ids_sact_intersection.append(ids_sact)
 
     # cnames_sact
@@ -257,7 +257,7 @@ class MOMA:
     # split
     if split is not None:
       assert split in self.lookup.retrieve('splits')
-      ids_hoi = self.get_ids_hoi(ids_act=self.lookup.retrieve('ids_act', (self.paradigm, split)))
+      ids_hoi = self.get_ids_hoi(ids_act=self.lookup.retrieve('ids_act', f'{self.paradigm}_{split}'))
       ids_hoi_intersection.append(ids_hoi)
 
     # ids_act

@@ -5,7 +5,7 @@ import os.path as osp
 import pickle
 import shutil
 
-from .data import Bidict, Lazydict, Metadatum, Act, SAct, HOI, Clip
+from .data import Bidict, LazyDict, Metadatum, Act, SAct, HOI, Clip
 
 """
 The following functions are publicly available:
@@ -90,8 +90,8 @@ class Lookup:
         variable = pickle.load(f)
       variables.append(variable)
 
-    id_hoi_to_ann_hoi = Lazydict(osp.join(dir_lookup, 'id_hoi'), 'ann_hoi')
-    id_hoi_to_clip = Lazydict(osp.join(dir_lookup, 'id_hoi'), 'clip')
+    id_hoi_to_ann_hoi = LazyDict(osp.join(dir_lookup, 'id_hoi'), 'ann_hoi')
+    id_hoi_to_clip = LazyDict(osp.join(dir_lookup, 'id_hoi'), 'clip')
     variables.insert(3, id_hoi_to_ann_hoi)
     variables.insert(4, id_hoi_to_clip)
 
@@ -167,7 +167,7 @@ class Lookup:
       with open(path_split, 'r') as f:
         ids_act = json.load(f)
       for split in splits:
-        paradigm_and_split_to_ids_act[(paradigm, split)] = ids_act[split]
+        paradigm_and_split_to_ids_act[f'{paradigm}_{split}'] = ids_act[split]
 
     self.paradigm_and_split_to_ids_act = paradigm_and_split_to_ids_act
 
@@ -177,9 +177,9 @@ class Lookup:
                       'anns_act', 'metadata', 'anns_sact', 'anns_hoi', 'clips']
 
       if kind == 'paradigms':
-        return [x[0] for x in self.paradigm_and_split_to_ids_act.keys()]
+        return [x.split('_')[0] for x in self.paradigm_and_split_to_ids_act.keys()]
       elif kind == 'splits':
-        return [x[1] for x in self.paradigm_and_split_to_ids_act.keys()]
+        return [x.split('_')[1] for x in self.paradigm_and_split_to_ids_act.keys()]
       elif kind == 'ids_act':
         return self.id_act_to_ann_act.keys()
       elif kind == 'ids_sact':
