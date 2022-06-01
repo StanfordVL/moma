@@ -53,7 +53,7 @@ class LazyDict(dict):
     self.buffer = {}
     self.dir_cache = dir_cache
     self.path_prefix = osp.join(dir_cache, f'{prefix}_')
-    self._keys = [x.removeprefix(self.path_prefix) for x in glob.glob(self.path_prefix+'*')]
+    self._keys = [self.removeprefix(x, self.path_prefix) for x in glob.glob(self.path_prefix+'*')]
 
   def keys(self):
     return self._keys
@@ -78,7 +78,12 @@ class LazyDict(dict):
 
   def __repr__(self):
     return 'LazyDict()'
-
+  
+  # Added for python backwards compatibility
+  def removeprefix(self, text, prefix):
+      if text.startswith(prefix):
+          return text[len(prefix):]
+      return text
 
 class Metadatum:
   def __init__(self, ann):
