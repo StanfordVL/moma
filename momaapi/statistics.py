@@ -10,6 +10,35 @@ class Statistics(dict):
   def __init__(self, dir_moma, taxonomy, lookup, reset_cache):
     super().__init__()
     self.statistics = self.__read_statistics(dir_moma, taxonomy, lookup, reset_cache)
+    self.__sanity_check(taxonomy)
+
+  def __sanity_check(self, taxonomy):
+    # standard
+    assert self.statistics['all']['act']['num_classes'] == len(taxonomy['act']) == \
+           self.statistics['standard_train']['act']['num_classes'] == \
+           self.statistics['standard_val']['act']['num_classes'] == \
+           self.statistics['standard_test']['act']['num_classes']
+    assert self.statistics['all']['sact']['num_classes'] == len(taxonomy['sact']) == \
+           self.statistics['standard_train']['sact']['num_classes'] == \
+           self.statistics['standard_val']['sact']['num_classes'] == \
+           self.statistics['standard_test']['sact']['num_classes']
+    assert self.statistics['all']['actor']['num_classes'] == len(taxonomy['actor']) == \
+           self.statistics['standard_train']['actor']['num_classes'] == \
+           self.statistics['standard_val']['actor']['num_classes'] == \
+           self.statistics['standard_test']['actor']['num_classes']
+    # TODO: fix object taxonomy
+    # assert self.statistics['all']['object']['num_classes'] == len(taxonomy['object']) == \
+    #        self.statistics['standard_train']['object']['num_classes'] == \
+    #        self.statistics['standard_val']['object']['num_classes'] == \
+    #        self.statistics['standard_test']['object']['num_classes']
+
+    # few-shot
+    assert self.statistics['few-shot_train']['act']['num_classes']+ \
+           self.statistics['few-shot_val']['act']['num_classes']+ \
+           self.statistics['few-shot_test']['act']['num_classes'] == len(taxonomy['act'])
+    assert self.statistics['few-shot_train']['sact']['num_classes']+ \
+           self.statistics['few-shot_val']['sact']['num_classes']+ \
+           self.statistics['few-shot_test']['sact']['num_classes'] == len(taxonomy['sact'])
 
   def __read_statistics(self, dir_moma, taxonomy, lookup, reset_cache):
     paradigms = lookup.retrieve('paradigms')
@@ -84,23 +113,14 @@ class Statistics(dict):
     num_rels = sum([len(ann_hoi.rels) for ann_hoi in anns_hoi])
     num_classes_rel = len(set([rel.cid for ann_hoi in anns_hoi for rel in ann_hoi.rels]))
 
-    # if paradigm != 'few-shot':
-    #   print(paradigm, split)
-    #   assert num_classes_actor == len(taxonomy['actor']), f"{num_classes_actor} vs {len(taxonomy['actor'])}"
-    #   assert num_classes_object == len(taxonomy['object']), f"{num_classes_object} vs {len(taxonomy['object'])}"
-    #   assert num_classes_ia == len(taxonomy['ia']), f"{num_classes_ia} vs {len(taxonomy['ia'])}"
-    #   assert num_classes_ta == len(taxonomy['ta']), f"{num_classes_ta} vs {len(taxonomy['ta'])}"
-    #   assert num_classes_att == len(taxonomy['att']), f"{num_classes_att} vs {len(taxonomy['att'])}"
-    #   assert num_classes_rel == len(taxonomy['rel']), f"{num_classes_rel} vs {len(taxonomy['rel'])}"
-
     # durations
     duration_total_raw = sum(metadatum.duration for metadatum in metadata)
     duration_total_act, duration_avg_act, duration_min_act, duration_max_act = self.__get_duration(anns_act)
     duration_total_sact, duration_avg_sact, duration_min_sact, duration_max_sact = self.__get_duration(anns_sact)
 
     # class distributions
-    bincount_act = np.bincount([ann_act.cid for ann_act in anns_act], minlength=num_classes_act).tolist()
-    bincount_sact = np.bincount([ann_sact.cid for ann_sact in anns_sact], minlength=num_classes_sact).tolist()
+    bincount_act = np.bincount([ann_act.cid for ann_act in anns_act], minlength=len(taxonomy['act'])).tolist()
+    bincount_sact = np.bincount([ann_sact.cid for ann_sact in anns_sact], minlength=len(taxonomy['sact'])).tolist()
     bincount_actor, bincount_object, bincount_ia, bincount_ta, bincount_att, bincount_rel = [], [], [], [], [], []
     for ann_hoi in anns_hoi:
       bincount_actor += [actor.cid for actor in ann_hoi.actors]
@@ -109,12 +129,12 @@ class Statistics(dict):
       bincount_ta += [ta.cid for ta in ann_hoi.tas]
       bincount_att += [att.cid for att in ann_hoi.atts]
       bincount_rel += [rel.cid for rel in ann_hoi.rels]
-    bincount_actor = np.bincount(bincount_actor, minlength=num_classes_actor).tolist()
-    bincount_object = np.bincount(bincount_object, minlength=num_classes_object).tolist()
-    bincount_ia = np.bincount(bincount_ia, minlength=num_classes_ia).tolist()
-    bincount_ta = np.bincount(bincount_ta, minlength=num_classes_ta).tolist()
-    bincount_att = np.bincount(bincount_att, minlength=num_classes_att).tolist()
-    bincount_rel = np.bincount(bincount_rel, minlength=num_classes_rel).tolist()
+    bincount_actor = np.bincount(bincount_actor, minlength=len(taxonomy['actor'])).tolist()
+    bincount_object = np.bincount(bincount_object, minlength=len(taxonomy['object'])).tolist()
+    bincount_ia = np.bincount(bincount_ia, minlength=len(taxonomy['ia'])).tolist()
+    bincount_ta = np.bincount(bincount_ta, minlength=len(taxonomy['ta'])).tolist()
+    bincount_att = np.bincount(bincount_att, minlength=len(taxonomy['att'])).tolist()
+    bincount_rel = np.bincount(bincount_rel, minlength=len(taxonomy['rel'])).tolist()
 
     # curate statistics
     statistics = {
