@@ -20,6 +20,7 @@ pip install .
 - PyGraphviz: a Python interface to the Graphviz graph layout and visualization package
 - seaborn: a data visualization library based on matplotlib
 - Torchvision
+- jsbeautifier: for better visualization of json files
 
 ## Hierarchy
 | Level | <div style="width:200px">Concept</div>                                              | Representation                                                             |
