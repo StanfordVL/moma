@@ -9,7 +9,9 @@ from .statistics import Statistics
 
 """
 The following functions are defined:
- - get_cnames(): Get the class name of a kind ('act', 'sact', etc.) that satisfy certain conditions
+ - get_cids(): Get the class ID of a kind ('act', 'sact', etc.) that satisfies certain conditions
+ - map_cids(): Map class IDs between standard class IDs and split-specific contiguous class IDs
+ - get_cnames(): Given class IDs, return their class names
  - is_sact(): Check whether a certain time in an activity has a sub-activity
  - get_ids_act(): Get the unique activity instance IDs that satisfy certain conditions
  - get_ids_sact(): Get the unique sub-activity instance IDs that satisfy certain conditions
@@ -70,13 +72,49 @@ class MOMA:
   def num_classes(self):
     return self.taxonomy.get_num_classes()[self.paradigm]
 
-  def get_cnames(self, kind, threshold=None, split=None):
+  def get_cids(self, kind, threshold, split):
     """
-     - kind: currently only support 'actor' and 'object'
+     - kind: ['act', 'sact', 'actor', 'object', 'ia', 'ta', 'att', 'rel']
      - threshold: exclude classes with fewer than this number of instances
      - split: 'train', 'val', 'test', 'either', 'all', 'combined'
+       - either: exclude a class if the smallest number of instances in across splits is less than the threshold
+       - all: exclude a class if the largest number of instances in across splits is less than the threshold
+       - combined: exclude a class if the number of instances in the entire dataset is less than the threshold
     """
     cids = self.statistics.get_cids(kind, threshold, self.paradigm, split)
+    return cids
+
+  def map_cids(self, split, cids_act_contiguous=None, cids_act=None, cids_sact_contiguous=None, cids_sact=None):
+    """ Map class IDs between standard class IDs and split-specific contiguous class IDs
+    For the few-shot paradigm only
+    """
+    assert self.paradigm == 'few-shot'
+    assert sum([x is not None for x in [cids_act_contiguous, cids_act, cids_sact_contiguous, cids_sact]]) == 1
+
+    if cids_act_contiguous is not None:
+      return [self.lookup(paradigm='standard', split=split, cid_act=x) for x in cids_act_contiguous]
+    elif cids_act is not None:
+      return [self.lookup(paradigm='few-shot', split=split, cid_act=x) for x in cids_act]
+    elif cids_sact_contiguous is not None:
+      return [self.lookup(paradigm='standard', split=split, cid_sact=x) for x in cids_sact_contiguous]
+    elif cids_sact is not None:
+      return [self.lookup(paradigm='few-shot', split=split, cid_sact=x) for x in cids_sact]
+    else:
+      raise ValueError
+
+  def get_cnames(self, cids_act=None, cids_sact=None, cids_actor=None, cids_object=None,
+                 cids_ia=None, cids_ta=None, cids_att=None, cids_rel=None):
+    """ Get the associated class names given the class IDs
+    """
+    args = [cids_act, cids_sact, cids_actor, cids_object, cids_ia, cids_ta, cids_att, cids_rel]
+    kinds = ['act', 'sact', 'actor', 'object', 'ia', 'ta', 'att', 'rel']
+
+    indices = [i for i, x in enumerate(args) if x is not None]
+    assert len(indices) == 1
+
+    cids = args[indices[0]]
+    kind = kinds[indices[0]]
+
     cnames = [self.taxonomy[kind][cid] for cid in cids]
     return cnames
 

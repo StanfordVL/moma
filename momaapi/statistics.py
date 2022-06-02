@@ -17,17 +17,23 @@ class Statistics(dict):
   def get_cids(self, kind, threshold, paradigm, split):
     assert paradigm in self.lookup.retrieve('paradigms')
     assert split in self.lookup.retrieve('splits')+['either', 'all', 'combined']
-    
-    if split == 'either':  # exclude a class if #isntances < threshold in either one of the splits
+
+    # exclude a class if the smallest number of instances in across splits is less than the threshold
+    if split == 'either':
       distribution = np.stack([self.statistics[f'{paradigm}_{_split}'][kind]['distribution']
                                for _split in self.lookup.retrieve('splits')])
       distribution = np.amin(distribution, axis=0)
-    elif split == 'all':  # exclude a class if #isntances < threshold in all of the splits
+
+    # exclude a class if the largest number of instances in across splits is less than the threshold
+    elif split == 'all':
       distribution = np.stack([self.statistics[f'{paradigm}_{_split}'][kind]['distribution']
                                for _split in self.lookup.retrieve('splits')])
       distribution = np.amax(distribution, axis=0)
-    elif split == 'combined':  # exclude a class if #isntances < threshold in whole unsplit dataset
+
+    # exclude a class if the number of instances in the entire dataset is less than the threshold
+    elif split == 'combined':
       distribution = np.array(self.statistics['all'][kind]['distribution'])
+
     else:
       distribution = np.array(self.statistics[f'{paradigm}_{split}'][kind]['distribution'])
 
