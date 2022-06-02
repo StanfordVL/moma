@@ -92,13 +92,13 @@ class MOMA:
     assert sum([x is not None for x in [cids_act_contiguous, cids_act, cids_sact_contiguous, cids_sact]]) == 1
 
     if cids_act_contiguous is not None:
-      return [self.lookup(paradigm='standard', split=split, cid_act=x) for x in cids_act_contiguous]
+      return [self.lookup.map_cid(paradigm='standard', split=split, cid_act=x) for x in cids_act_contiguous]
     elif cids_act is not None:
-      return [self.lookup(paradigm='few-shot', split=split, cid_act=x) for x in cids_act]
+      return [self.lookup.map_cid(paradigm='few-shot', split=split, cid_act=x) for x in cids_act]
     elif cids_sact_contiguous is not None:
-      return [self.lookup(paradigm='standard', split=split, cid_sact=x) for x in cids_sact_contiguous]
+      return [self.lookup.map_cid(paradigm='standard', split=split, cid_sact=x) for x in cids_sact_contiguous]
     elif cids_sact is not None:
-      return [self.lookup(paradigm='few-shot', split=split, cid_sact=x) for x in cids_sact]
+      return [self.lookup.map_cid(paradigm='few-shot', split=split, cid_sact=x) for x in cids_sact]
     else:
       raise ValueError
 
