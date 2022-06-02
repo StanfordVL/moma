@@ -13,13 +13,13 @@ The following functions are publicly available:
  - map_id()
  - map_cid()
 
-The Lookup class implements the following lookups:
+retrieve(): accesses the value given a key
  - split -> ids_act (one-to-many): retrieve(kind='id_act', key=split)
  - id_act -> ann_act, metadatum (one-to-one): retrieve(kind='ann_act' or 'metadatum', key=id_act)
  - id_sact -> ann_sact (one-to-one): retrieve(kind='ann_sact', key=id_sact)
  - id_hoi -> ann_hoi, clip (one-to-one): retrieve(kind='ann_hoi' or 'clip', key=id_hoi)
 
-These keys can be mapped across the MOMA hierarchy:
+map_id(): maps instance IDs across the MOMA hierarchy
  - id_act -> ids_sact (one-to-many): map_id(id_act=id_act, kind='sact')
  - id_act -> ids_hoi (one-to-many): map_id(id_act=id_act, kind='hoi')
  - id_sact -> id_act (one-to-one): map_id(id_sact=id_sact, kind='act')
@@ -27,7 +27,7 @@ These keys can be mapped across the MOMA hierarchy:
  - id_hoi -> id_sact (one-to-one): map_id(id_hoi=id_hoi, kind='sact')
  - id_hoi -> id_act (one-to-one): map_id(id_hoi=id_hoi, kind='act')
  
-Mapping activity and sub-activity class IDs between few-shot and standard paradigms:
+map_cid(): maps activity and sub-activity class IDs between few-shot and standard paradigms
  - cid_fs -> cid_std: map_cid(split=split, cid_act=cid_fs or cid_sact=cid_fs)
  - cid_std -> cid_fs: map_cid(split=split, cid_act=cid_std or cid_sact=cid_std)
 """

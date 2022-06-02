@@ -26,7 +26,7 @@ class Statistics(dict):
       distribution = np.stack([self.statistics[f'{paradigm}_{_split}'][kind]['distribution']
                                for _split in self.lookup.retrieve('splits')])
       distribution = np.amax(distribution, axis=0)
-    elif split == 'combined':
+    elif split == 'combined':  # exclude a class if #isntances < threshold in whole unsplit dataset
       distribution = np.array(self.statistics['all'][kind]['distribution'])
     else:
       distribution = np.array(self.statistics[f'{paradigm}_{split}'][kind]['distribution'])
