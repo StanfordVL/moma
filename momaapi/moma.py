@@ -70,13 +70,13 @@ class MOMA:
   def num_classes(self):
     return self.taxonomy.get_num_classes()[self.paradigm]
 
-  def filter_cnames(self, kind, threshold=None, split=None):
+  def get_cnames(self, kind, threshold=None, split=None):
     """
      - kind: currently only support 'actor' and 'object'
      - threshold: exclude classes with fewer than this number of instances
      - split: 'train', 'val', 'test', 'either', 'all', 'combined'
     """
-    cids = self.statistics.filter_cids(kind, threshold, self.paradigm, split)
+    cids = self.statistics.get_cids(kind, threshold, self.paradigm, split)
     cnames = [self.taxonomy[kind][cid] for cid in cids]
     return cnames
 
@@ -91,7 +91,7 @@ class MOMA:
       time = ann_act.start+time
 
     is_sact = False
-    ids_sact = self.lookup.trace('ids_sact', id_act=id_act)
+    ids_sact = self.lookup.map_id('ids_sact', id_act=id_act)
     for id_sact in ids_sact:
       ann_sact = self.lookup.retrieve('ann_sact', id_sact)
       if ann_sact.start <= time < ann_sact.end:
@@ -131,12 +131,12 @@ class MOMA:
 
     # ids_sact
     if ids_sact is not None:
-      ids_act = [self.lookup.trace('id_act', id_sact=id_sact) for id_sact in ids_sact]
+      ids_act = [self.lookup.map_id('id_act', id_sact=id_sact) for id_sact in ids_sact]
       ids_act_intersection.append(ids_act)
 
     # ids_hoi
     if ids_hoi is not None:
-      ids_act = [self.lookup.trace('id_act', id_hoi=id_hoi) for id_hoi in ids_hoi]
+      ids_act = [self.lookup.map_id('id_act', id_hoi=id_hoi) for id_hoi in ids_hoi]
       ids_act_intersection.append(ids_act)
 
     ids_act_intersection = sorted(set.intersection(*map(set, ids_act_intersection)))
@@ -186,12 +186,12 @@ class MOMA:
 
     # ids_act
     if ids_act is not None:
-      ids_sact = itertools.chain(*[self.lookup.trace('ids_sact', id_act=id_act) for id_act in ids_act])
+      ids_sact = itertools.chain(*[self.lookup.map_id('ids_sact', id_act=id_act) for id_act in ids_act])
       ids_sact_intersection.append(ids_sact)
 
     # ids_hoi
     if ids_hoi is not None:
-      ids_sact = [self.lookup.trace('id_sact', id_hoi=id_hoi) for id_hoi in ids_hoi]
+      ids_sact = [self.lookup.map_id('id_sact', id_hoi=id_hoi) for id_hoi in ids_hoi]
       ids_sact_intersection.append(ids_sact)
 
     # cnames_actor, cnames_object, cnames_ia, cnames_ta, cnames_att, cnames_rel
@@ -199,7 +199,7 @@ class MOMA:
       kwargs = {'cnames_actor': cnames_actor, 'cnames_object': cnames_object,
                 'cnames_ia': cnames_ia, 'cnames_ta': cnames_ta,
                 'cnames_att': cnames_att, 'cnames_rel': cnames_rel}
-      ids_sact = [self.lookup.trace('id_sact', id_hoi=id_hoi) for id_hoi in self.get_ids_hoi(**kwargs)]
+      ids_sact = [self.lookup.map_id('id_sact', id_hoi=id_hoi) for id_hoi in self.get_ids_hoi(**kwargs)]
       ids_sact_intersection.append(ids_sact)
 
     ids_sact_intersection = sorted(set.intersection(*map(set, ids_sact_intersection)))
@@ -238,12 +238,12 @@ class MOMA:
 
     # ids_act
     if ids_act is not None:
-      ids_hoi = itertools.chain(*[self.lookup.trace('ids_hoi', id_act=id_act) for id_act in ids_act])
+      ids_hoi = itertools.chain(*[self.lookup.map_id('ids_hoi', id_act=id_act) for id_act in ids_act])
       ids_hoi_intersection.append(ids_hoi)
 
     # ids_sact
     if ids_sact is not None:
-      ids_hoi = itertools.chain(*[self.lookup.trace('ids_hoi', id_sact=id_sact) for id_sact in ids_sact])
+      ids_hoi = itertools.chain(*[self.lookup.map_id('ids_hoi', id_sact=id_sact) for id_sact in ids_sact])
       ids_hoi_intersection.append(ids_hoi)
 
     # cnames_actor, cnames_object, cnames_ia, cnames_ta, cnames_att, cnames_rel

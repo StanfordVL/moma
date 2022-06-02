@@ -14,7 +14,7 @@ class Statistics(dict):
     self.statistics = self.__read_statistics(dir_moma, reset_cache)
     self.__sanity_check()
     
-  def filter_cids(self, kind, threshold, paradigm, split):
+  def get_cids(self, kind, threshold, paradigm, split):
     assert paradigm in self.lookup.retrieve('paradigms')
     assert split in self.lookup.retrieve('splits')+['either', 'all', 'combined']
     
@@ -107,9 +107,9 @@ class Statistics(dict):
       ids_act = self.lookup.retrieve('ids_act', f'{paradigm}_{split}')
       metadata = [self.lookup.retrieve('metadatum', id_act) for id_act in ids_act]
       anns_act = [self.lookup.retrieve('ann_act', id_act) for id_act in ids_act]
-      ids_sact = list(itertools.chain(*[self.lookup.trace('ids_sact', id_act=id_act) for id_act in ids_act]))
+      ids_sact = list(itertools.chain(*[self.lookup.map_id('ids_sact', id_act=id_act) for id_act in ids_act]))
       anns_sact = [self.lookup.retrieve('ann_sact', id_sact) for id_sact in ids_sact]
-      ids_hoi = list(itertools.chain(*[self.lookup.trace('ids_hoi', id_sact=id_sact) for id_sact in ids_sact]))
+      ids_hoi = list(itertools.chain(*[self.lookup.map_id('ids_hoi', id_sact=id_sact) for id_sact in ids_sact]))
       anns_hoi = [self.lookup.retrieve('ann_hoi', id_hoi) for id_hoi in ids_hoi]
 
     # number of classes and instances

@@ -10,7 +10,7 @@ from .data import Bidict, LazyDict, Metadatum, Act, SAct, HOI, Clip
 """
 The following functions are publicly available:
  - retrieve()
- - trace()
+ - map_id()
  - map_cid()
 
 The Lookup class implements the following lookups:
@@ -19,13 +19,13 @@ The Lookup class implements the following lookups:
  - id_sact -> ann_sact (one-to-one): retrieve(kind='ann_sact', key=id_sact)
  - id_hoi -> ann_hoi, clip (one-to-one): retrieve(kind='ann_hoi' or 'clip', key=id_hoi)
 
-These keys can be traced across the MOMA hierarchy:
- - id_act -> ids_sact (one-to-many): trace(id_act=id_act, kind='sact')
- - id_act -> ids_hoi (one-to-many): trace(id_act=id_act, kind='hoi')
- - id_sact -> id_act (one-to-one): trace(id_sact=id_sact, kind='act')
- - id_sact -> ids_hoi (one-to-many): trace(id_sact=id_sact, kind='hoi')
- - id_hoi -> id_sact (one-to-one): trace(id_hoi=id_hoi, kind='sact')
- - id_hoi -> id_act (one-to-one): trace(id_hoi=id_hoi, kind='act')
+These keys can be mapped across the MOMA hierarchy:
+ - id_act -> ids_sact (one-to-many): map_id(id_act=id_act, kind='sact')
+ - id_act -> ids_hoi (one-to-many): map_id(id_act=id_act, kind='hoi')
+ - id_sact -> id_act (one-to-one): map_id(id_sact=id_sact, kind='act')
+ - id_sact -> ids_hoi (one-to-many): map_id(id_sact=id_sact, kind='hoi')
+ - id_hoi -> id_sact (one-to-one): map_id(id_hoi=id_hoi, kind='sact')
+ - id_hoi -> id_act (one-to-one): map_id(id_hoi=id_hoi, kind='act')
  
 Mapping activity and sub-activity class IDs between few-shot and standard paradigms:
  - cid_fs -> cid_std: map_cid(split=split, cid_act=cid_fs or cid_sact=cid_fs)
@@ -215,7 +215,7 @@ class Lookup:
 
     raise ValueError(f'retrieve(kind={kind}, key={key})')
 
-  def trace(self, kind, id_act=None, id_sact=None, id_hoi=None):
+  def map_id(self, kind, id_act=None, id_sact=None, id_hoi=None):
     assert sum([x is not None for x in [id_act, id_sact, id_hoi]]) == 1
     assert kind in ['id_act', 'id_sact', 'ids_sact', 'id_hoi', 'ids_hoi']
 
