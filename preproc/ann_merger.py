@@ -10,13 +10,13 @@ class AnnMerger:
     self.dir_moma = dir_moma
     self.ann_phase1 = ann_phase1
     self.ann_phase2 = ann_phase2
-    self.anns = self.__merge()
+    self.anns = self._merge()
 
   def dump(self):
     with open(os.path.join(self.dir_moma, 'anns/anns.json'), 'w') as f:
       json.dump(self.anns, f, ensure_ascii=False, indent=2, sort_keys=False)
 
-  def __get_anns(self):
+  def _get_anns(self):
     for id_act in self.ann_phase1.id_act_to_ids_sact:
       ids_sact_phase1 = self.ann_phase1.id_act_to_ids_sact[id_act]
       ids_sact_phase2 = self.ann_phase2.ids_sact
@@ -34,11 +34,11 @@ class AnnMerger:
 
       yield id_act, ann_act, ids_sact, anns_sact_phase1, anns_sact_phase2
 
-  def __merge(self):
+  def _merge(self):
     cn2en = self.ann_phase1.cn2en
 
     anns = []
-    for id_act, ann_act, ids_sact, anns_sact_phase1, anns_sact_phase2 in self.__get_anns():
+    for id_act, ann_act, ids_sact, anns_sact_phase1, anns_sact_phase2 in self._get_anns():
       assert len(ids_sact) == len(anns_sact_phase1) == len(anns_sact_phase2)
       sact = []
       for id_sact, ann_sact_phase1, ann_sact_phase2 in zip(ids_sact, anns_sact_phase1, anns_sact_phase2):

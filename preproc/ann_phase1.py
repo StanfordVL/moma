@@ -26,9 +26,9 @@ class AnnPhase1:
     self.id_act_to_ids_sact = {}
     self.metadata = {}
 
-    self.__fix()
+    self._fix()
 
-  def __fix(self):
+  def _fix(self):
     # remove activity instances without sub-activities
     for id_act in list(self.anns_act):
       ann_sact = self.anns_act[id_act]['subactivity']
@@ -102,7 +102,7 @@ class AnnPhase1:
   def get_cname_sact(self, ann_sact):
     return self.cn2en[ann_sact['filename'].split('_')[0]]
 
-  def __inspect_anns_act(self):
+  def _inspect_anns_act(self):
     # check video files
     fnames_video_all = os.listdir(os.path.join(self.dir_moma, 'videos/raw'))
     assert all([fname_video.endswith('.mp4') for fname_video in fnames_video_all])
@@ -125,7 +125,7 @@ class AnnPhase1:
         cnames_sact_2 = dict_cnames[cnames_act[j]]
         assert len(cnames_sact_1.intersection(cnames_sact_2)) == 0
 
-  def __inspect_ann_act(self, id_act, ann_act):
+  def _inspect_ann_act(self, id_act, ann_act):
     # make sure the class name exists
     cname_act = self.get_cname_act(ann_act)
     assert cname_act in self.taxonomy.keys(), f'unseen class name {cname_act}'
@@ -201,10 +201,10 @@ class AnnPhase1:
     return errors
 
   def inspect(self, verbose=True):
-    self.__inspect_anns_act()
+    self._inspect_anns_act()
     for id_act, ann_act in self.anns_act.items():
       ids_sact = [self.get_id_sact(ann_sact) for ann_sact in ann_act['subactivity']]
-      errors = self.__inspect_ann_act(id_act, ann_act)
+      errors = self._inspect_ann_act(id_act, ann_act)
 
       if verbose:
         for id_sact, msg in errors.items():

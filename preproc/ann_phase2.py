@@ -59,10 +59,10 @@ class AnnPhase2:
     self.en2cn = en2cn
     self.ids_sact = []
 
-    self.__fix()
+    self._fix()
 
   @staticmethod
-  def __trim(ann_sact_raw, num_hois_trim, is_start):
+  def _trim(ann_sact_raw, num_hois_trim, is_start):
     num_hois = len(ann_sact_raw)
     record = ann_sact_raw[0]['task']['task_params']['record']
     duration = record['metadata']['additionalInfo']['duration']-num_hois_trim
@@ -86,19 +86,19 @@ class AnnPhase2:
 
     return ann_sact_raw
 
-  def __fix(self):
+  def _fix(self):
     # '3361': start, 31 -> 33
-    self.anns_sact_raw['3361'] = self.__trim(self.anns_sact_raw['3361'], 2, True)
+    self.anns_sact_raw['3361'] = self._trim(self.anns_sact_raw['3361'], 2, True)
     # '5730': start, 55 -> 56
-    self.anns_sact_raw['5730'] = self.__trim(self.anns_sact_raw['5730'], 1, True)
+    self.anns_sact_raw['5730'] = self._trim(self.anns_sact_raw['5730'], 1, True)
     # '6239': end, 59 -> 49
-    self.anns_sact_raw['6239'] = self.__trim(self.anns_sact_raw['6239'], 10, False)
+    self.anns_sact_raw['6239'] = self._trim(self.anns_sact_raw['6239'], 10, False)
     # '6679': start, 00 -> 05
-    self.anns_sact_raw['6679'] = self.__trim(self.anns_sact_raw['6679'], 5, True)
+    self.anns_sact_raw['6679'] = self._trim(self.anns_sact_raw['6679'], 5, True)
     # '9534': end, 19 -> 09
-    self.anns_sact_raw['9534'] = self.__trim(self.anns_sact_raw['9534'], 10, False)
+    self.anns_sact_raw['9534'] = self._trim(self.anns_sact_raw['9534'], 10, False)
     # '11065': end, 30 -> 20
-    self.anns_sact_raw['11065'] = self.__trim(self.anns_sact_raw['11065'], 10, False)
+    self.anns_sact_raw['11065'] = self._trim(self.anns_sact_raw['11065'], 10, False)
 
     ids_sact_rm = ['27', '198', '199', '653', '1535', '1536', '3775', '4024', '5531', '5629',
                    '5729', '6178', '6478', '7073', '7074', '7076', '7350', '9713', '10926', '10927',
@@ -132,7 +132,7 @@ class AnnPhase2:
     timestamp = float(timestamp)/1000000
     return timestamp
 
-  def __inspect_ann_sact(self, ann_sact_raw):
+  def _inspect_ann_sact(self, ann_sact_raw):
     # get id_sact, ids_hoi, and num_hois
     record = ann_sact_raw[0]['task']['task_params']['record']
     id_sact_real = record['attachment'].split('_')[-1][:-4].split('/')[0]
@@ -195,7 +195,7 @@ class AnnPhase2:
       cnames = [ann_instance_object.cname for ann_instance_object in anns_instance_object]
       assert len(set(cnames)) == 1
 
-  def __inspect_ann_hoi(self, ann_hoi_raw):
+  def _inspect_ann_hoi(self, ann_hoi_raw):
     errors = []
 
     assert len(ann_hoi_raw['task_result']['annotations']) == 4

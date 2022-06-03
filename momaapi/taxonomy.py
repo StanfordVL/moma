@@ -8,10 +8,10 @@ from .data import Bidict, OrderedBidict
 class Taxonomy(dict):
   def __init__(self, dir_moma):
     super().__init__()
-    self.taxonomy = self.__read_taxonomy(dir_moma)
+    self.taxonomy = self._read_taxonomy(dir_moma)
 
   @staticmethod
-  def __read_taxonomy(dir_moma):
+  def _read_taxonomy(dir_moma):
     with open(osp.join(dir_moma, 'anns/taxonomy/actor.json'), 'r') as f:
       taxonomy_actor = json.load(f)
       taxonomy_actor = sorted(itertools.chain(*taxonomy_actor.values()))

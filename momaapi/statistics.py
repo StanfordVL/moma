@@ -11,8 +11,8 @@ class Statistics(dict):
     super().__init__()
     self.taxonomy = taxonomy
     self.lookup = lookup
-    self.statistics = self.__read_statistics(dir_moma, reset_cache)
-    self.__sanity_check()
+    self.statistics = self._read_statistics(dir_moma, reset_cache)
+    self._sanity_check()
     
   def get_cids(self, kind, threshold, paradigm, split):
     assert paradigm in self.lookup.retrieve('paradigms')
@@ -40,7 +40,7 @@ class Statistics(dict):
     cids = np.where(distribution >= threshold)[0].tolist()
     return cids
 
-  def __sanity_check(self):
+  def _sanity_check(self):
     # standard
     assert self.statistics['all']['act']['num_classes'] == len(self.taxonomy['act']) == \
            self.statistics['standard_train']['act']['num_classes'] == \
@@ -68,7 +68,7 @@ class Statistics(dict):
            self.statistics['few-shot_val']['sact']['num_classes']+ \
            self.statistics['few-shot_test']['sact']['num_classes'] == len(self.taxonomy['sact'])
 
-  def __read_statistics(self, dir_moma, reset_cache):
+  def _read_statistics(self, dir_moma, reset_cache):
     paradigms = self.lookup.retrieve('paradigms')
     splits = self.lookup.retrieve('splits')
 
@@ -82,9 +82,9 @@ class Statistics(dict):
       print('Statistics: load cache')
 
     else:
-      statistics = {'all': self.__get_statistics()}
+      statistics = {'all': self._get_statistics()}
       for paradigm, split in itertools.product(paradigms, splits):
-        statistics[f'{paradigm}_{split}'] = self.__get_statistics(paradigm, split)
+        statistics[f'{paradigm}_{split}'] = self._get_statistics(paradigm, split)
       with open(path_statistics, 'w') as f:
         options = jsbeautifier.default_options()
         options.indent_size = 4
@@ -94,14 +94,14 @@ class Statistics(dict):
     return statistics
 
   @staticmethod
-  def __get_duration(anns):
+  def _get_duration(anns):
     duration_total = sum(ann.end-ann.start for ann in anns)
     duration_avg = duration_total/len(anns)
     duration_min = min(ann.end-ann.start for ann in anns)
     duration_max = max(ann.end-ann.start for ann in anns)
     return duration_total, duration_avg, duration_min, duration_max
 
-  def __get_statistics(self, paradigm=None, split=None):
+  def _get_statistics(self, paradigm=None, split=None):
     # subsample metadata, anns_act, anns_sact, and anns_hoi
     if paradigm is None and split is None:
       metadata = self.lookup.retrieve('metadata')
@@ -143,8 +143,8 @@ class Statistics(dict):
 
     # durations
     duration_total_raw = sum(metadatum.duration for metadatum in metadata)
-    duration_total_act, duration_avg_act, duration_min_act, duration_max_act = self.__get_duration(anns_act)
-    duration_total_sact, duration_avg_sact, duration_min_sact, duration_max_sact = self.__get_duration(anns_sact)
+    duration_total_act, duration_avg_act, duration_min_act, duration_max_act = self._get_duration(anns_act)
+    duration_total_sact, duration_avg_sact, duration_min_sact, duration_max_sact = self._get_duration(anns_sact)
 
     # class distributions
     bincount_act = np.bincount([ann_act.cid for ann_act in anns_act], minlength=len(self.taxonomy['act'])).tolist()

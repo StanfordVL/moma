@@ -46,11 +46,11 @@ class Lookup:
     self.id_hoi_to_id_sact = None
     self.paradigm_and_split_to_ids_act = None
 
-    self.__read_anns(dir_moma, reset_cache)
-    self.__read_paradigms_and_splits(dir_moma)
+    self._read_anns(dir_moma, reset_cache)
+    self._read_paradigms_and_splits(dir_moma)
 
   @staticmethod
-  def __save_cache(dir_moma, id_act_to_metadatum, id_act_to_ann_act, id_sact_to_ann_sact, id_hoi_to_ann_hoi,
+  def _save_cache(dir_moma, id_act_to_metadatum, id_act_to_ann_act, id_sact_to_ann_sact, id_hoi_to_ann_hoi,
                    id_hoi_to_clip, id_sact_to_id_act, id_hoi_to_id_sact):
     dir_lookup = osp.join(dir_moma, 'anns/cache/lookup')
     os.makedirs(osp.join(dir_lookup, 'id_hoi'), exist_ok=True)
@@ -80,7 +80,7 @@ class Lookup:
     print('Lookup: save cache')
 
   @staticmethod
-  def __load_cache(dir_moma):
+  def _load_cache(dir_moma):
     dir_lookup = osp.join(dir_moma, 'anns/cache/lookup')
 
     variables = []
@@ -100,14 +100,14 @@ class Lookup:
     print('Lookup: load cache')
     return variables
 
-  def __read_anns(self, dir_moma, reset_cache):
+  def _read_anns(self, dir_moma, reset_cache):
     dir_lookup = osp.join(dir_moma, 'anns/cache/lookup')
     if reset_cache and osp.exists(dir_lookup):
       shutil.rmtree(dir_lookup)
 
     try:
       id_act_to_metadatum, id_act_to_ann_act, id_sact_to_ann_sact, id_hoi_to_ann_hoi, id_hoi_to_clip, \
-      id_sact_to_id_act, id_hoi_to_id_sact = self.__load_cache(dir_moma)
+      id_sact_to_id_act, id_hoi_to_id_sact = self._load_cache(dir_moma)
 
     except FileNotFoundError:
       with open(osp.join(dir_moma, f'anns/anns.json'), 'r') as f:
@@ -141,7 +141,7 @@ class Lookup:
               id_hoi_to_clip[ann_hoi_raw['id']] = Clip(ann_hoi_raw, info_clips[ann_hoi_raw['id']])
             id_hoi_to_id_sact[ann_hoi_raw['id']] = ann_sact_raw['id']
 
-      self.__save_cache(dir_moma, id_act_to_metadatum, id_act_to_ann_act, id_sact_to_ann_sact, id_hoi_to_ann_hoi,
+      self._save_cache(dir_moma, id_act_to_metadatum, id_act_to_ann_act, id_sact_to_ann_sact, id_hoi_to_ann_hoi,
                         id_hoi_to_clip, id_sact_to_id_act, id_hoi_to_id_sact)
 
     id_sact_to_id_act = Bidict(id_sact_to_id_act)
@@ -155,7 +155,7 @@ class Lookup:
     self.id_hoi_to_id_sact = id_hoi_to_id_sact
     self.id_hoi_to_clip = id_hoi_to_clip
 
-  def __read_paradigms_and_splits(self, dir_moma):
+  def _read_paradigms_and_splits(self, dir_moma):
     paradigms = ['standard', 'few-shot']
     splits = ['train', 'val', 'test']
     suffixes = {'standard': 'std', 'few-shot': 'fs'}
