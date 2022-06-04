@@ -12,15 +12,16 @@ pip install .
 #### Requirements:
 - Python 3.9+
 - ffmpeg (only for preprocessing): ```pip install ffmpeg-python```
+- jsbeautifier (for better visualization of json files): ```pip install jsbeautifier```
 
 
-#### Requirements: visualization
+#### Requirements: data visualization
 - [distinctipy](https://github.com/alan-turing-institute/distinctipy): a lightweight package for generating visually distinct colors
 - Graphviz: ```sudo apt-get install graphviz graphviz-dev```
 - PyGraphviz: a Python interface to the Graphviz graph layout and visualization package
 - seaborn: a data visualization library based on matplotlib
 - Torchvision
-- jsbeautifier: for better visualization of json files
+
 
 ## Hierarchy
 | Level | <div style="width:200px">Concept</div>                                              | Representation                                                             |

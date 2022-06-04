@@ -127,7 +127,7 @@ class Lookup:
         anns_sact_raw = ann_act_raw['sub_activities']
 
         for ann_sact_raw in anns_sact_raw:
-          id_sact_to_ann_sact[ann_sact_raw['id']] = SAct(ann_sact_raw, self.taxonomy['sact'], 
+          id_sact_to_ann_sact[ann_sact_raw['id']] = SAct(ann_sact_raw, self.taxonomy['sact'],
                                                          self.taxonomy['actor'], self.taxonomy['object'])
           id_sact_to_id_act[ann_sact_raw['id']] = ann_act_raw['id']
           anns_hoi_raw = ann_sact_raw['higher_order_interactions']
@@ -142,7 +142,7 @@ class Lookup:
             id_hoi_to_id_sact[ann_hoi_raw['id']] = ann_sact_raw['id']
 
       self._save_cache(dir_moma, id_act_to_metadatum, id_act_to_ann_act, id_sact_to_ann_sact, id_hoi_to_ann_hoi,
-                        id_hoi_to_clip, id_sact_to_id_act, id_hoi_to_id_sact)
+                       id_hoi_to_clip, id_sact_to_id_act, id_hoi_to_id_sact)
 
     id_sact_to_id_act = Bidict(id_sact_to_id_act)
     id_hoi_to_id_sact = Bidict(id_hoi_to_id_sact)

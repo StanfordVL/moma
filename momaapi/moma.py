@@ -307,10 +307,10 @@ class MOMA:
     return [self.lookup.retrieve('ann_act', id_act) for id_act in ids_act]
 
   def get_anns_sact(self, ids_sact: list) -> list:
-     return [self.lookup.retrieve('ann_sact', id_sact) for id_sact in ids_sact]
+    return [self.lookup.retrieve('ann_sact', id_sact) for id_sact in ids_sact]
 
   def get_anns_hoi(self, ids_hoi: list) -> list:
-     return [self.lookup.retrieve('ann_hoi', id_hoi) for id_hoi in ids_hoi]
+    return [self.lookup.retrieve('ann_hoi', id_hoi) for id_hoi in ids_hoi]
 
   def get_clips(self, ids_hoi: list) -> list:
     return [self.lookup.retrieve('clip', id_hoi) for id_hoi in ids_hoi]
