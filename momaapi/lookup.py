@@ -128,7 +128,9 @@ class Lookup:
 
         for ann_sact_raw in anns_sact_raw:
           id_sact_to_ann_sact[ann_sact_raw['id']] = SAct(ann_sact_raw, self.taxonomy['sact'],
-                                                         self.taxonomy['actor'], self.taxonomy['object'])
+                                                         self.taxonomy['actor'], self.taxonomy['object'],
+                                                         self.taxonomy['ia'], self.taxonomy['ta'],
+                                                         self.taxonomy['att'], self.taxonomy['rel'])
           id_sact_to_id_act[ann_sact_raw['id']] = ann_act_raw['id']
           anns_hoi_raw = ann_sact_raw['higher_order_interactions']
 

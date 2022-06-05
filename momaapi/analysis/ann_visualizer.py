@@ -147,13 +147,13 @@ class AnnVisualizer:
     """ graph """
     # get node & edge positions
     info_nodes = []
-    for id_actor in ann_sact.ids_actor:
-      cid_actor = ann_sact.get_cid_actor(id_actor)
-      cname_actor = self.moma.taxonomy['actor'][cid_actor]
+    for aact_actor in ann_sact.aacts_actor:
+      cid_actor = aact_actor.cid
+      cname_actor = aact_actor.cname
       info_nodes.append((id_actor, cname_actor))
-    for id_object in ann_sact.ids_object:
-      cid_object = ann_sact.get_cid_object(id_object)
-      cname_object = self.moma.taxonomy['object'][cid_object]
+    for aact_object in ann_sact.aacts_object:
+      cid_object = aact_object.cid
+      cname_object = aact_object.cname
       info_nodes.append((id_object, cname_object))
 
     info_edges = []

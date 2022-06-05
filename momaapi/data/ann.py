@@ -36,46 +36,93 @@ class Act:
 
 
 class SAct:
-  def __init__(self, ann, taxonomy_sact, taxonomy_actor, taxonomy_object):
+  def __init__(self, ann, taxonomy_sact, taxonomy_actor, taxonomy_object, 
+               taxonomy_ia, taxonomy_ta, taxonomy_att, taxonomy_rel):
     self.id = ann['id']
     self.cname = ann['class_name']
     self.cid = taxonomy_sact.index(ann['class_name'])
     self.start = ann['start_time']
     self.end = ann['end_time']
     self.ids_hoi = [x['id'] for x in ann['higher_order_interactions']]
+    self.times = [x['time'] for x in ann['higher_order_interactions']]
 
-    # unique entity instances in this sub-activity
-    self.__id_actor_to_cid_actor = dict(set([
-      (y['id'], taxonomy_actor.index(y['class_name'])) for x in ann['higher_order_interactions'] for y in x['actors']
-    ]))
-    self.__id_object_to_cid_object = dict(set([
-      (y['id'], taxonomy_object.index(y['class_name'])) for x in ann['higher_order_interactions'] for y in x['objects']
-    ]))
+    # find unique entity instances
+    ids_actor = sorted(set([y['id'] for x in ann['higher_order_interactions'] for y in x['actors']]))
+    ids_object = sorted(set([y['id'] for x in ann['higher_order_interactions'] for y in x['objects']]))
+    info_sact = {'start_time': self.start, 'end_time': self.end, 'times': self.times}
+
+    # group annotations by entity ID and frame ID
+    actors = {id_actor:[None for _ in self.ids_hoi] for id_actor in ids_actor}
+    objects = {id_object:[None for _ in self.ids_hoi] for id_object in ids_object}
+    ias = {id_entity:[[] for _ in self.ids_hoi] for id_entity in ids_actor+ids_object}
+    tas = {id_entity: [[] for _ in self.ids_hoi] for id_entity in ids_actor+ids_object}
+    atts = {id_entity: [[] for _ in self.ids_hoi] for id_entity in ids_actor+ids_object}
+    rels = {id_entity: [[] for _ in self.ids_hoi] for id_entity in ids_actor+ids_object}
+    for i, ann_hoi_raw in enumerate(ann['higher_order_interactions']):
+      for x in ann_hoi_raw['actors']:
+        assert x['id'] not in actors or actors[x['id']][i] is None
+        actors[x['id']][i] = Entity(x, 'actor', taxonomy_actor)
+      for x in ann_hoi_raw['objects']:
+        assert x['id'] not in objects or objects[x['id']][i] is None
+        objects[x['id']][i] = Entity(x, 'object', taxonomy_object)
+      for x in ann_hoi_raw['intransitive_actions']:
+        ias[x['source_id']][i].append(Predicate(x, 'ia', taxonomy_ia))
+      for x in ann_hoi_raw['transitive_actions']:
+        tas[x['source_id']][i].append(Predicate(x, 'ta', taxonomy_ta))
+      for x in ann_hoi_raw['attributes']:
+        atts[x['source_id']][i].append(Predicate(x, 'att', taxonomy_att))
+      for x in ann_hoi_raw['relationships']:
+        rels[x['source_id']][i].append(Predicate(x, 'rel', taxonomy_rel))
+
+    # create aacts
+    self.aacts_actor = [AAct(info_sact, actors[i], ias[i], tas[i], atts[i], rels[i]) for i in ids_actor]
+    self.aacts_object = [AAct(info_sact, objects[i], ias[i], tas[i], atts[i], rels[i]) for i in ids_object]
 
   @property
   def ids_actor(self):
-    return sorted(self.__id_actor_to_cid_actor.keys())
+    return [aact_actor.id for aact_actor in self.aacts_actor]
 
   @property
   def ids_object(self):
-    return sorted(self.__id_object_to_cid_object.keys(), key=int)
+    return [aact_object.id for aact_object in self.aacts_object]
 
   @property
-  def cids_actor(self):
-    return sorted(self.__id_actor_to_cid_actor.values())
-
-  @property
-  def cids_object(self):
-    return sorted(self.__id_object_to_cid_object.values())
-
-  def get_cid_actor(self, id_actor):
-    return self.__id_actor_to_cid_actor[id_actor]
-
-  def get_cid_object(self, id_object):
-    return self.__id_object_to_cid_object[id_object]
+  def length(self):
+    return len(self.times)
 
   def __repr__(self):
-    return f'SAct(id={self.id}, cname={self.cname}, time=[{self.start}, end={self.end}), num_hois={len(self.ids_hoi)})'
+    return f'SAct(id={self.id}, cname={self.cname}, time=[{self.start}, end={self.end}), length={self.length})'
+
+
+class AAct:
+  def __init__(self, info_sact, entities, ias, tas, atts, rels):
+    entity = next(entity for entity in entities if entity is not None)
+    self.id = entity.id
+    self.kind = entity.kind
+    self.cname = entity.cname
+    self.cid = entity.cid
+
+    self.start = info_sact['start_time']
+    self.end = info_sact['end_time']
+    self.times = info_sact['times']
+
+    self.entities = entities
+    self.ias = ias
+    self.tas = tas
+    self.atts = atts
+    self.rels = rels
+
+  @property
+  def bboxes(self):
+    return [entity.bbox for entity in self.entities]
+
+  @property
+  def length(self):
+    return len(self.times)
+
+  def __repr__(self):
+    return f'AAct_{self.kind}(id={self.id}, cname={self.cname}, time=[{self.start}, end={self.end}), ' \
+           f'length={self.length})'
 
 
 class HOI:

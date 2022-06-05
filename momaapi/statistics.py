@@ -127,10 +127,10 @@ class Statistics(dict):
 
     num_actors_image = sum([len(ann_hoi.actors) for ann_hoi in anns_hoi])
     num_actors_video = sum([len(ann_sact.ids_actor) for ann_sact in anns_sact])
-    num_classes_actor = len(set(itertools.chain(*[ann_sact.cids_actor for ann_sact in anns_sact])))
+    num_classes_actor = len(set([actor.cid for ann_hoi in anns_hoi for actor in ann_hoi.actors]))
     num_objects_image = sum([len(ann_hoi.objects) for ann_hoi in anns_hoi])
     num_objects_video = sum([len(ann_sact.ids_object) for ann_sact in anns_sact])
-    num_classes_object = len(set(itertools.chain(*[ann_sact.cids_object for ann_sact in anns_sact])))
+    num_classes_object = len(set([object.cid for ann_hoi in anns_hoi for object in ann_hoi.objects]))
 
     num_ias = sum([len(ann_hoi.ias) for ann_hoi in anns_hoi])
     num_classes_ia = len(set([ia.cid for ann_hoi in anns_hoi for ia in ann_hoi.ias]))
