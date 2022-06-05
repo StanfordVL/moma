@@ -315,12 +315,12 @@ class AnnPhase2:
   def inspect(self, verbose=True):
     errors = []
     for id_sact, ann_sact_raw in self.anns_sact_raw.items():
-      self.__inspect_ann_sact(ann_sact_raw)
+      self._inspect_ann_sact(ann_sact_raw)
 
       errors_sact = []
       for ann_hoi_raw in ann_sact_raw:
         id_hoi = self.get_id_hoi(ann_hoi_raw)
-        errors_hoi = self.__inspect_ann_hoi(ann_hoi_raw)
+        errors_hoi = self._inspect_ann_hoi(ann_hoi_raw)
         errors_sact += errors_hoi
         if verbose and len(errors_hoi) > 0:
           # msg = errors_hoi[0] if len(errors_hoi) == 1 else '; '.join(errors_hoi)
