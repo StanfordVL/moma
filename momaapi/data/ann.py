@@ -17,6 +17,10 @@ class Metadatum:
   def get_time(self, fid):
     raise NotImplementedError
 
+  @property
+  def scale_factor(self):
+    return min(self.width, self.height)/320
+
   def __repr__(self):
     return f'Metadatum(id={self.id}, fname={self.fname}, size=({self.num_frames}, {self.height}, {self.width}, 3), ' \
            f'duration={self.duration}'
@@ -36,7 +40,7 @@ class Act:
 
 
 class SAct:
-  def __init__(self, ann, taxonomy_sact, taxonomy_actor, taxonomy_object, 
+  def __init__(self, ann, scale_factor, taxonomy_sact, taxonomy_actor, taxonomy_object,
                taxonomy_ia, taxonomy_ta, taxonomy_att, taxonomy_rel):
     self.id = ann['id']
     self.cname = ann['class_name']
@@ -49,7 +53,7 @@ class SAct:
     # find unique entity instances
     ids_actor = sorted(set([y['id'] for x in ann['higher_order_interactions'] for y in x['actors']]))
     ids_object = sorted(set([y['id'] for x in ann['higher_order_interactions'] for y in x['objects']]))
-    info_sact = {'start_time': self.start, 'end_time': self.end, 'times': self.times}
+    info_sact = {'start_time': self.start, 'end_time': self.end, 'times': self.times, 'scale_factor': scale_factor}
 
     # group annotations by entity ID and frame ID
     actors = {id_actor:[None for _ in self.ids_hoi] for id_actor in ids_actor}
@@ -105,16 +109,25 @@ class AAct:
     self.start = info_sact['start_time']
     self.end = info_sact['end_time']
     self.times = info_sact['times']
+    self.scale_factor = info_sact['scale_factor']
 
-    self.entities = entities
+    self._entities = entities
     self.ias = ias
     self.tas = tas
     self.atts = atts
     self.rels = rels
 
-  @property
-  def bboxes(self):
-    return [entity.bbox for entity in self.entities]
+  def get_bboxes(self, full_res=False):
+    bboxes = []
+    for entity in self._entities:
+      if entity is None:
+        bbox = None
+      elif not full_res:
+        bbox = BBox.scale(entity.bbox, self.scale_factor)
+      else:
+        bbox = entity.bbox
+      bboxes.append(bbox)
+    return bboxes
 
   @property
   def length(self):
@@ -166,6 +179,11 @@ class Clip:
 class BBox:
   def __init__(self, ann):
     self.x, self.y, self.width, self.height = ann
+    
+  @classmethod
+  def scale(cls, bbox, scale_factor):
+    return cls((round(bbox.x/scale_factor), round(bbox.y/scale_factor),
+                round(bbox.width/scale_factor), round(bbox.height/scale_factor)))
 
   @property
   def x1(self):

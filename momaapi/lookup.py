@@ -46,7 +46,6 @@ class Lookup:
     self.paradigm_and_split_to_ids_act = self._read_paradigms_and_splits(dir_moma)
 
   @staticmethod
-  @timeit
   def _save_cache(dir_moma, data, names, names_lazy):
     dir_lookup = osp.join(dir_moma, 'anns/cache/lookup')
     os.makedirs(dir_lookup, exist_ok=True)
@@ -63,7 +62,6 @@ class Lookup:
           pickle.dump(data[name], f)
 
   @staticmethod
-  @timeit
   def _load_cache(dir_moma, names, names_lazy):
     dir_lookup = osp.join(dir_moma, 'anns/cache/lookup')
 
@@ -78,6 +76,7 @@ class Lookup:
 
     return data
 
+  @timeit
   def _read_anns(self, dir_moma, reset_cache, names, names_lazy, names_bidict):
     dir_lookup = osp.join(dir_moma, 'anns/cache/lookup')
     if reset_cache and osp.exists(dir_lookup):
@@ -97,10 +96,11 @@ class Lookup:
         ann_act_raw = ann_raw['activity']
         data['id_act_to_metadatum'][ann_act_raw['id']] = Metadatum(ann_raw)
         data['id_act_to_ann_act'][ann_act_raw['id']] = Act(ann_act_raw, self.taxonomy['act'])
+        scale_factor = data['id_act_to_metadatum'][ann_act_raw['id']].scale_factor
         anns_sact_raw = ann_act_raw['sub_activities']
 
         for ann_sact_raw in anns_sact_raw:
-          data['id_sact_to_ann_sact'][ann_sact_raw['id']] = SAct(ann_sact_raw, self.taxonomy['sact'],
+          data['id_sact_to_ann_sact'][ann_sact_raw['id']] = SAct(ann_sact_raw, scale_factor, self.taxonomy['sact'],
                                                                  self.taxonomy['actor'], self.taxonomy['object'],
                                                                  self.taxonomy['ia'], self.taxonomy['ta'],
                                                                  self.taxonomy['att'], self.taxonomy['rel'])
