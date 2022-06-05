@@ -6,6 +6,7 @@ import pickle
 import shutil
 
 from .data import Bidict, LazyDict, Metadatum, Act, SAct, HOI, Clip
+from .utils import timeit
 
 """
 The following functions are publicly available:
@@ -37,77 +38,53 @@ class Lookup:
   def __init__(self, dir_moma, taxonomy, reset_cache):
     self.taxonomy = taxonomy
 
-    self.id_act_to_metadatum = None
-    self.id_act_to_ann_act = None
-    self.id_sact_to_ann_sact = None
-    self.id_hoi_to_ann_hoi = None
-    self.id_hoi_to_clip = None
-    self.id_sact_to_id_act = None
-    self.id_hoi_to_id_sact = None
-    self.paradigm_and_split_to_ids_act = None
-
-    self._read_anns(dir_moma, reset_cache)
-    self._read_paradigms_and_splits(dir_moma)
+    names = ['id_act_to_metadatum', 'id_act_to_ann_act', 'id_sact_to_ann_sact', 'id_hoi_to_ann_hoi', 'id_hoi_to_clip',
+             'id_sact_to_id_act', 'id_hoi_to_id_sact']
+    names_lazy = ['id_sact_to_ann_sact', 'id_hoi_to_ann_hoi', 'id_hoi_to_clip']
+    names_bidict = ['id_sact_to_id_act', 'id_hoi_to_id_sact']
+    self._read_anns(dir_moma, reset_cache, names, names_lazy, names_bidict)
+    self.paradigm_and_split_to_ids_act = self._read_paradigms_and_splits(dir_moma)
 
   @staticmethod
-  def _save_cache(dir_moma, id_act_to_metadatum, id_act_to_ann_act, id_sact_to_ann_sact, id_hoi_to_ann_hoi,
-                   id_hoi_to_clip, id_sact_to_id_act, id_hoi_to_id_sact):
+  @timeit
+  def _save_cache(dir_moma, data, names, names_lazy):
     dir_lookup = osp.join(dir_moma, 'anns/cache/lookup')
-    os.makedirs(osp.join(dir_lookup, 'id_hoi'), exist_ok=True)
+    os.makedirs(dir_lookup, exist_ok=True)
 
-    named_variables = {
-      'id_act_to_metadatum': id_act_to_metadatum,
-      'id_act_to_ann_act': id_act_to_ann_act,
-      'id_sact_to_ann_sact': id_sact_to_ann_sact,
-      'id_hoi_to_ann_hoi': id_hoi_to_ann_hoi,
-      'id_hoi_to_clip': id_hoi_to_clip,
-      'id_sact_to_id_act': id_sact_to_id_act,
-      'id_hoi_to_id_sact': id_hoi_to_id_sact,
-    }
-
-    for name, variable in named_variables.items():
-      assert variable is not None
-
-      if name == 'id_hoi_to_ann_hoi' or name == 'id_hoi_to_clip':
-        for id_hoi, value in variable.items():
-          with open(osp.join(dir_lookup, f'{name.replace("_to_", "/")}_{id_hoi}'), 'wb') as f:
+    for name in names:
+      if name in names_lazy:
+        src, trg = name.split('_to_')
+        os.makedirs(osp.join(dir_lookup, src), exist_ok=True)
+        for key, value in data[name].items():
+          with open(osp.join(dir_lookup, f'{name.replace("_to_", "/")}_{key}'), 'wb') as f:
             pickle.dump(value, f)
-
       else:
         with open(osp.join(dir_lookup, name), 'wb') as f:
-          pickle.dump(variable, f)
-
-    print('Lookup: save cache')
+          pickle.dump(data[name], f)
 
   @staticmethod
-  def _load_cache(dir_moma):
+  @timeit
+  def _load_cache(dir_moma, names, names_lazy):
     dir_lookup = osp.join(dir_moma, 'anns/cache/lookup')
 
-    variables = []
-    for name in ['id_act_to_metadatum', 'id_act_to_ann_act', 'id_sact_to_ann_sact',
-                 'id_sact_to_id_act', 'id_hoi_to_id_sact']:
-      with open(osp.join(dir_lookup, name), 'rb') as f:
-        variable = pickle.load(f)
-      variables.append(variable)
+    data = {}
+    for name in names:
+      if name in names_lazy:
+        src, trg = name.split('_to_')
+        data[name] = LazyDict(osp.join(dir_lookup, src), trg)
+      else:
+        with open(osp.join(dir_lookup, name), 'rb') as f:
+          data[name] = pickle.load(f)
 
-    id_hoi_to_ann_hoi = LazyDict(osp.join(dir_lookup, 'id_hoi'), 'ann_hoi')
-    id_hoi_to_clip = LazyDict(osp.join(dir_lookup, 'id_hoi'), 'clip')
-    variables.insert(3, id_hoi_to_ann_hoi)
-    variables.insert(4, id_hoi_to_clip)
+    return data
 
-    assert len(id_hoi_to_ann_hoi.keys()) == len(variables[-1].keys()), \
-        f'{len(id_hoi_to_ann_hoi.keys())} vs {len(variables[-1].keys())}'
-    print('Lookup: load cache')
-    return variables
-
-  def _read_anns(self, dir_moma, reset_cache):
+  def _read_anns(self, dir_moma, reset_cache, names, names_lazy, names_bidict):
     dir_lookup = osp.join(dir_moma, 'anns/cache/lookup')
     if reset_cache and osp.exists(dir_lookup):
       shutil.rmtree(dir_lookup)
 
     try:
-      id_act_to_metadatum, id_act_to_ann_act, id_sact_to_ann_sact, id_hoi_to_ann_hoi, id_hoi_to_clip, \
-      id_sact_to_id_act, id_hoi_to_id_sact = self._load_cache(dir_moma)
+      data = self._load_cache(dir_moma, names, names_lazy)
 
     except FileNotFoundError:
       with open(osp.join(dir_moma, f'anns/anns.json'), 'r') as f:
@@ -115,49 +92,39 @@ class Lookup:
       with open(osp.join(dir_moma, f'anns/clips.json'), 'r') as f:
         info_clips = json.load(f)
 
-      id_act_to_metadatum, id_act_to_ann_act = {}, {}
-      id_sact_to_ann_sact = {}
-      id_hoi_to_ann_hoi, id_hoi_to_clip = {}, {}
-      id_sact_to_id_act, id_hoi_to_id_sact = {}, {}
-
+      data = {name:{} for name in names}
       for ann_raw in anns_raw:
         ann_act_raw = ann_raw['activity']
-        id_act_to_metadatum[ann_act_raw['id']] = Metadatum(ann_raw)
-        id_act_to_ann_act[ann_act_raw['id']] = Act(ann_act_raw, self.taxonomy['act'])
+        data['id_act_to_metadatum'][ann_act_raw['id']] = Metadatum(ann_raw)
+        data['id_act_to_ann_act'][ann_act_raw['id']] = Act(ann_act_raw, self.taxonomy['act'])
         anns_sact_raw = ann_act_raw['sub_activities']
 
         for ann_sact_raw in anns_sact_raw:
-          id_sact_to_ann_sact[ann_sact_raw['id']] = SAct(ann_sact_raw, self.taxonomy['sact'],
-                                                         self.taxonomy['actor'], self.taxonomy['object'],
-                                                         self.taxonomy['ia'], self.taxonomy['ta'],
-                                                         self.taxonomy['att'], self.taxonomy['rel'])
-          id_sact_to_id_act[ann_sact_raw['id']] = ann_act_raw['id']
+          data['id_sact_to_ann_sact'][ann_sact_raw['id']] = SAct(ann_sact_raw, self.taxonomy['sact'],
+                                                                 self.taxonomy['actor'], self.taxonomy['object'],
+                                                                 self.taxonomy['ia'], self.taxonomy['ta'],
+                                                                 self.taxonomy['att'], self.taxonomy['rel'])
+          data['id_sact_to_id_act'][ann_sact_raw['id']] = ann_act_raw['id']
           anns_hoi_raw = ann_sact_raw['higher_order_interactions']
 
           for ann_hoi_raw in anns_hoi_raw:
-            id_hoi_to_ann_hoi[ann_hoi_raw['id']] = HOI(ann_hoi_raw,
-                                                       self.taxonomy['actor'], self.taxonomy['object'],
-                                                       self.taxonomy['ia'], self.taxonomy['ta'],
-                                                       self.taxonomy['att'], self.taxonomy['rel'])
+            data['id_hoi_to_ann_hoi'][ann_hoi_raw['id']] = HOI(ann_hoi_raw,
+                                                               self.taxonomy['actor'], self.taxonomy['object'],
+                                                               self.taxonomy['ia'], self.taxonomy['ta'],
+                                                               self.taxonomy['att'], self.taxonomy['rel'])
             if ann_hoi_raw['id'] in info_clips:  # Currently, only clips from the test set have been generated
-              id_hoi_to_clip[ann_hoi_raw['id']] = Clip(ann_hoi_raw, info_clips[ann_hoi_raw['id']])
-            id_hoi_to_id_sact[ann_hoi_raw['id']] = ann_sact_raw['id']
+              data['id_hoi_to_clip'][ann_hoi_raw['id']] = Clip(ann_hoi_raw, info_clips[ann_hoi_raw['id']])
+            data['id_hoi_to_id_sact'][ann_hoi_raw['id']] = ann_sact_raw['id']
 
-      self._save_cache(dir_moma, id_act_to_metadatum, id_act_to_ann_act, id_sact_to_ann_sact, id_hoi_to_ann_hoi,
-                       id_hoi_to_clip, id_sact_to_id_act, id_hoi_to_id_sact)
+      self._save_cache(dir_moma, data, names, names_lazy)
 
-    id_sact_to_id_act = Bidict(id_sact_to_id_act)
-    id_hoi_to_id_sact = Bidict(id_hoi_to_id_sact)
+    for name in names_bidict:
+      data[name] = Bidict(data[name])
+    for name in names:
+      setattr(self, name, data[name])
 
-    self.id_act_to_metadatum = id_act_to_metadatum
-    self.id_act_to_ann_act = id_act_to_ann_act
-    self.id_sact_to_ann_sact = id_sact_to_ann_sact
-    self.id_hoi_to_ann_hoi = id_hoi_to_ann_hoi
-    self.id_sact_to_id_act = id_sact_to_id_act
-    self.id_hoi_to_id_sact = id_hoi_to_id_sact
-    self.id_hoi_to_clip = id_hoi_to_clip
-
-  def _read_paradigms_and_splits(self, dir_moma):
+  @staticmethod
+  def _read_paradigms_and_splits(dir_moma):
     paradigms = ['standard', 'few-shot']
     splits = ['train', 'val', 'test']
     suffixes = {'standard': 'std', 'few-shot': 'fs'}
@@ -171,7 +138,7 @@ class Lookup:
       for split in splits:
         paradigm_and_split_to_ids_act[f'{paradigm}_{split}'] = ids_act[split]
 
-    self.paradigm_and_split_to_ids_act = paradigm_and_split_to_ids_act
+    return paradigm_and_split_to_ids_act
 
   def retrieve(self, kind, key=None):
     if key is None:

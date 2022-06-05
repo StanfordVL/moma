@@ -5,6 +5,8 @@ import numpy as np
 import os
 import os.path as osp
 
+from .utils import timeit
+
 
 class Statistics(dict):
   def __init__(self, dir_moma, taxonomy, lookup, reset_cache):
@@ -68,6 +70,19 @@ class Statistics(dict):
            self.statistics['few-shot_val']['sact']['num_classes']+ \
            self.statistics['few-shot_test']['sact']['num_classes'] == len(self.taxonomy['sact'])
 
+  @timeit
+  def _save_cache(self, path_statistics, statistics):
+    with open(path_statistics, 'w') as f:
+      options = jsbeautifier.default_options()
+      options.indent_size = 4
+      f.write(jsbeautifier.beautify(json.dumps(statistics), options))
+
+  @timeit
+  def _load_cache(self, path_statistics):
+    with open(path_statistics, 'r') as f:
+      statistics = json.load(f)
+    return statistics
+
   def _read_statistics(self, dir_moma, reset_cache):
     paradigms = self.lookup.retrieve('paradigms')
     splits = self.lookup.retrieve('splits')
@@ -77,19 +92,13 @@ class Statistics(dict):
       os.remove(path_statistics)
 
     if osp.exists(path_statistics):
-      with open(path_statistics, 'r') as f:
-        statistics = json.load(f)
-      print('Statistics: load cache')
+      statistics = self._load_cache(path_statistics)
 
     else:
       statistics = {'all': self._get_statistics()}
       for paradigm, split in itertools.product(paradigms, splits):
         statistics[f'{paradigm}_{split}'] = self._get_statistics(paradigm, split)
-      with open(path_statistics, 'w') as f:
-        options = jsbeautifier.default_options()
-        options.indent_size = 4
-        f.write(jsbeautifier.beautify(json.dumps(statistics), options))
-      print('Statistics: save cache')
+      self._save_cache(path_statistics, statistics)
 
     return statistics
 
