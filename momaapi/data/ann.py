@@ -1,3 +1,6 @@
+import numpy as np
+
+
 class Metadatum:
   def __init__(self, ann):
     self.id = ann['activity']['id']
@@ -53,7 +56,6 @@ class SAct:
     # find unique entity instances
     ids_actor = sorted(set([y['id'] for x in ann['higher_order_interactions'] for y in x['actors']]))
     ids_object = sorted(set([y['id'] for x in ann['higher_order_interactions'] for y in x['objects']]))
-    info_sact = {'start_time': self.start, 'end_time': self.end, 'times': self.times, 'scale_factor': scale_factor}
 
     # group annotations by entity ID and frame ID
     actors = {id_actor:[None for _ in self.ids_hoi] for id_actor in ids_actor}
@@ -79,16 +81,19 @@ class SAct:
         rels[x['source_id']][i].append(Predicate(x, 'rel', taxonomy_rel))
 
     # create aacts
-    self.aacts_actor = [AAct(info_sact, actors[i], ias[i], tas[i], atts[i], rels[i]) for i in ids_actor]
-    self.aacts_object = [AAct(info_sact, objects[i], ias[i], tas[i], atts[i], rels[i]) for i in ids_object]
+    info = {'start_time': self.start, 'end_time': self.end, 'times': self.times, 'scale_factor': scale_factor,
+            'num_classes_ia': len(taxonomy_ia), 'num_classes_ta': len(taxonomy_ta), 
+            'num_classes_att': len(taxonomy_att), 'num_classes_rel': len(taxonomy_rel)}
+    self.aacts_actor = [AAct(info, actors[i], ias[i], tas[i], atts[i], rels[i]) for i in ids_actor]
+    self.aacts_object = [AAct(info, objects[i], ias[i], tas[i], atts[i], rels[i]) for i in ids_object]
 
   @property
   def ids_actor(self):
-    return [aact_actor.id for aact_actor in self.aacts_actor]
+    return [aact_actor.id_entity for aact_actor in self.aacts_actor]
 
   @property
   def ids_object(self):
-    return [aact_object.id for aact_object in self.aacts_object]
+    return [aact_object.id_entity for aact_object in self.aacts_object]
 
   @property
   def length(self):
@@ -99,23 +104,27 @@ class SAct:
 
 
 class AAct:
-  def __init__(self, info_sact, entities, ias, tas, atts, rels):
+  def __init__(self, info, entities, ias, tas, atts, rels):
     entity = next(entity for entity in entities if entity is not None)
-    self.id = entity.id
-    self.kind = entity.kind
-    self.cname = entity.cname
-    self.cid = entity.cid
+    self.id_entity = entity.id
+    self.kind_entity = entity.kind
+    self.cname_entity = entity.cname
+    self.cid_entity = entity.cid
 
-    self.start = info_sact['start_time']
-    self.end = info_sact['end_time']
-    self.times = info_sact['times']
-    self.scale_factor = info_sact['scale_factor']
+    self.start = info['start_time']
+    self.end = info['end_time']
+    self.times = info['times']
 
+    self._scale_factor = info['scale_factor']
     self._entities = entities
-    self.ias = ias
-    self.tas = tas
-    self.atts = atts
-    self.rels = rels
+    self._ias = ias
+    self._tas = tas
+    self._atts = atts
+    self._rels = rels
+    self._num_classes_ia = info['num_classes_ia']
+    self._num_classes_ta = info['num_classes_ta']
+    self._num_classes_att = info['num_classes_att']
+    self._num_classes_rel = info['num_classes_rel']
 
   def get_bboxes(self, full_res=False):
     bboxes = []
@@ -123,11 +132,36 @@ class AAct:
       if entity is None:
         bbox = None
       elif not full_res:
-        bbox = BBox.scale(entity.bbox, self.scale_factor)
+        bbox = BBox.scale(entity.bbox, self._scale_factor)
       else:
         bbox = entity.bbox
       bboxes.append(bbox)
     return bboxes
+
+  @property
+  def cids_predicate(self):  # binary
+    indices_ia = np.array([[t, ia.cid] for t, ias in enumerate(self._ias) for ia in ias]).T
+    cids_ia = np.zeros((self.length, self._num_classes_ia))
+    if len(indices_ia) > 0:
+      cids_ia[indices_ia[0], indices_ia[1]] = 1
+    
+    indices_ta = np.array([[t, ta.cid] for t, tas in enumerate(self._tas) for ta in tas]).T
+    cids_ta = np.zeros((self.length, self._num_classes_ta))
+    if len(indices_ta) > 0:
+      cids_ta[indices_ta[0], indices_ta[1]] = 1
+    
+    indices_att = np.array([[t, att.cid] for t, atts in enumerate(self._atts) for att in atts]).T
+    cids_att = np.zeros((self.length, self._num_classes_att))
+    if len(indices_att) > 0:
+      cids_att[indices_att[0], indices_att[1]] = 1
+    
+    indices_rel = np.array([[t, rel.cid] for t, rels in enumerate(self._rels) for rel in rels]).T
+    cids_rel = np.zeros((self.length, self._num_classes_rel))
+    if len(indices_rel) > 0:
+      cids_rel[indices_rel[0], indices_rel[1]] = 1
+
+    cids_predicate = np.concatenate((cids_ia, cids_ta, cids_att, cids_rel), axis=1)
+    return cids_predicate
 
   @property
   def length(self):
