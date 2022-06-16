@@ -24,21 +24,17 @@ pip install .
 
 
 ## Hierarchy
-| Level | <div style="width:200px">Concept</div>                                              | Representation                                                             |
-|-------|------------------------------------------------------|----------------------------------------------------------------------------|
-| 1     | Activity                                             | Semantic label                                                             |
-| 2     | Sub-activity                                         | Temporal boundary and semantic label                                       |
-| 3     | Higher-order interaction                             | Spatial-temporal scene graph                                               |
-|       | ┗━&emsp;Entity                                       | Graph node w/ bounding box, instance label, and semantic label             |
-|       | &emsp;&emsp;┣━&emsp;Actor                            | -                                                                          |
-|       | &emsp;&emsp;┗━&emsp;Object                           | -                                                                          |
-|       | ┗━&emsp;Predicate                                    | -                                                                          |
-|       | &emsp;&emsp;┗━&emsp;Binary predicate                 | Directed edge as a triplet (source node, semantic label, and target node)  |
-|       | &emsp;&emsp;&emsp;&emsp;┣━&emsp;Relationship         | -                                                                          |
-|       | &emsp;&emsp;&emsp;&emsp;┗━&emsp;Transitive action    | -                                                                          |
-|       | &emsp;&emsp;┗━&emsp;Unary predicate                  | Semantic label of a graph node as a pair (source node, semantic label)     |
-|       | &emsp;&emsp;&emsp;&emsp;┣━&emsp;Attribute            | -                                                                          |
-|       | &emsp;&emsp;&emsp;&emsp;┗━&emsp;Intransitive action  | -                                                                          |
+| Level | <div style="width:200px">Concept</div>              | Representation                                                             |
+|-------|-----------------------------------------------------|----------------------------------------------------------------------------|
+| 1     | Activity                                            | Semantic label                                                             |
+| 2     | Sub-activity                                        | Temporal boundary and semantic label                                       |
+| 3     | Higher-order interaction                            | Spatial-temporal scene graph                                               |
+|       | ┗━&emsp;Entity                                      | Graph node w/ bounding box, instance label, and semantic label             |
+|       | &emsp;&emsp;┣━&emsp;Actor                           | -                                                                          |
+|       | &emsp;&emsp;┗━&emsp;Object                          | -                                                                          |
+|       | ┗━&emsp;Predicate                                   | -                                                                          |
+|       | &emsp;&emsp;┗━&emsp;Relationship                    | Directed edge as a triplet (source node, semantic label, and target node)  |
+|       | &emsp;&emsp;┗━&emsp;Attribute                       | Semantic label of a graph node as a pair (source node, semantic label)     |
 
 ## Dataset directory layout
 ```
@@ -46,8 +42,9 @@ $ tree dir_moma
 .
 ├── anns
 │    ├── anns.json
-│    ├── split.json
+│    ├── split_std.json
 │    ├── split_fs.json
+│    ├── clips.json
 │    └── taxonomy
 └── videos
      ├── all
@@ -56,7 +53,9 @@ $ tree dir_moma
      ├── activity
      ├── sub_activity_fr
      ├── sub_activity
-     └── interaction
+     ├── interaction
+     ├── interaction_frames
+     └── interaction_video
 ```
 
 ## Scripts
