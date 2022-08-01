@@ -73,9 +73,9 @@ $ tree dir_moma
 
 ## Scripts
 
-`tests/preproc.py`: Pre-process the dataset. Don't run this script since the dataset has been pre-processed.
+`tests/run_preproc.py`: Pre-process the dataset. Don't run this script since the dataset has been pre-processed.
 
-`tests/visualize.py`: Visualize annotations and dataset statistics.
+`tests/run_visualize.py`: Visualize annotations and dataset statistics.
 
 ## Annotations
 
