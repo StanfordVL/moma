@@ -11,6 +11,15 @@ cd momatools
 pip install .
 ```
 
+You can install all the dependencies needed for MOMA-LRG by running
+
+```
+pip install -r requirements.txt
+```
+
+> **Warning**
+> Note that the dependency on `pygraphviz` requires the installation of `graphviz`, which can be installed via `sudo apt-get install graphviz graphviz-dev` on Linux systems and `brew install graphviz` via [Homebrew](https://brew.sh/) on macOS.
+
 #### Requirements:
 
 - Python 3.9+
