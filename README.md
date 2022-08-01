@@ -22,7 +22,7 @@ pip install -r requirements.txt
 
 #### Requirements:
 
-- Python 3.9+
+- Python 3.7+
 - ffmpeg (only for preprocessing): `pip install ffmpeg-python`
 - jsbeautifier (for better visualization of json files): `pip install jsbeautifier`
 
