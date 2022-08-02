@@ -3,13 +3,19 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to MOMA-LRG's documentation!
-====================================
+Welcome to the documentation for the MOMA-LRG dataset!
+=======================================================
+The **Multi-Object, Multi-Actor Dataset with Language Refined Graphs (MOMA-LRG)** is an novel benchmark designed to develop highly general and interpretable video understanding models. 
+
+The dataset is a research project from the `Stanford Vision and Learning Lab <svl.stanford.edu/>`_.
+
+.. note::
+   The dataset and its API are currently under active development. For the source code, please navigate to `this GitHub repository <https://github.com/d1ngn1gefe1/momatools/>`_.
 
 .. toctree::
-   :maxdepth: 2
-   :caption: Contents:
-
+   getting_started
+.. toctree::
+   moma
 
 
 Indices and tables

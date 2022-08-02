@@ -1,2 +1,6 @@
 from .moma import MOMA
-from .analysis import *
+#from .analysis import *
+
+__all__ = [
+    'moma',
+]

@@ -53,11 +53,19 @@ Definitions:
 
 
 class MOMA:
+  """
+  The MOMA dataset
+  """
   def __init__(self, dir_moma: str, paradigm: str='standard', reset_cache: bool=False):
     """
-     - dir_moma: directory of the MOMA dataset
-     - paradigm: 'standard' or 'few-shot'
-     - reset_cache: whether to regenerate cache
+    Creates the MOMA object used to interface with the dataset.
+    
+    :param dir_moma: directory of the MOMA dataset
+    :type dir_moma: str
+    :param paradigm: 'standard' or 'few-shot'
+    :type paradigm: str
+    :param reset_cache: whether to regenerate cache
+    :type reset_cache: bool
     """
     assert osp.isdir(osp.join(dir_moma, 'anns')) and osp.isdir(osp.join(dir_moma, 'videos'))
 
@@ -74,7 +82,7 @@ class MOMA:
 
   def get_cids(self, kind, threshold, split):
     """
-     - kind: ['act', 'sact', 'actor', 'object', 'ia', 'ta', 'att', 'rel']
+    :param kind: ['act', 'sact', 'actor', 'object', 'ia', 'ta', 'att', 'rel']
      - threshold: exclude classes with fewer than this number of instances
      - split: 'train', 'val', 'test', 'either', 'all', 'combined'
        - either: exclude a class if the smallest number of instances in across splits is less than the threshold
@@ -85,7 +93,8 @@ class MOMA:
     return cids
 
   def map_cids(self, split, cids_act_contiguous=None, cids_act=None, cids_sact_contiguous=None, cids_sact=None):
-    """ Map class IDs between standard class IDs and split-specific contiguous class IDs
+    """ 
+    Map class IDs between standard class IDs and split-specific contiguous class IDs
     For the few-shot paradigm only
     """
     assert self.paradigm == 'few-shot'
@@ -104,7 +113,8 @@ class MOMA:
 
   def get_cnames(self, cids_act=None, cids_sact=None, cids_actor=None, cids_object=None,
                  cids_ia=None, cids_ta=None, cids_att=None, cids_rel=None):
-    """ Get the associated class names given the class IDs
+    """ 
+    Get the associated class names given the class IDs
     """
     args = [cids_act, cids_sact, cids_actor, cids_object, cids_ia, cids_ta, cids_att, cids_rel]
     kinds = ['act', 'sact', 'actor', 'object', 'ia', 'ta', 'att', 'rel']
@@ -139,14 +149,14 @@ class MOMA:
 
   def get_ids_act(self, split: str=None, cnames_act: list=None,
                   ids_sact: list=None, ids_hoi: list=None) -> list:
-    """ Get the unique activity instance IDs that satisfy certain conditions
+    """Get the unique activity instance IDs that satisfy certain conditions 
     dataset split
-     - split: get activity IDs [ids_act] that belong to the given dataset split
+    - split: get activity IDs [ids_act] that belong to the given dataset split
     same-level
-     - cnames_act: get activity IDs [ids_act] for given activity class names [cnames_act]
+    - cnames_act: get activity IDs [ids_act] for given activity class names [cnames_act]
     bottom-up
-     - ids_sact: get activity IDs [ids_act] for given sub-activity IDs [ids_sact]
-     - ids_hoi: get activity IDs [ids_act] for given higher-order interaction IDs [ids_hoi]
+    - ids_sact: get activity IDs [ids_act] for given sub-activity IDs [ids_sact]
+    - ids_hoi: get activity IDs [ids_act] for given higher-order interaction IDs [ids_hoi]
     """
     if all(x is None for x in [split, cnames_act, ids_sact, ids_hoi]):
       return sorted(self.lookup.retrieve('ids_act'))
@@ -185,21 +195,22 @@ class MOMA:
                    cnames_actor: list=None, cnames_object: list=None,
                    cnames_ia: list=None, cnames_ta: list=None,
                    cnames_att: list=None, cnames_rel: list=None) -> list:
-    """ Get the unique sub-activity instance IDs that satisfy certain conditions
+    """ 
+    Get the unique sub-activity instance IDs that satisfy certain conditions
     dataset split
-     - split: get sub-activity IDs [ids_sact] that belong to the given dataset split
+    - split: get sub-activity IDs [ids_sact] that belong to the given dataset split
     same-level
-     - cnames_sact: get sub-activity IDs [ids_sact] for given sub-activity class names [cnames_sact]
+    - cnames_sact: get sub-activity IDs [ids_sact] for given sub-activity class names [cnames_sact]
     top-down
-     - ids_act: get sub-activity IDs [ids_sact] for given activity IDs [ids_act]
+    - ids_act: get sub-activity IDs [ids_sact] for given activity IDs [ids_act]
     bottom-up
-     - ids_hoi: get sub-activity IDs [ids_sact] for given higher-order interaction IDs [ids_hoi]
-     - cnames_actor: get sub-activity IDs [ids_sact] for given actor class names [cnames_actor]
-     - cnames_object: get sub-activity IDs [ids_sact] for given object class names [cnames_object]
-     - cnames_ia: get sub-activity IDs [ids_sact] for given intransitive action class names [cnames_ia]
-     - cnames_ta: get sub-activity IDs [ids_sact] for given transitive action class names [cnames_ta]
-     - cnames_att: get sub-activity IDs [ids_sact] for given attribute class names [cnames_att]
-     - cnames_rel: get sub-activity IDs [ids_sact] for given relationship class names [cnames_rel]
+    - ids_hoi: get sub-activity IDs [ids_sact] for given higher-order interaction IDs [ids_hoi]
+    - cnames_actor: get sub-activity IDs [ids_sact] for given actor class names [cnames_actor]
+    - cnames_object: get sub-activity IDs [ids_sact] for given object class names [cnames_object]
+    - cnames_ia: get sub-activity IDs [ids_sact] for given intransitive action class names [cnames_ia]
+    - cnames_ta: get sub-activity IDs [ids_sact] for given transitive action class names [cnames_ta]
+    - cnames_att: get sub-activity IDs [ids_sact] for given attribute class names [cnames_att]
+    - cnames_rel: get sub-activity IDs [ids_sact] for given relationship class names [cnames_rel]
     """
     if all(x is None for x in [split, cnames_sact, ids_act, ids_hoi, cnames_actor, cnames_object,
                                cnames_ia, cnames_ta, cnames_att, cnames_rel]):
@@ -250,17 +261,17 @@ class MOMA:
                   cnames_att: list=None, cnames_rel: list=None) -> list:
     """ Get the unique higher-order interaction instance IDs that satisfy certain conditions
     dataset split
-     - split: get higher-order interaction IDs [ids_hoi] that belong to the given dataset split
+    - split: get higher-order interaction IDs [ids_hoi] that belong to the given dataset split
     top-down
-     - ids_act: get higher-order interaction IDs [ids_hoi] for given activity IDs [ids_act]
-     - ids_sact: get higher-order interaction IDs [ids_hoi] for given sub-activity IDs [ids_sact]
+    - ids_act: get higher-order interaction IDs [ids_hoi] for given activity IDs [ids_act]
+    - ids_sact: get higher-order interaction IDs [ids_hoi] for given sub-activity IDs [ids_sact]
     bottom-up
-     - cnames_actor: get higher-order interaction IDs [ids_hoi] for given actor class names [cnames_actor]
-     - cnames_object: get higher-order interaction IDs [ids_hoi] for given object class names [cnames_object]
-     - cnames_ia: get higher-order interaction IDs [ids_hoi] for given intransitive action class names [cnames_ia]
-     - cnames_ta: get higher-order interaction IDs [ids_hoi] for given transitive action class names [cnames_ta]
-     - cnames_att: get higher-order interaction IDs [ids_hoi] for given attribute class names [cnames_att]
-     - cnames_rel: get higher-order interaction IDs [ids_hoi] for given relationship class names [cnames_rel]
+    - cnames_actor: get higher-order interaction IDs [ids_hoi] for given actor class names [cnames_actor]
+    - cnames_object: get higher-order interaction IDs [ids_hoi] for given object class names [cnames_object]
+    - cnames_ia: get higher-order interaction IDs [ids_hoi] for given intransitive action class names [cnames_ia]
+    - cnames_ta: get higher-order interaction IDs [ids_hoi] for given transitive action class names [cnames_ta]
+    - cnames_att: get higher-order interaction IDs [ids_hoi] for given attribute class names [cnames_att]
+    - cnames_rel: get higher-order interaction IDs [ids_hoi] for given relationship class names [cnames_rel]
     """
     if all(x is None for x in [split, ids_act, ids_sact, cnames_actor, cnames_object,
                                cnames_ia, cnames_ta, cnames_att, cnames_rel]):

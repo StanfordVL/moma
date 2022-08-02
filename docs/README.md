@@ -3,6 +3,7 @@
 To build locally, first install `sphinx` by running
 ```
 python -m pip install sphinx
+pip install furo
 ```
 inside of a virtual or conda environment.
 
