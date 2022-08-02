@@ -18,6 +18,7 @@ pip install -r requirements.txt
 ```
 
 > **Warning**
+>
 > Note that the dependency on `pygraphviz` requires the installation of `graphviz`, which can be installed via `sudo apt-get install graphviz graphviz-dev` on Linux systems and `brew install graphviz` via [Homebrew](https://brew.sh/) on macOS.
 
 #### Requirements:
@@ -49,6 +50,7 @@ pip install -r requirements.txt
 |       | &emsp;&emsp;┗━&emsp;Attribute          | Semantic label of a graph node as a pair (source node, semantic label)    |
 
 ## Dataset directory layout
+Download the dataset into a directory titled `dir_moma` with the structure below. The `anns` directory requires roughly 1.8GB of space and the video directory requires 436 GB.
 
 ```
 $ tree dir_moma
