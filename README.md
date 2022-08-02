@@ -50,7 +50,7 @@ pip install -r requirements.txt
 |       | &emsp;&emsp;┗━&emsp;Attribute          | Semantic label of a graph node as a pair (source node, semantic label)    |
 
 ## Dataset directory layout
-Download the dataset into a directory titled `dir_moma` with the structure below. The `anns` directory requires roughly 1.8GB of space and the video directory requires 436 GB.
+Download the dataset into a directory titled `dir_moma` with the structure below. The `anns` directory requires roughly 1.8GB of space and the `video` directory requires 436 GB.
 
 ```
 $ tree dir_moma
