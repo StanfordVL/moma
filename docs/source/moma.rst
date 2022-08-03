@@ -1,4 +1,4 @@
-MOMA-LRG
+MOMA
 ===========
 .. automodule:: momaapi.moma
     :members:

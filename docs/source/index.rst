@@ -15,7 +15,14 @@ The dataset is a research project from the `Stanford Vision and Learning Lab <sv
 .. toctree::
    getting_started
 .. toctree::
+   examples
+.. toctree::
+   :maxdepth: 1
+   :caption: API Reference
+
    moma
+   taxonomy
+
 
 
 Indices and tables
