@@ -12,7 +12,7 @@ kiwisolver==1.4.4
 matplotlib==3.5.2
 numpy
 packaging==21.3
-pandas==1.4.3
+pandas
 Pillow==9.2.0
 pygraphviz==1.9.0
 pyparsing==3.0.9
