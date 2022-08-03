@@ -10,7 +10,7 @@ idna==3.3
 jsbeautifier==1.14.4
 kiwisolver==1.4.4
 matplotlib==3.5.2
-numpy==1.23.1
+numpy
 packaging==21.3
 pandas==1.4.3
 Pillow==9.2.0
