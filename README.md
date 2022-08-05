@@ -27,6 +27,14 @@ pip install -r requirements.txt
 - ffmpeg (only for preprocessing): `pip install ffmpeg-python`
 - jsbeautifier (for better visualization of json files): `pip install jsbeautifier`
 
+Formatting is done via the [`black`](https://black.readthedocs.io/en/stable/getting_started.html) package. To format, first install black via:
+
+```
+pip install black
+```
+
+and then run `black .` in the `momatools` directory.
+
 #### Requirements: data visualization
 
 - [distinctipy](https://github.com/alan-turing-institute/distinctipy): a lightweight package for generating visually distinct colors
@@ -50,6 +58,7 @@ pip install -r requirements.txt
 |       | &emsp;&emsp;┗━&emsp;Attribute          | Semantic label of a graph node as a pair (source node, semantic label)    |
 
 ## Dataset directory layout
+
 Download the dataset into a directory titled `dir_moma` with the structure below. The `anns` directory requires roughly 1.8GB of space and the `video` directory requires 436 GB.
 
 ```
