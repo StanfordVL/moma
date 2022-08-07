@@ -35,6 +35,10 @@ map_cid(): maps activity and sub-activity class IDs between few-shot and standar
 
 
 class Lookup:
+    """
+    Lookup class
+    """
+
     def __init__(self, dir_moma, taxonomy, reset_cache):
         self.taxonomy = taxonomy
 

@@ -2,6 +2,19 @@ import numpy as np
 
 
 class Metadatum:
+    """
+    Metadata class for a video. The metadata contains information
+    for videos in the MOMA-LRG dataset, the properties of which are
+    detailed below.
+
+    :ivar id: Activity ID
+    :ivar fname: File name of the video
+    :ivar num_frames: Number of frames in the video
+    :ivar width: Width of the video resolution
+    :ivar height: Height of the video resolution
+    :ivar duration: Duration of the video in seconds
+    """
+
     def __init__(self, ann):
         self.id = ann["activity"]["id"]
         self.fname = ann["file_name"]
@@ -11,7 +24,12 @@ class Metadatum:
         self.duration = ann["duration"]
 
     def get_fid(self, time):
-        """Get the frame ID given a timestamp in seconds"""
+        """
+        Get the frame ID given a timestamp in seconds
+        :param time: Timestamp in seconds
+        :type time: float
+        """
+
         fps = (self.num_frames - 1) / self.duration
         fid = time * fps
         return fid
@@ -31,6 +49,16 @@ class Metadatum:
 
 
 class Act:
+    """
+    Class for an activity annotation.
+
+    :ivar cname: Activity class name
+    :ivar cid: Activity class ID
+    :ivar start: Start time of the activity in seconds
+    :ivar end: End time of the activity in seconds
+    :ivar ids_sact: List of sub-activity IDs
+    """
+
     def __init__(self, ann, taxonomy):
         self.id = ann["id"]
         self.cname = ann["class_name"]
@@ -44,6 +72,17 @@ class Act:
 
 
 class SAct:
+    """
+    Class for a sub-activity class annotation.
+
+    :ivar cname: Sub-activity class name
+    :ivar cid: Sub-activity class ID
+    :ivar start: Start time of the sub-activity in seconds, relative to the start of the activity video
+    :ivar end: End time of the sub-activity in seconds, relative to the start of the activity video
+    :ivar ids_hoi: List of higher-order interactions
+    :ivar times: Times of higher order interactions inside the video
+    """
+
     def __init__(
         self,
         ann,
@@ -150,6 +189,20 @@ class SAct:
 
 
 class AAct:
+    """
+    Class for an atomic action annotation. Atomic actions are unary
+    predicates that actors perform.
+
+    :ivar id_entity: Entity ID
+    :ivar kind_entity: type of the entity
+    :ivar cname_entity: Entity class name
+    :ivar cid_entity: Entity class ID
+    :ivar start: start time of the atomic action in seconds,
+        relative to the start of the activity video
+    :ivar end: end time of the atomic action in seconds,
+        relative to the start of the activity video
+    """
+
     def __init__(self, info, entities, ias, tas, atts, rels):
         entity = next(entity for entity in entities if entity is not None)
         self.id_entity = entity.id
@@ -229,6 +282,10 @@ class AAct:
 
 
 class HOI:
+    """
+    Higher order interactions
+    """
+
     def __init__(
         self,
         ann,
@@ -281,6 +338,10 @@ class Clip:
 
 
 class BBox:
+    """
+    Bounding box
+    """
+
     def __init__(self, ann):
         self.x, self.y, self.width, self.height = ann
 
@@ -316,6 +377,10 @@ class BBox:
 
 
 class Entity:
+    """
+    Entity
+    """
+
     def __init__(self, ann, kind, taxonomy):
         self.id = ann["id"]  # local instance ID
         self.kind = kind
@@ -329,6 +394,10 @@ class Entity:
 
 
 class Predicate:
+    """
+    Predicate
+    """
+
     def __init__(self, ann, kind, taxonomy):
         is_binary = "target_id" in ann
         self.kind = kind

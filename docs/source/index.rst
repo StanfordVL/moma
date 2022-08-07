@@ -21,7 +21,9 @@ The dataset is a research project from the `Stanford Vision and Learning Lab <sv
    :caption: API Reference
 
    moma
+   anns
    taxonomy
+   lookup
 
 
 
