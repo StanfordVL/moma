@@ -11,21 +11,21 @@ from .utils import timeit
 class Statistics(dict):
     def __init__(self, dir_moma, taxonomy, lookup, reset_cache):
         super().__init__()
-        self.taxonomy = taxonomy
-        self.lookup = lookup
+        self._taxonomy = taxonomy
+        self._lookup = lookup
         self.statistics = self._read_statistics(dir_moma, reset_cache)
         self._sanity_check()
 
     def get_cids(self, kind, threshold, paradigm, split):
-        assert paradigm in self.lookup.retrieve("paradigms")
-        assert split in self.lookup.retrieve("splits") + ["either", "all", "combined"]
+        assert paradigm in self._lookup.retrieve("paradigms")
+        assert split in self._lookup.retrieve("splits") + ["either", "all", "combined"]
 
         # exclude a class if the smallest number of instances in across splits is less than the threshold
         if split == "either":
             distribution = np.stack(
                 [
                     self.statistics[f"{paradigm}_{_split}"][kind]["distribution"]
-                    for _split in self.lookup.retrieve("splits")
+                    for _split in self._lookup.retrieve("splits")
                 ]
             )
             distribution = np.amin(distribution, axis=0)
@@ -35,7 +35,7 @@ class Statistics(dict):
             distribution = np.stack(
                 [
                     self.statistics[f"{paradigm}_{_split}"][kind]["distribution"]
-                    for _split in self.lookup.retrieve("splits")
+                    for _split in self._lookup.retrieve("splits")
                 ]
             )
             distribution = np.amax(distribution, axis=0)
@@ -56,27 +56,27 @@ class Statistics(dict):
         # standard
         assert (
             self.statistics["all"]["act"]["num_classes"]
-            == len(self.taxonomy["act"])
+            == len(self._taxonomy["act"])
             == self.statistics["standard_train"]["act"]["num_classes"]
             == self.statistics["standard_val"]["act"]["num_classes"]
             == self.statistics["standard_test"]["act"]["num_classes"]
         )
         assert (
             self.statistics["all"]["sact"]["num_classes"]
-            == len(self.taxonomy["sact"])
+            == len(self._taxonomy["sact"])
             == self.statistics["standard_train"]["sact"]["num_classes"]
             == self.statistics["standard_val"]["sact"]["num_classes"]
             == self.statistics["standard_test"]["sact"]["num_classes"]
         )
         assert (
             self.statistics["all"]["actor"]["num_classes"]
-            == len(self.taxonomy["actor"])
+            == len(self._taxonomy["actor"])
             == self.statistics["standard_train"]["actor"]["num_classes"]
             == self.statistics["standard_val"]["actor"]["num_classes"]
             == self.statistics["standard_test"]["actor"]["num_classes"]
         )
         # TODO: fix object taxonomy
-        # assert self.statistics['all']['object']['num_classes'] == len(self.taxonomy['object']) == \
+        # assert self.statistics['all']['object']['num_classes'] == len(self._taxonomy['object']) == \
         #        self.statistics['standard_train']['object']['num_classes'] == \
         #        self.statistics['standard_val']['object']['num_classes'] == \
         #        self.statistics['standard_test']['object']['num_classes']
@@ -91,7 +91,7 @@ class Statistics(dict):
         ][
             "num_classes"
         ] == len(
-            self.taxonomy["act"]
+            self._taxonomy["act"]
         )
         assert self.statistics["few-shot_train"]["sact"][
             "num_classes"
@@ -102,7 +102,7 @@ class Statistics(dict):
         ][
             "num_classes"
         ] == len(
-            self.taxonomy["sact"]
+            self._taxonomy["sact"]
         )
 
     def _save_cache(self, path_statistics, statistics):
@@ -118,8 +118,8 @@ class Statistics(dict):
 
     @timeit
     def _read_statistics(self, dir_moma, reset_cache):
-        paradigms = self.lookup.retrieve("paradigms")
-        splits = self.lookup.retrieve("splits")
+        paradigms = self._lookup.retrieve("paradigms")
+        splits = self._lookup.retrieve("splits")
 
         path_statistics = osp.join(dir_moma, "anns/cache/statistics.json")
         if reset_cache and osp.exists(path_statistics):
@@ -149,35 +149,37 @@ class Statistics(dict):
     def _get_statistics(self, paradigm=None, split=None):
         # subsample metadata, anns_act, anns_sact, and anns_hoi
         if paradigm is None and split is None:
-            metadata = self.lookup.retrieve("metadata")
-            anns_act = self.lookup.retrieve("anns_act")
-            anns_sact = self.lookup.retrieve("anns_sact")
-            anns_hoi = self.lookup.retrieve("anns_hoi")
+            metadata = self._lookup.retrieve("metadata")
+            anns_act = self._lookup.retrieve("anns_act")
+            anns_sact = self._lookup.retrieve("anns_sact")
+            anns_hoi = self._lookup.retrieve("anns_hoi")
         else:
             assert paradigm is not None and split is not None
-            ids_act = self.lookup.retrieve("ids_act", f"{paradigm}_{split}")
-            metadata = [self.lookup.retrieve("metadatum", id_act) for id_act in ids_act]
-            anns_act = [self.lookup.retrieve("ann_act", id_act) for id_act in ids_act]
+            ids_act = self._lookup.retrieve("ids_act", f"{paradigm}_{split}")
+            metadata = [
+                self._lookup.retrieve("metadatum", id_act) for id_act in ids_act
+            ]
+            anns_act = [self._lookup.retrieve("ann_act", id_act) for id_act in ids_act]
             ids_sact = list(
                 itertools.chain(
                     *[
-                        self.lookup.map_id("ids_sact", id_act=id_act)
+                        self._lookup.map_id("ids_sact", id_act=id_act)
                         for id_act in ids_act
                     ]
                 )
             )
             anns_sact = [
-                self.lookup.retrieve("ann_sact", id_sact) for id_sact in ids_sact
+                self._lookup.retrieve("ann_sact", id_sact) for id_sact in ids_sact
             ]
             ids_hoi = list(
                 itertools.chain(
                     *[
-                        self.lookup.map_id("ids_hoi", id_sact=id_sact)
+                        self._lookup.map_id("ids_hoi", id_sact=id_sact)
                         for id_sact in ids_sact
                     ]
                 )
             )
-            anns_hoi = [self.lookup.retrieve("ann_hoi", id_hoi) for id_hoi in ids_hoi]
+            anns_hoi = [self._lookup.retrieve("ann_hoi", id_hoi) for id_hoi in ids_hoi]
 
         # number of classes and instances
         num_acts = len(anns_act)
@@ -231,11 +233,11 @@ class Statistics(dict):
 
         # class distributions
         bincount_act = np.bincount(
-            [ann_act.cid for ann_act in anns_act], minlength=len(self.taxonomy["act"])
+            [ann_act.cid for ann_act in anns_act], minlength=len(self._taxonomy["act"])
         ).tolist()
         bincount_sact = np.bincount(
             [ann_sact.cid for ann_sact in anns_sact],
-            minlength=len(self.taxonomy["sact"]),
+            minlength=len(self._taxonomy["sact"]),
         ).tolist()
         (
             bincount_actor,
@@ -253,22 +255,22 @@ class Statistics(dict):
             bincount_att += [att.cid for att in ann_hoi.atts]
             bincount_rel += [rel.cid for rel in ann_hoi.rels]
         bincount_actor = np.bincount(
-            bincount_actor, minlength=len(self.taxonomy["actor"])
+            bincount_actor, minlength=len(self._taxonomy["actor"])
         ).tolist()
         bincount_object = np.bincount(
-            bincount_object, minlength=len(self.taxonomy["object"])
+            bincount_object, minlength=len(self._taxonomy["object"])
         ).tolist()
         bincount_ia = np.bincount(
-            bincount_ia, minlength=len(self.taxonomy["ia"])
+            bincount_ia, minlength=len(self._taxonomy["ia"])
         ).tolist()
         bincount_ta = np.bincount(
-            bincount_ta, minlength=len(self.taxonomy["ta"])
+            bincount_ta, minlength=len(self._taxonomy["ta"])
         ).tolist()
         bincount_att = np.bincount(
-            bincount_att, minlength=len(self.taxonomy["att"])
+            bincount_att, minlength=len(self._taxonomy["att"])
         ).tolist()
         bincount_rel = np.bincount(
-            bincount_rel, minlength=len(self.taxonomy["rel"])
+            bincount_rel, minlength=len(self._taxonomy["rel"])
         ).tolist()
 
         # curate statistics
@@ -292,9 +294,7 @@ class Statistics(dict):
                 "duration_total": duration_total_sact,
                 "distribution": bincount_sact,
             },
-            "hoi": {
-                "num_instances": num_hois,
-            },
+            "hoi": {"num_instances": num_hois,},
             "actor": {
                 "num_instances_image": num_actors_image,
                 "num_instances_video": num_actors_video,
