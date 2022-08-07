@@ -50,7 +50,9 @@ class Metadatum:
 
 class Act:
     """
-    Class for an activity annotation.
+    Class for an activity annotation. An **activity** is the coarsest level of
+    annotation, consisting of a series of subactivities that are decomposed into
+    smaller subactivities.
 
     :ivar cname: Activity class name
     :ivar cid: Activity class ID
@@ -73,7 +75,10 @@ class Act:
 
 class SAct:
     """
-    Class for a sub-activity class annotation.
+    Class for a sub-activity class annotation. A **subactivity** is a finer
+    grained level of annotation which refers to a step taken as part of an activity.
+    It is temporallly localized within the activity (that is, it has a start and
+    end time in seconds that are `relative to the start of the activity`).
 
     :ivar cname: Sub-activity class name
     :ivar cid: Sub-activity class ID
@@ -191,7 +196,7 @@ class SAct:
 class AAct:
     """
     Class for an atomic action annotation. Atomic actions are unary
-    predicates that actors perform.
+    predicates that `actors` perform.
 
     :ivar id_entity: Entity ID
     :ivar kind_entity: type of the entity
@@ -283,7 +288,16 @@ class AAct:
 
 class HOI:
     """
-    Higher order interactions
+    Class for a higher order interaction. A **higher-order interaction**,
+    abbreviated as HOI, is a predicate involving `two or more entities`.
+
+    :ivar id: HOI annotation ID
+    :ivar time: time of the HOI annotation in seconds, relative to the start of the activity video
+    :ivar actors: list of actor entities involved in the interaction
+    :ivar ias: list of intransitive actions occuring between actors
+    :ivar tas: list of transitive actions occuring between actors
+    :ivar atts: list of attributes that the actor has
+    :ivar rels: list of relationships between entities in the interaction
     """
 
     def __init__(
@@ -326,7 +340,8 @@ class HOI:
 
 
 class Clip:
-    """A clip corresponds to a 1 second/5 frames video clip centered at the higher-order interaction
+    """
+    A clip corresponds to a 1 second/5 frames video clip centered at the higher-order interaction
     - <1 second/5 frames if exceeds the raw video boundary
     - Currently, only clips from the test set have been generated
     """
@@ -339,7 +354,13 @@ class Clip:
 
 class BBox:
     """
-    Bounding box
+    Bounding box in the form of [x, y, w, h]. These are utilized to localize
+    entities.
+
+    :ivar x: x-coordinate of the top-left corner of the bounding box
+    :ivar y: y-coordinate of the top-left corner of the bounding box
+    :ivar w: width of the bounding box
+    :ivar h: height of the bounding box
     """
 
     def __init__(self, ann):
@@ -378,7 +399,14 @@ class BBox:
 
 class Entity:
     """
-    Entity
+    Class of an annotation of an entity. Entities are the building blocks of
+    interactions. They are either human actors or inhuman objects.
+
+    :ivar id: entity ID
+    :ivar kind: kind of the entity, either "actor" or "object"
+    :ivar cname: class name of the entity
+    :ivar cid: class ID of the entity
+    :ivar bbox: bounding box of the entity
     """
 
     def __init__(self, ann, kind, taxonomy):
@@ -395,7 +423,15 @@ class Entity:
 
 class Predicate:
     """
-    Predicate
+    Predicate class, representing unary and binary predicates. **Predicates** are
+    of the form ``[src] (cid) [trg]``, where ``src`` refers to the "source entity"
+    performing the action and ``trg`` to the "target entity" who is affected
+    by the source entity.
+
+    :ivar kind: kind of the predicate
+    :ivar cname: class name of the predicate
+    :ivar id_src: ID of the source entity
+    :ivar id_trg: ID of the target entity
     """
 
     def __init__(self, ann, kind, taxonomy):
