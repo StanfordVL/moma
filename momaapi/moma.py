@@ -5,7 +5,7 @@ import os.path as osp
 from .taxonomy import Taxonomy
 from .lookup import Lookup
 from .statistics import Statistics
-from typing import Literal
+from typing_extensions import Literal
 
 
 """
