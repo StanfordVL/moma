@@ -5,6 +5,7 @@ import os.path as osp
 from .taxonomy import Taxonomy
 from .lookup import Lookup
 from .statistics import Statistics
+from typing import Literal
 
 
 """
@@ -65,7 +66,7 @@ class MOMA:
     :param dir_moma: directory containing the MOMA dataset
     :type dir_moma: str
     :param paradigm: the experiment configuration, which is either ``'standard'`` or ``'few-shot'``
-    :type paradigm: str
+    :type paradigm: Literal['standard', 'few-shot']
     :param reset_cache: flag that indicates whether to reset cached data
     :type reset_cache: bool
     :param taxonomy: a Taxonomy object containing information about the dataset taxonomy
@@ -78,7 +79,10 @@ class MOMA:
     """
 
     def __init__(
-        self, dir_moma: str, paradigm: str = "standard", reset_cache: bool = False
+        self,
+        dir_moma: str,
+        paradigm: Literal["standard", "few-shot"] = "standard",
+        reset_cache: bool = False,
     ):
         """
         Constructor for MOMA-LRG
@@ -98,10 +102,15 @@ class MOMA:
     def num_classes(self):
         return self.taxonomy.get_num_classes()[self.paradigm]
 
-    def get_cids(self, kind, threshold, split):
+    def get_cids(
+        self,
+        kind: Literal["act", "sact", "actor", "object", "ia", "ta", "att", "rel"],
+        threshold: int,
+        split: Literal["train", "val", "test", "either", "all", "combined"],
+    ) -> list:
         """
         :param kind: the kind of annotations needed to be retrieved
-        :type kind: ``Union['act', 'sact', 'actor', 'object', 'ia', 'ta', 'att', 'rel']``
+        :type kind: Literal['act', 'sact', 'actor', 'object', 'ia', 'ta', 'att', 'rel']
         :param threshold: exclude classes with fewer than this number of total instances
         :type threshold: int
         :param split: the split to be used for the retrieval. Here, ``train`` refers to
@@ -111,7 +120,7 @@ class MOMA:
           a class if the largest number of instances in across splits is less than the
           threshold, and ``combined`` will exclude a class if the smallest number of
           instances in across splits is less than the threshold
-        :type split: ``Union['train', 'val', 'test', 'either', 'all', 'combined']``
+        :type split: Literal['train', 'val', 'test', 'either', 'all', 'combined']
         :return: a list of class IDs
         :rtype: List[int]
         """
@@ -120,18 +129,18 @@ class MOMA:
 
     def map_cids(
         self,
-        split,
-        cids_act_contiguous=None,
-        cids_act=None,
-        cids_sact_contiguous=None,
-        cids_sact=None,
-    ):
+        split: Literal["train", "val", "test", "either", "all", "combined"],
+        cids_act_contiguous: list = None,
+        cids_act: list = None,
+        cids_sact_contiguous: list = None,
+        cids_sact: list = None,
+    ) -> list:
         """
         Map class IDs between standard class IDs and split-specific contiguous class IDs.
         **For the few-shot paradigm only**.
 
         :param split: the dataset split to use
-        :type split: ``Union['train', 'val', 'test', 'either', 'all', 'combined']``
+        :type split: Literal['train', 'val', 'test', 'either', 'all', 'combined']
         :param cids_act_contiguous: a list of contiguous class IDs in the activity set
         :type cids_act_contiguous: Optional[List[int]]
         :param cids_act: a list of class IDs in the activity set
@@ -183,17 +192,36 @@ class MOMA:
 
     def get_cnames(
         self,
-        cids_act=None,
-        cids_sact=None,
-        cids_actor=None,
-        cids_object=None,
-        cids_ia=None,
-        cids_ta=None,
-        cids_att=None,
-        cids_rel=None,
-    ):
+        cids_act: list = None,
+        cids_sact: list = None,
+        cids_actor: list = None,
+        cids_object: list = None,
+        cids_ia: list = None,
+        cids_ta: list = None,
+        cids_att: list = None,
+        cids_rel: list = None,
+    ) -> list:
         """
         Returns the associated class names given the class IDs.
+
+        :param cids_act: a list of class IDs of activities
+        :type cids_act: Optional[List[int]]
+        :param cids_sact: a list of class IDs of sub-activities
+        :type cids_sact: Optional[List[int]]
+        :param cids_actor: a list of class IDs of actors
+        :type cids_actor: Optional[List[int]]
+        :param cids_object: a list of class IDs of objects
+        :type cids_object: Optional[List[int]]
+        :param cids_ia: a list of class IDs of intransitive actions
+        :type cids_ia: Optional[List[int]]
+        :param cids_ta: a list of class IDs of transitive actions
+        :type cids_ta: Optional[List[int]]
+        :param cids_att: a list of class IDs of attributes
+        :type cids_att: Optional[List[int]]
+        :param cids_rel: a list of class IDs of relationships
+        :type cids_rel: Optional[List[int]]
+        :return: a list of class names
+        :rtype: List[str]
         """
         args = [
             cids_act,
@@ -216,7 +244,7 @@ class MOMA:
         cnames = [self.taxonomy[kind][cid] for cid in cids]
         return cnames
 
-    def is_sact(self, id_act, time, absolute=False):
+    def is_sact(self, id_act: int, time: int, absolute: bool = False) -> bool:
         """
         Checks whether a certain time in an activity has a sub-activity.
 
@@ -438,12 +466,10 @@ class MOMA:
         dataset split
 
         :param split: get higher-order interaction IDs [ids_hoi] that belong to the given dataset split
-          top-down
         :type split: ``Union['train', 'val', 'test', 'either', 'all', 'combined']``
         :param ids_act: get higher-order interaction IDs [ids_hoi] for given activity IDs [ids_act]
         :type ids_act: list
         :param ids_sact: get higher-order interaction IDs [ids_hoi] for given sub-activity IDs [ids_sact]
-          bottom-up
         :type ids_sact: list
         :param cnames_actor: get higher-order interaction IDs [ids_hoi] for given actor class names [cnames_actor]
         :type cnames_actor: list
@@ -525,18 +551,55 @@ class MOMA:
         return ids_hoi_intersection
 
     def get_metadata(self, ids_act: list) -> list:
+        """
+        Get the metadata for the given activity IDs. The metadata returned
+        is that associated with the raw videos that contain instances of the
+        activity IDs.
+
+        :param ids_act: get metadata for the given activity IDs
+        :return: video metadata for the given activity ID
+        :rtype: list
+        """
         return [self.lookup.retrieve("metadatum", id_act) for id_act in ids_act]
 
     def get_anns_act(self, ids_act: list) -> list:
+        """
+        Given activity instance IDs, return their annotations
+
+        :param ids_act: activity instance IDs
+        :return: annotations for the given activity instance IDs
+        :rtype: list
+        """
         return [self.lookup.retrieve("ann_act", id_act) for id_act in ids_act]
 
     def get_anns_sact(self, ids_sact: list) -> list:
+        """
+        Given sub-activity instance IDs, return their annotations
+
+        :param ids_sact: sub-activity instance IDs
+        :return: annotations for the given sub-activity instance IDs
+        :rtype: list
+        """
         return [self.lookup.retrieve("ann_sact", id_sact) for id_sact in ids_sact]
 
     def get_anns_hoi(self, ids_hoi: list) -> list:
+        """
+        Given higher-order interaction instance IDs, return their annotations
+
+        :param ids_hoi: higher-order interaction instance IDs
+        :return: annotations for the given higher-order interaction instance IDs
+        :rtype: list
+        """
         return [self.lookup.retrieve("ann_hoi", id_hoi) for id_hoi in ids_hoi]
 
     def get_clips(self, ids_hoi: list) -> list:
+        """
+        Given higher-order interaction instance IDs, return their clips
+
+        :param ids_hoi: higher-order interaction instance IDs
+        :return: clips for the given higher-order interaction instance IDs
+        :rtype: list
+        """
         return [self.lookup.retrieve("clip", id_hoi) for id_hoi in ids_hoi]
 
     def get_paths(
@@ -548,6 +611,24 @@ class MOMA:
         full_res: bool = False,
         sanity_check: bool = True,
     ) -> list:
+        """
+        Given activity, sub-activity, higher-order interaction, or clip IDs, return the paths to the videos.
+
+        :param ids_act: activity instance IDs
+        :type ids_act: list
+        :param ids_sact: sub-activity instance IDs
+        :type ids_sact: list
+        :param ids_hoi: higher-order interaction instance IDs
+        :type ids_hoi: list
+        :param id_hoi_clip: clip ID
+        :type id_hoi_clip: str
+        :param full_res: return full-resolution videos
+        :type full_res: bool
+        :param sanity_check: check that the video exists
+        :type sanity_check: bool
+        :return: paths to the videos
+        :rtype: list
+        """
         assert (
             sum([x is not None for x in [ids_act, ids_sact, ids_hoi, id_hoi_clip]]) == 1
         )
@@ -595,7 +676,19 @@ class MOMA:
     def sort(
         self, ids_sact: list = None, ids_hoi: list = None, sanity_check: bool = True
     ):
-        """Given a list of sub-activity or higher-order interaction instance IDs, return them in sorted order"""
+        """
+        Given a list of sub-activity or higher-order interaction instance IDs, return them in sorted order
+        by when they occured in the video.
+
+        :param ids_sact: sub-activity instance IDs
+        :type ids_sact: list
+        :param ids_hoi: higher-order interaction instance IDs
+        :type ids_hoi: list
+        :param sanity_check: check that the video exists
+        :type sanity_check: bool
+        :return: sorted IDs
+        :rtype: list
+        """
         assert sum([x is not None for x in [ids_sact, ids_hoi]]) == 1
 
         if ids_sact is not None:
