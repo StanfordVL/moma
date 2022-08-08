@@ -45,17 +45,17 @@ and then run `black .` in the `momatools` directory.
 
 ## Hierarchy
 
-| Level | <div style="width:200px">Concept</div> | Representation                                                            |
-| ----- | -------------------------------------- | ------------------------------------------------------------------------- |
-| 1     | Activity                               | Semantic label                                                            |
-| 2     | Sub-activity                           | Temporal boundary and semantic label                                      |
-| 3     | Higher-order interaction               | Spatial-temporal scene graph                                              |
-|       | ┗━&emsp;Entity                         | Graph node w/ bounding box, instance label, and semantic label            |
-|       | &emsp;&emsp;┣━&emsp;Actor              | -                                                                         |
-|       | &emsp;&emsp;┗━&emsp;Object             | -                                                                         |
-|       | ┗━&emsp;Predicate                      | -                                                                         |
-|       | &emsp;&emsp;┗━&emsp;Relationship       | Directed edge as a triplet (source node, semantic label, and target node) |
-|       | &emsp;&emsp;┗━&emsp;Attribute          | Semantic label of a graph node as a pair (source node, semantic label)    |
+| Level | Concept&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | Representation |
+| ----- | -------------------------------- | ---------------------------------------------------------------|
+| 1     | Activity                         | Semantic label                                                 |
+| 2     | Sub-activity                     | Temporal boundary and semantic label                           |
+| 3     | Atomic action                    | Spatial-temporal scene graph                                   |
+|       | ┗━&emsp;Entity                   | Graph node w/ bounding box, instance label, and semantic label |
+|       | &emsp;&emsp;┣━&emsp;Actor        | Same as above                                                  |
+|       | &emsp;&emsp;┗━&emsp;Object       | Same as above                                                  |
+|       | ┗━&emsp;Predicate                | A tuple containing a predicate and its associated entities     |
+|       | &emsp;&emsp;┗━&emsp;Relationship | A triple `(source node, semantic label, and target node)` that appears as a directed edge on an activity graph |
+|       | &emsp;&emsp;┗━&emsp;Attribute    | A double `(source node, semantic label)` that appears as a semantic label for a graph node on an activity graph |
 
 ## Dataset directory layout
 
