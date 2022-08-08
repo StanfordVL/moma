@@ -7,7 +7,7 @@ Welcome to the documentation for the MOMA-LRG dataset!
 =======================================================
 The **Multi-Object, Multi-Actor Dataset with Language Refined Graphs (MOMA-LRG)** is an novel benchmark designed to develop highly general and interpretable video understanding models. 
 
-The dataset is a research project from the `Stanford Vision and Learning Lab <svl.stanford.edu/>`_.
+The dataset is a research project from the `Stanford Vision and Learning Lab <https://svl.stanford.edu/>`_.
 
 .. note::
    The dataset and its API are currently under active development. For the source code, please navigate to `this GitHub repository <https://github.com/d1ngn1gefe1/momatools/>`_.
