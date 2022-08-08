@@ -2,6 +2,19 @@ import numpy as np
 
 
 class Metadatum:
+    """
+    Metadata class for a video. The metadata contains information
+    for videos in the MOMA-LRG dataset, the properties of which are
+    detailed below.
+
+    :ivar id: Activity ID
+    :ivar fname: File name of the video
+    :ivar num_frames: Number of frames in the video
+    :ivar width: Width of the video resolution
+    :ivar height: Height of the video resolution
+    :ivar duration: Duration of the video in seconds
+    """
+
     def __init__(self, ann):
         self.id = ann["activity"]["id"]
         self.fname = ann["file_name"]
@@ -11,7 +24,12 @@ class Metadatum:
         self.duration = ann["duration"]
 
     def get_fid(self, time):
-        """Get the frame ID given a timestamp in seconds"""
+        """
+        Get the frame ID given a timestamp in seconds
+        :param time: Timestamp in seconds
+        :type time: float
+        """
+
         fps = (self.num_frames - 1) / self.duration
         fid = time * fps
         return fid
@@ -31,6 +49,18 @@ class Metadatum:
 
 
 class Act:
+    """
+    Class for an activity annotation. An **activity** is the coarsest level of
+    annotation, consisting of a series of subactivities that are decomposed into
+    smaller subactivities.
+
+    :ivar cname: Activity class name
+    :ivar cid: Activity class ID
+    :ivar start: Start time of the activity in seconds
+    :ivar end: End time of the activity in seconds
+    :ivar ids_sact: List of sub-activity IDs
+    """
+
     def __init__(self, ann, taxonomy):
         self.id = ann["id"]
         self.cname = ann["class_name"]
@@ -44,6 +74,20 @@ class Act:
 
 
 class SAct:
+    """
+    Class for a sub-activity class annotation. A **subactivity** is a finer
+    grained level of annotation which refers to a step taken as part of an activity.
+    It is temporallly localized within the activity (that is, it has a start and
+    end time in seconds that are `relative to the start of the activity`).
+
+    :ivar cname: Sub-activity class name
+    :ivar cid: Sub-activity class ID
+    :ivar start: Start time of the sub-activity in seconds, relative to the start of the activity video
+    :ivar end: End time of the sub-activity in seconds, relative to the start of the activity video
+    :ivar ids_hoi: List of higher-order interactions
+    :ivar times: Times of higher order interactions inside the video
+    """
+
     def __init__(
         self,
         ann,
@@ -150,6 +194,20 @@ class SAct:
 
 
 class AAct:
+    """
+    Class for an atomic action annotation. Atomic actions are unary
+    predicates that `actors` perform.
+
+    :ivar id_entity: Entity ID
+    :ivar kind_entity: type of the entity
+    :ivar cname_entity: Entity class name
+    :ivar cid_entity: Entity class ID
+    :ivar start: start time of the atomic action in seconds,
+        relative to the start of the activity video
+    :ivar end: end time of the atomic action in seconds,
+        relative to the start of the activity video
+    """
+
     def __init__(self, info, entities, ias, tas, atts, rels):
         entity = next(entity for entity in entities if entity is not None)
         self.id_entity = entity.id
@@ -229,6 +287,19 @@ class AAct:
 
 
 class HOI:
+    """
+    Class for a higher order interaction. A **higher-order interaction**,
+    abbreviated as HOI, is a predicate involving `two or more entities`.
+
+    :ivar id: HOI annotation ID
+    :ivar time: time of the HOI annotation in seconds, relative to the start of the activity video
+    :ivar actors: list of actor entities involved in the interaction
+    :ivar ias: list of intransitive actions occuring between actors
+    :ivar tas: list of transitive actions occuring between actors
+    :ivar atts: list of attributes that the actor has
+    :ivar rels: list of relationships between entities in the interaction
+    """
+
     def __init__(
         self,
         ann,
@@ -269,7 +340,8 @@ class HOI:
 
 
 class Clip:
-    """A clip corresponds to a 1 second/5 frames video clip centered at the higher-order interaction
+    """
+    A clip corresponds to a 1 second/5 frames video clip centered at the higher-order interaction
     - <1 second/5 frames if exceeds the raw video boundary
     - Currently, only clips from the test set have been generated
     """
@@ -281,6 +353,16 @@ class Clip:
 
 
 class BBox:
+    """
+    Bounding box in the form of [x, y, w, h]. These are utilized to localize
+    entities.
+
+    :ivar x: x-coordinate of the top-left corner of the bounding box
+    :ivar y: y-coordinate of the top-left corner of the bounding box
+    :ivar w: width of the bounding box
+    :ivar h: height of the bounding box
+    """
+
     def __init__(self, ann):
         self.x, self.y, self.width, self.height = ann
 
@@ -316,6 +398,17 @@ class BBox:
 
 
 class Entity:
+    """
+    Class of an annotation of an entity. Entities are the building blocks of
+    interactions. They are either human actors or inhuman objects.
+
+    :ivar id: entity ID
+    :ivar kind: kind of the entity, either "actor" or "object"
+    :ivar cname: class name of the entity
+    :ivar cid: class ID of the entity
+    :ivar bbox: bounding box of the entity
+    """
+
     def __init__(self, ann, kind, taxonomy):
         self.id = ann["id"]  # local instance ID
         self.kind = kind
@@ -329,6 +422,18 @@ class Entity:
 
 
 class Predicate:
+    """
+    Predicate class, representing unary and binary predicates. **Predicates** are
+    of the form ``[src] (cid) [trg]``, where ``src`` refers to the "source entity"
+    performing the action and ``trg`` to the "target entity" who is affected
+    by the source entity.
+
+    :ivar kind: kind of the predicate
+    :ivar cname: class name of the predicate
+    :ivar id_src: ID of the source entity
+    :ivar id_trg: ID of the target entity
+    """
+
     def __init__(self, ann, kind, taxonomy):
         is_binary = "target_id" in ann
         self.kind = kind

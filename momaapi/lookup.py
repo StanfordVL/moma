@@ -35,6 +35,10 @@ map_cid(): maps activity and sub-activity class IDs between few-shot and standar
 
 
 class Lookup:
+    """
+    Lookup utility class to help lookup annotations.
+    """
+
     def __init__(self, dir_moma, taxonomy, reset_cache):
         self.taxonomy = taxonomy
 
@@ -174,6 +178,21 @@ class Lookup:
         return paradigm_and_split_to_ids_act
 
     def retrieve(self, kind, key=None):
+        """
+        Accesses the value given a key. There are several different ways to retrieve:
+
+            * Convert a ``split`` into ``ids_act`` (one-to-many):
+                ``retrieve(kind='id_act', key=split)``
+            * Convert an ``id_act`` into an ``ann_act``, metadatum (one-to-one):
+                ``retrieve(kind='ann_act' or 'metadatum', key=id_act)``
+            * Convert an ``id_sact`` into an ``ann_sact`` (one-to-one):
+                ``retrieve(kind='ann_sact', key=id_sact)``
+            * Convert an ``id_hoi`` into an ``ann_hoi`` or a ``clip`` (one-to-one):
+                ``retrieve(kind='ann_hoi' or 'clip', key=id_hoi)``
+
+        :param kind: indicates the type of retrieval that is used
+        :type kind: Literal["paradigms","splits","ids_act","ids_sact","ids_hoi","anns_act","metadata","anns_sact","anns_hoi","clips",]
+        """
         if key is None:
             assert kind in [
                 "paradigms",
@@ -239,6 +258,24 @@ class Lookup:
         raise ValueError(f"retrieve(kind={kind}, key={key})")
 
     def map_id(self, kind, id_act=None, id_sact=None, id_hoi=None):
+        """
+        Maps instance IDs across the MOMA hierarchy. Usage:
+
+            * Convert an ``id_act`` into ``ids_sact`` (one-to-many):
+                ``map_id(id_act=id_act, kind='sact')``
+            * Convert an ``id_act`` into ``ids_hoi`` (one-to-many):
+                ``map_id(id_act=id_act, kind='hoi')``
+            * Convert an ``id_sact`` into ``id_act`` (one-to-one):
+                ``map_id(id_sact=id_sact, kind='act')``
+            * Convert an ``id_sact`` into ``ids_hoi`` (one-to-many):
+                ``map_id(id_sact=id_sact, kind='hoi')``
+            * Convert an ``id_hoi`` into ``id_sact`` (one-to-one):
+                ``map_id(id_hoi=id_hoi, kind='sact')``
+            * Convert an ``id_hoi`` into ``id_act`` (one-to-one):
+                ``map_id(id_hoi=id_hoi, kind='act')``
+
+        """
+
         assert sum([x is not None for x in [id_act, id_sact, id_hoi]]) == 1
         assert kind in ["id_act", "id_sact", "ids_sact", "id_hoi", "ids_hoi"]
 

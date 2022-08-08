@@ -294,7 +294,9 @@ class Statistics(dict):
                 "duration_total": duration_total_sact,
                 "distribution": bincount_sact,
             },
-            "hoi": {"num_instances": num_hois,},
+            "hoi": {
+                "num_instances": num_hois,
+            },
             "actor": {
                 "num_instances_image": num_actors_image,
                 "num_instances_video": num_actors_video,

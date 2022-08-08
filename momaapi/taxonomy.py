@@ -6,6 +6,21 @@ from .data import Bidict, OrderedBidict
 
 
 class Taxonomy(dict):
+    """
+    The MOMA taxonomy object is a dictionary that contains information about
+    the MOMA hierarchy. This typically should not be used, but contains information
+    about different levels of the MOMA hierarchy for each split of the dataset.
+
+    Printing the Taxonomy can be done via
+
+    .. code-block:: python
+
+        from momaapi import MOMA
+        moma = MOMA(dir_moma)
+        print(moma.taxonomy)
+
+    """
+
     def __init__(self, dir_moma):
         super().__init__()
         self.taxonomy = self._read_taxonomy(dir_moma)
