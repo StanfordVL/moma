@@ -24,12 +24,3 @@ The dataset is a research project from the `Stanford Vision and Learning Lab <sv
    anns
    taxonomy
    lookup
-
-
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`

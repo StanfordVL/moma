@@ -11,6 +11,7 @@ as follows:
 .. code-block:: python
 
     import momaapi
+    dir_moma = "my/moma/directory"
     moma = momaapi.MOMA(dir_moma)
 
 Getting access to the underlying data can be done via calling methods on
@@ -32,3 +33,17 @@ To evaluate on few-shot, create a MOMA object by running:
 
 The interface is the same as in the standard paradigm.
 
+Working with the data
+---------------------
+After creating a MOMA object, you can interface with the dataset through
+a very simple API. Let's say that you wanted to retrieve the annotations
+for all videos containing the activity class ``"basketball game"`` in the
+validation set. You could run
+
+.. code-block:: python
+
+    ids_act = moma.get_ids_act(split="val", cnames_act=["basketball game"])
+    anns_act = moma.get_anns_act(ids_act)
+
+``anns_act`` now contains a list of Activity annotations, each containing
+metadata on a different instance of a basketball game. 
