@@ -1,7 +1,24 @@
+<div align="center">
+
 # MOMA-LRG
 
-MOMA-LRG is a dataset dedicated to multi-object, multi-actor activity parsing.
+**A dataset dedicated to multi-object, multi-actor activity parsing.**
 ![activity](figures/moma.gif)
+[[Website]](https://moma.stanford.edu/)
+[[Preprocessing Tools]](https://github.com/d1ngn1gefe1/momatools)
+[[MOMA 1.0 Paper]](https://proceedings.neurips.cc/paper/2021/file/95688ba636a4720a85b3634acfec8cdd-Paper.pdf)
+
+___
+</div>
+
+
+## Contents
+- [Installation](#installation)
+- [MOMA Hierarchy](#moma-hierarchy)
+- [Dataset Statistics](#dataset-statistics)
+  - [Class Distributions](#class-distributions)
+- [Dataset Layout](#dataset-layout)
+- [Annotation Schema](#annotation-schema)
 
 ## Installation
 
@@ -43,7 +60,7 @@ and then run `black .` in the `momatools` directory.
 - seaborn: a data visualization library based on matplotlib
 - Torchvision
 
-## Hierarchy
+## MOMA Hierarchy
 
 | Level | Concept&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | Representation |
 | ----- | -------------------------------- | ---------------------------------------------------------------|
@@ -57,38 +74,8 @@ and then run `black .` in the `momatools` directory.
 |       | &emsp;&emsp;┗━&emsp;Relationship | A triple `(source node, semantic label, and target node)` that appears as a directed edge on an activity graph |
 |       | &emsp;&emsp;┗━&emsp;Attribute    | A double `(source node, semantic label)` that appears as a semantic label for a graph node on an activity graph |
 
-## Dataset directory layout
 
-Download the dataset into a directory titled `dir_moma` with the structure below. The `anns` directory requires roughly 1.8GB of space and the `video` directory requires 436 GB.
-
-```
-$ tree dir_moma
-.
-├── anns
-│    ├── anns.json
-│    ├── split_std.json
-│    ├── split_fs.json
-│    ├── clips.json
-│    └── taxonomy
-└── videos
-     ├── all
-     ├── raw
-     ├── activity_fr
-     ├── activity
-     ├── sub_activity_fr
-     ├── sub_activity
-     ├── interaction
-     ├── interaction_frames
-     └── interaction_video
-```
-
-## Scripts
-
-`tests/run_preproc.py`: Pre-process the dataset. Don't run this script since the dataset has been pre-processed.
-
-`tests/run_visualize.py`: Visualize annotations and dataset statistics.
-
-## Annotations
+## Dataset Statistics
 
 In this version, we include:
 
@@ -103,7 +90,48 @@ In this version, we include:
 - 52,072 **transitive action** instances from [33 classes](https://raw.githubusercontent.com/d1ngn1gefe1/momatools/main/figures/transitive_action.png?token=GHSAT0AAAAAABQHYNY3VTPGYBKO52XBPEUUYPUG7WQ).
 - 442,981 **intransitive action** instances from [9 classes](https://raw.githubusercontent.com/d1ngn1gefe1/momatools/main/figures/intransitive_action.png?token=GHSAT0AAAAAABQHYNY2O4HYZFXUG3S7M5UMYPUG7XA).
 
-Below, we show the syntax of the MOMA-LRG annotations.
+
+### Class Distributions
+This section presents the class distributions of the concepts described in this paper.
+
+| Concept | Distribution | Concept | Distribution | 
+| ------- | ------------ | ------- | ------------ |
+| Activity | ![activity](figures/act.png) | Sub-activity | ![sub_activity](figures/sact.png) |
+| Actor | ![actor](figures/actor.png) | Object | ![object](figures/object.png) |
+| Relationship | ![relationship](figures/rel.png) | Attribute | ![attribute](figures/att.png) |
+| Transitive Action | ![transitive_action](figures/ta.png) | Intransitive Action | ![intransitive_action](figures/ia.png) |
+
+
+## Dataset Layout
+
+Download the dataset into a directory titled `dir_moma` with the structure below. The `anns` directory requires roughly 1.8GB of space and the `video` directory requires 436 GB.
+
+```
+$ tree dir_moma
+.
+├── anns
+│    ├── anns.json
+│    ├── splits
+│    │    ├── standard.json
+│    │    └── few_shot.json
+│    ├── clips.json
+│    └── taxonomy
+│         └── *.json
+└── videos
+     ├── all
+     ├── raw
+     ├── activity_fr
+     ├── activity
+     ├── sub_activity_fr
+     ├── sub_activity
+     ├── interaction
+     ├── interaction_frames
+     └── interaction_video
+```
+
+
+## Annotation Schema
+Below, we show the schema of the MOMA-LRG annotations.
 
 ```json5
 [
@@ -202,37 +230,3 @@ Below, we show the syntax of the MOMA-LRG annotations.
   ...
 ]
 ```
-
-## Class distributions
-
-### Activity
-
-![activity](figures/act.png)
-
-### Sub-activity
-
-![sub_activity](figures/sact.png)
-
-### Actor
-
-![actor](figures/actor.png)
-
-### Object
-
-![object](figures/object.png)
-
-### Relationship
-
-![relationship](figures/rel.png)
-
-### Attribute
-
-![attribute](figures/att.png)
-
-### Transitive action
-
-![transitive_action](figures/ta.png)
-
-### Intransitive action
-
-![intransitive_action](figures/ia.png)
