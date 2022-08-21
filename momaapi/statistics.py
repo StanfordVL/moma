@@ -129,6 +129,7 @@ class Statistics(dict):
             statistics = self._load_cache(path_statistics)
 
         else:
+            print("Compiling the Statistics class...")
             statistics = {"all": self._get_statistics()}
             for paradigm, split in itertools.product(paradigms, splits):
                 statistics[f"{paradigm}_{split}"] = self._get_statistics(
@@ -294,9 +295,7 @@ class Statistics(dict):
                 "duration_total": duration_total_sact,
                 "distribution": bincount_sact,
             },
-            "hoi": {
-                "num_instances": num_hois,
-            },
+            "hoi": {"num_instances": num_hois,},
             "actor": {
                 "num_instances_image": num_actors_image,
                 "num_instances_video": num_actors_video,

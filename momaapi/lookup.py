@@ -99,9 +99,12 @@ class Lookup:
             data = self._load_cache(dir_moma, names, names_lazy)
 
         except FileNotFoundError:
+            print("Compiling the Lookup class...")
             with open(osp.join(dir_moma, f"anns/anns.json"), "r") as f:
                 anns_raw = json.load(f)
-            with open(osp.join(dir_moma, f"anns/clips.json"), "r") as f:
+            with open(
+                osp.join(dir_moma, f"videos/interaction_frames/timestamps.json"), "r"
+            ) as f:
                 info_clips = json.load(f)
 
             data = {name: {} for name in names}
@@ -162,11 +165,12 @@ class Lookup:
     def _read_paradigms_and_splits(dir_moma):
         paradigms = ["standard", "few-shot"]
         splits = ["train", "val", "test"]
-        suffixes = {"standard": "std", "few-shot": "fs"}
 
         paradigm_and_split_to_ids_act = {}
         for paradigm in paradigms:
-            path_split = osp.join(dir_moma, f"anns/split_{suffixes[paradigm]}.json")
+            path_split = osp.join(
+                dir_moma, f"anns/splits/{paradigm.replace('-', '_')}.json"
+            )
             assert osp.isfile(
                 path_split
             ), f"Dataset split file does not exist: {path_split}"
