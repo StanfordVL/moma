@@ -1,4 +1,4 @@
-<div style="text-align: center">
+<div align="center">
 <img src="figures/logo.png">
 
 **A dataset dedicated to multi-object, multi-actor activity parsing.**
