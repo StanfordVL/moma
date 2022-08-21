@@ -100,12 +100,18 @@ class Lookup:
 
         except FileNotFoundError:
             print("Compiling the Lookup class...")
+
             with open(osp.join(dir_moma, f"anns/anns.json"), "r") as f:
                 anns_raw = json.load(f)
-            with open(
-                osp.join(dir_moma, f"videos/interaction_frames/timestamps.json"), "r"
-            ) as f:
-                info_clips = json.load(f)
+
+            if osp.exists(osp.join(dir_moma, f"videos/interaction_frames")):
+                with open(
+                    osp.join(dir_moma, f"videos/interaction_frames/timestamps.json"),
+                    "r",
+                ) as f:
+                    info_clips = json.load(f)
+            else:
+                info_clips = None
 
             data = {name: {} for name in names}
             for ann_raw in anns_raw:
@@ -144,9 +150,8 @@ class Lookup:
                             self.taxonomy["att"],
                             self.taxonomy["rel"],
                         )
-                        if (
-                            ann_hoi_raw["id"] in info_clips
-                        ):  # Currently, only clips from the test set have been generated
+                        # Currently, only clips from the test set have been generated
+                        if info_clips is not None and ann_hoi_raw["id"] in info_clips:
                             data["id_hoi_to_clip"][ann_hoi_raw["id"]] = Clip(
                                 ann_hoi_raw, info_clips[ann_hoi_raw["id"]]
                             )
