@@ -5,6 +5,9 @@ import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
 import os
 import os.path as osp
+import tempfile
+
+from ..utils import supress_stdout
 
 
 def to_dt(sec):
@@ -18,18 +21,22 @@ def lighten(color, factor=0.5):
 
 
 class TimelineVisualizer:
-    def __init__(self, moma, dir_vis):
+    def __init__(self, moma, dir_vis=None):
+        if dir_vis is None:
+            dir_vis = tempfile.mkdtemp()
+
         self.moma = moma
         self.dir_vis = dir_vis
         self.palette = {}
 
-    def get_palette(self, num_colors):
+    def _get_palette(self, num_colors):
         if num_colors not in self.palette:
             self.palette[num_colors] = distinctipy.get_colors(
                 num_colors, pastel_factor=0.5
             )
         return self.palette[num_colors]
 
+    @supress_stdout
     def show(self, id_act, id_sact=None, id_hoi=None, path=None):
         os.makedirs(osp.join(self.dir_vis, "timeline"), exist_ok=True)
 
@@ -53,7 +60,7 @@ class TimelineVisualizer:
         labels_sact = [ann_sact.cname for ann_sact in anns_sact]
         x = defaultdict(lambda: len(x))
         ids_color = [x[label_sact] for label_sact in labels_sact]
-        colors_sact = self.get_palette(len(ids_color))
+        colors_sact = self._get_palette(len(ids_color))
         times_hoi = [ann_hoi.time for ann_hoi in anns_hoi]
 
         interval_video = [to_dt(x) for x in interval_video]
@@ -155,3 +162,4 @@ class TimelineVisualizer:
             )
             path = osp.join(self.dir_vis, f"timeline/{fname}")
         plt.savefig(path)
+        return path

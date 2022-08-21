@@ -11,19 +11,24 @@ import PIL.ImageDraw as ImageDraw
 import PIL.ImageFont as ImageFont
 import pygraphviz as pgv
 import shutil
+import tempfile
 from torchvision import io
 
 from .timeline_visualizer import TimelineVisualizer
+from ..utils import supress_stdout
 
 
 class AnnVisualizer:
-    def __init__(self, moma, dir_vis):
+    def __init__(self, moma, dir_vis=None):
+        if dir_vis is None:
+            dir_vis = tempfile.mkdtemp()
+
         self.moma = moma
         self.timeline_visualizer = TimelineVisualizer(moma, dir_vis)
         self.dir_vis = dir_vis
 
     @staticmethod
-    def get_palette(ids, alpha=255):
+    def _get_palette(ids, alpha=255):
         # distinctipy's representation
         colors_box = distinctipy.get_colors(len(ids))
         colors_text = [
@@ -46,7 +51,7 @@ class AnnVisualizer:
         }
         return palette
 
-    def draw_bbox(self, ann_hoi, palette):
+    def _draw_bbox(self, ann_hoi, palette):
         path_image = self.moma.get_paths(ids_hoi=[ann_hoi.id])[0]
         image = io.read_image(path_image).permute(1, 2, 0).numpy()
         image = Image.fromarray(image).convert("RGBA")
@@ -93,17 +98,20 @@ class AnnVisualizer:
 
         return image.convert("RGB")
 
+    @supress_stdout
     def show_hoi(self, id_hoi, vstack=True):
-        if osp.isfile(osp.join(self.dir_vis, f"hoi/{id_hoi}.png")):
-            return
+        path_hoi = osp.join(self.dir_vis, f"hoi/{id_hoi}.png")
+
+        if osp.isfile(path_hoi):
+            return path_hoi
 
         os.makedirs(osp.join(self.dir_vis, "hoi"), exist_ok=True)
 
         ann_hoi = self.moma.get_anns_hoi(ids_hoi=[id_hoi])[0]
-        palette = self.get_palette(ann_hoi.ids_actor + ann_hoi.ids_object, alpha=150)
+        palette = self._get_palette(ann_hoi.ids_actor + ann_hoi.ids_object, alpha=150)
 
         """ bbox """
-        image = self.draw_bbox(ann_hoi, palette)
+        image = self._draw_bbox(ann_hoi, palette)
         path_bbox = osp.join(self.dir_vis, f"hoi/bbox_{id_hoi}.png")
         image.save(path_bbox)
 
@@ -186,7 +194,7 @@ class AnnVisualizer:
             image.paste(image_bbox, (0, 0))
             image.paste(image_graph, (image_bbox.width, 0))
 
-        image.save(osp.join(self.dir_vis, f"hoi/{id_hoi}.png"))
+        image.save(path_hoi)
 
         # cleanup
         os.remove(path_bbox)
@@ -195,21 +203,26 @@ class AnnVisualizer:
         image_graph.close()
         plt.close("all")
 
+        return path_hoi
+
+    @supress_stdout
     def show_sact(self, id_sact, vstack=True):
-        if osp.isfile(osp.join(self.dir_vis, f"sact/{id_sact}.gif")):
-            return
+        path_sact = osp.join(self.dir_vis, f"sact/{id_sact}.gif")
+
+        if osp.isfile(path_sact):
+            return path_sact
 
         os.makedirs(osp.join(self.dir_vis, "sact", id_sact), exist_ok=True)
 
         ann_sact = self.moma.get_anns_sact(ids_sact=[id_sact])[0]
         ids_hoi = self.moma.get_ids_hoi(ids_sact=[id_sact])
         anns_hoi = self.moma.get_anns_hoi(ids_hoi=ids_hoi)
-        palette = self.get_palette(ann_sact.ids_actor + ann_sact.ids_object, alpha=200)
+        palette = self._get_palette(ann_sact.ids_actor + ann_sact.ids_object, alpha=200)
 
         """ bbox """
         for i, id_hoi in enumerate(ids_hoi):
             ann_hoi = self.moma.get_anns_hoi(ids_hoi=[id_hoi])[0]
-            image = self.draw_bbox(ann_hoi, palette)
+            image = self._draw_bbox(ann_hoi, palette)
             image.save(
                 osp.join(self.dir_vis, f"sact/{id_sact}/bbox_{str(i).zfill(2)}.png")
             )
@@ -218,12 +231,12 @@ class AnnVisualizer:
         # get node & edge positions
         info_nodes = []
         for aact_actor in ann_sact.aacts_actor:
-            cid_actor = aact_actor.cid
-            cname_actor = aact_actor.cname
+            id_actor = aact_actor.id_entity
+            cname_actor = aact_actor.cname_entity
             info_nodes.append((id_actor, cname_actor))
         for aact_object in ann_sact.aacts_object:
-            cid_object = aact_object.cid
-            cname_object = aact_object.cname
+            id_object = aact_object.id_entity
+            cname_object = aact_object.cname_entity
             info_nodes.append((id_object, cname_object))
 
         info_edges = []
@@ -432,7 +445,7 @@ class AnnVisualizer:
                 images.append(image)
 
         images[0].save(
-            osp.join(self.dir_vis, f"sact/{id_sact}.gif"),
+            path_sact,
             format="GIF",
             append_images=images[1:],
             save_all=True,
@@ -446,3 +459,5 @@ class AnnVisualizer:
         [image_graph.close() for image_graph in images_graph]
         [image_timeline.close() for image_timeline in images_timeline]
         plt.close("all")
+
+        return path_sact
