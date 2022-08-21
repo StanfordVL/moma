@@ -3,7 +3,6 @@ from distinctipy import distinctipy
 import glob
 import math
 from matplotlib import font_manager
-import matplotlib.pyplot as plt
 import os
 import os.path as osp
 import PIL.Image as Image
@@ -201,7 +200,6 @@ class AnnVisualizer:
         os.remove(path_graph)
         image_bbox.close()
         image_graph.close()
-        plt.close("all")
 
         return path_hoi
 
@@ -458,6 +456,5 @@ class AnnVisualizer:
         [image_bbox.close() for image_bbox in images_bbox]
         [image_graph.close() for image_graph in images_graph]
         [image_timeline.close() for image_timeline in images_timeline]
-        plt.close("all")
 
         return path_sact

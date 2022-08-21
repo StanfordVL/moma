@@ -79,5 +79,6 @@ class StatVisualizer:
             path = osp.join(self.dir_vis, "stats", fname)
             paths[key] = path
             plt.savefig(path)
+            plt.close(fig)
 
         return paths

@@ -162,4 +162,5 @@ class TimelineVisualizer:
             )
             path = osp.join(self.dir_vis, f"timeline/{fname}")
         plt.savefig(path)
+        plt.close(fig)
         return path
