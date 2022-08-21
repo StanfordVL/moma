@@ -1,6 +1,6 @@
 #!/bin/bash
 
-DIR_LOCAL="/media/ssd/moma"
+DIR_LOCAL="/home/alan/data/moma-lrg"
 DIR_REMOTE="/home/alanzluo/data/moma"
 IPS=("104.198.3.149" "34.132.24.89" "104.198.196.133" "34.134.180.176" "34.122.127.45")
 
