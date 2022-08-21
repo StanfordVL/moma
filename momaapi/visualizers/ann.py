@@ -14,7 +14,7 @@ import shutil
 import tempfile
 from torchvision import io
 
-from .timeline_visualizer import TimelineVisualizer
+from .timeline import TimelineVisualizer
 from ..utils import supress_stdout
 
 
