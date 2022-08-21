@@ -22,9 +22,9 @@ ___
 ## Installation
 
 ```
-git clone https://github.com/d1ngn1gefe1/momatools
-cd momatools
-pip install .
+git clone https://github.com/d1ngn1gefe1/moma
+cd moma
+pip install -e .
 ```
 
 You can install all the dependencies needed for MOMA-LRG by running
@@ -33,31 +33,18 @@ You can install all the dependencies needed for MOMA-LRG by running
 pip install -r requirements.txt
 ```
 
-> **Warning**
->
-> Note that the dependency on `pygraphviz` requires the installation of `graphviz`, which can be installed via `sudo apt-get install graphviz graphviz-dev` on Linux systems and `brew install graphviz` via [Homebrew](https://brew.sh/) on macOS.
-
-#### Requirements:
+#### Additional Requirements:
 
 - Python 3.7+
-- ffmpeg (only for preprocessing): `pip install ffmpeg-python`
-- jsbeautifier (for better visualization of json files): `pip install jsbeautifier`
+- Graphviz: `sudo apt-get install graphviz graphviz-dev` (Linux) or `brew install graphviz` (Mac)
 
-Formatting is done via the [`black`](https://black.readthedocs.io/en/stable/getting_started.html) package. To format, first install black via:
 
+## Getting Started
+The downloaded files should be unpacked into the required [dataset layout](#dataset-layout). To verify the dataset layout, as well as to validate and compile the dataset API, run
 ```
-pip install black
+python scripts/validate.py
 ```
 
-and then run `black .` in the `momatools` directory.
-
-#### Requirements: data visualization
-
-- [distinctipy](https://github.com/alan-turing-institute/distinctipy): a lightweight package for generating visually distinct colors
-- Graphviz: `sudo apt-get install graphviz graphviz-dev`
-- PyGraphviz: a Python interface to the Graphviz graph layout and visualization package
-- seaborn: a data visualization library based on matplotlib
-- Torchvision
 
 ## MOMA Hierarchy
 
