@@ -3,40 +3,51 @@ import os
 import os.path as osp
 from pprint import pprint
 import seaborn as sns
+import tempfile
 
 
 class StatVisualizer:
-    def __init__(self, moma, dir_vis):
+    def __init__(self, moma, dir_vis=None):
+        if dir_vis is None:
+            dir_vis = tempfile.mkdtemp()
+
         self.moma = moma
         self.dir_vis = dir_vis
 
     def show(self, with_split):
         os.makedirs(osp.join(self.dir_vis, "stats"), exist_ok=True)
 
+        keys = [
+            x for x in self.moma.statistics["all"].keys() if x != "raw" and x != "hoi"
+        ]
         if with_split:
             distributions, hues = {}, {}
-            for key in self.moma.distributions_train:
+            for key in keys:
                 distributions[key] = (
-                    self.moma.distributions_train[key]
-                    + self.moma.distributions_val[key]
+                    self.moma.statistics["standard_train"][key]["distribution"]
+                    + self.moma.statistics["standard_val"][key]["distribution"]
+                    + self.moma.statistics["standard_test"][key]["distribution"]
                 )
-                hues[key] = ["train"] * len(self.moma.distributions_train[key]) + [
-                    "val"
-                ] * len(self.moma.distributions_val[key])
-            pprint(self.moma.statistics_train, sort_dicts=False)
-            pprint(self.moma.statistics_val, sort_dicts=False)
+                hues[key] = (
+                    ["train"]
+                    * len(self.moma.statistics["standard_train"][key]["distribution"])
+                    + ["val"]
+                    * len(self.moma.statistics["standard_val"][key]["distribution"])
+                    + ["test"]
+                    * len(self.moma.statistics["standard_test"][key]["distribution"])
+                )
 
         else:
-            distributions = self.moma.distributions
-            hues = {key: None for key in self.moma.distributions}
-            pprint(self.moma.statistics, sort_dicts=False)
+            distributions = {
+                key: self.moma.statistics["all"][key]["distribution"] for key in keys
+            }
+            hues = {key: None for key in keys}
 
+        paths = {}
         for key in distributions:
             counts = distributions[key]
             cnames = (
-                self.moma.get_taxonomy(key) + self.moma.get_taxonomy(key)
-                if with_split
-                else self.moma.get_taxonomy(key)
+                self.moma.taxonomy[key] * 3 if with_split else self.moma.taxonomy[key]
             )
             if isinstance(cnames[0], tuple):
                 cnames = [cname[0] for cname in cnames]
@@ -64,4 +75,9 @@ class StatVisualizer:
             ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha="right")
             ax.set_ylim(bottom=1)
             plt.tight_layout()
-            plt.savefig(osp.join(self.dir_vis, "stats", fname))
+
+            path = osp.join(self.dir_vis, "stats", fname)
+            paths[key] = path
+            plt.savefig(path)
+
+        return paths
