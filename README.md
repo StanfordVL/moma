@@ -43,7 +43,7 @@ pip install -r requirements.txt
 This section explains how to download, set up, and verify the MOMA-LRG dataset and its API.
 
 #### Download
-The videos are available for download in low-resolution (568x320).
+The videos are available for download in low-resolution (the shorter side is resized to 320px).
 A script is provided to crawl videos in full resolution. 
 Alternately, if you are interested in the raw videos for research purposes, please contact us by email [momadataset@lists.stanford.edu](mailto:momadataset@lists.stanford.edu).
 
