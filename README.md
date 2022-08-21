@@ -45,7 +45,7 @@ This section explains how to download, set up, and verify the MOMA-LRG dataset a
 #### Download
 The videos are available for download in low-resolution (568x320).
 A script is provided to crawl videos in full resolution. 
-Alternately, if you are interested in the raw videos for research purposes, please contact us by email [momadataset@lists.stanford.edu.](mailto:momadataset@lists.stanford.edu.)
+Alternately, if you are interested in the raw videos for research purposes, please contact us by email [momadataset@lists.stanford.edu](mailto:momadataset@lists.stanford.edu).
 
 [[Activity]](https://drive.google.com/file/d/1tfn54uJDkqgnDiD5v1xfd1oTyt-loHnJ/view?usp=sharing)
 [[Sub-activity]](https://drive.google.com/file/d/1CnYWQRBAkR9VyBD6mbJOlzcU4mRLRvNV/view?usp=sharing)
