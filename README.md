@@ -103,28 +103,30 @@ This section presents the class distributions of the concepts described in this 
 
 ## Dataset Layout
 
-Download the dataset into a directory titled `dir_moma` with the structure below. The `anns` directory requires roughly 1.8GB of space and the `video` directory requires 436 GB.
+Download the dataset into a directory titled `dir_moma` with the structure below. 
+The `anns` directory requires roughly 1.8GB of space and the `video` directory requires 436 GB.
+You may not require all the folders in `videos` depending on the nature of your project.
 
-```
+```shell
 $ tree dir_moma
 .
-├── anns
+├── anns/
 │    ├── anns.json
-│    ├── splits
+│    ├── splits/
 │    │    ├── standard.json
 │    │    └── few_shot.json
-│    └── taxonomy
-│         └── *.json
-└── videos
-     ├── all
-     ├── raw
-     ├── activity_fr
-     ├── activity
-     ├── sub_activity_fr
-     ├── sub_activity
-     ├── interaction
-     ├── interaction_frames
-     └── interaction_video
+│    └── taxonomy/
+│         ├── act_sact.json, cn2en.json, few_shot.json, lvis.json
+│         └── actor.json, object.json, intransitive_action.json, transitive_action.json, attribute.json, relationship.json
+└── videos/
+     ├── raw/ (full-resolution untrimmed videos)
+     ├── activity_fr/ (full-resolution activity videos)
+     ├── activity/ (low-resolution activity videos)
+     ├── sub_activity_fr/ (full-resolution sub-activity videos)
+     ├── sub_activity/ (low-resolution sub-activity videos)
+     ├── interaction/ (full-resolution atomic action frames extracted at 1fps)
+     ├── interaction_frames/
+     └── interaction_video/
 ```
 
 
