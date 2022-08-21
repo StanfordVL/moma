@@ -1,6 +1,5 @@
-<div align="center">
-
-# MOMA-LRG
+<div style="text-align: center">
+<img src="figures/logo.png">
 
 **A dataset dedicated to multi-object, multi-actor activity parsing.**
 ![activity](figures/moma.gif)
