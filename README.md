@@ -4,7 +4,7 @@
 **A dataset dedicated to multi-object, multi-actor activity parsing.**
 ![activity](figures/moma.gif)
 [[Website]](https://moma.stanford.edu/)
-[[Documentation]](https://momatools.readthedocs.io/en/latest/)
+[[Documentation]](https://momaapi.rtfd.io)
 [[MOMA 1.0 Paper]](https://proceedings.neurips.cc/paper/2021/file/95688ba636a4720a85b3634acfec8cdd-Paper.pdf)
 
 ___
