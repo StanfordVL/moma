@@ -86,9 +86,7 @@ class MOMA:
         """
         Constructor for MOMA-LRG
         """
-        assert osp.isdir(osp.join(dir_moma, "anns")) and osp.isdir(
-            osp.join(dir_moma, "videos")
-        )
+        assert osp.isdir(osp.join(dir_moma, "anns"))
 
         self.dir_moma = dir_moma
         self.paradigm = paradigm

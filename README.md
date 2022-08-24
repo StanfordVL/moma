@@ -25,7 +25,7 @@ ___
 
 ## Installation
 
-```
+```console
 git clone https://github.com/d1ngn1gefe1/moma
 cd moma
 pip install -e .
@@ -33,7 +33,7 @@ pip install -e .
 
 You can install all the dependencies needed for MOMA-LRG by running
 
-```
+```console
 pip install -r requirements.txt
 ```
 
@@ -47,14 +47,20 @@ pip install -r requirements.txt
 This section explains how to download, set up, and verify the MOMA-LRG dataset and its API.
 
 #### Download
-The videos are available for download in low-resolution (the shorter side is resized to 320px).
-A script is provided to crawl videos in full resolution. 
-Alternately, if you are interested in the raw videos for research purposes, please contact us by email [momadataset@lists.stanford.edu](mailto:momadataset@lists.stanford.edu).
-
+A script is provided to crawl raw videos in full resolution:
+```console
+python download/videos.py --dir-moma [path to MOMA-LRG]
+```
+We provide pre-processed videos in low resolution for exploration and illustration purposes (the shorter side is resized to 320px).
 [[Activity]](https://drive.google.com/file/d/1tfn54uJDkqgnDiD5v1xfd1oTyt-loHnJ/view?usp=sharing)
 [[Sub-activity]](https://drive.google.com/file/d/1CnYWQRBAkR9VyBD6mbJOlzcU4mRLRvNV/view?usp=sharing)
 [[Atomic Action]](https://drive.google.com/file/d/1Lf8uH13d8aDBAflYfqmNWQ914KugyF9D/view?usp=sharing)
-[[Annotations]](https://drive.google.com/file/d/1stizUmyHY6aNxxbxUPD5DvoibBvUrKZW/view?usp=sharing)
+Alternately, if you are interested in the full-resolution pre-processed videos for research purposes, please contact us by email at [momadataset@lists.stanford.edu](mailto:momadataset@lists.stanford.edu).
+
+You can download the annotations with our script or directly from [Google Drive](https://drive.google.com/file/d/1stizUmyHY6aNxxbxUPD5DvoibBvUrKZW/view?usp=sharing):
+```console
+python download/anns.py --dir-moma [path to MOMA-LRG]
+```
 
 #### Verification
 The downloaded files should be unpacked into the required [dataset layout](#dataset-layout). To verify the dataset layout, as well as to validate and compile the dataset API, run
