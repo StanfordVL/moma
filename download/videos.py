@@ -22,9 +22,14 @@ def main():
         except:
             print(f"Connection Error: {id_act}")
 
-        yt.streams.filter(progressive=True, file_extension="mp4").order_by(
-            "resolution"
-        ).desc().first().download(osp.join(args.dir_moma, f"videos/raw/{id_act}.mp4"))
+        # fmt: off
+        yt.streams\
+          .filter(progressive=True, file_extension="mp4")\
+          .order_by("resolution")\
+          .desc()\
+          .first()\
+          .download(osp.join(args.dir_moma, f"videos/raw/{id_act}.mp4"))
+        # fmt: on
 
 
 if __name__ == "__main__":
