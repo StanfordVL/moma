@@ -25,22 +25,28 @@ ___
 
 ## Installation
 
+#### System Requirements:
+
+- Python 3.7+
+- Graphviz: `sudo apt-get install graphviz graphviz-dev` (Linux) or `brew install graphviz` (Mac)
+
+You can install all the dependencies needed for MOMA-LRG by running:
+
+```
+pip install -r requirements.txt
+```
+
+To install the MOMA api after installing system requirements and dependencies, you can run:
+
 ```
 git clone https://github.com/d1ngn1gefe1/moma
 cd moma
 pip install -e .
 ```
 
-You can install all the dependencies needed for MOMA-LRG by running
 
-```
-pip install -r requirements.txt
-```
 
-#### Additional Requirements:
 
-- Python 3.7+
-- Graphviz: `sudo apt-get install graphviz graphviz-dev` (Linux) or `brew install graphviz` (Mac)
 
 
 ## Getting Started
