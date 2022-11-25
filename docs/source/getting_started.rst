@@ -7,13 +7,13 @@ To install the MOMA API, first clone the repository by running
 
 .. code-block:: bash
 
-    git clone https://github.com/d1ngn1gefe1/momatools
+    git clone https://github.com/StanfordVL/moma.git
 
 Install the API and its dependencies by running
 
 .. code-block:: bash
 
-    cd momatools
+    cd moma
     pip install .
     pip install -r requirements.txt
 
