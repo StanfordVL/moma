@@ -5,8 +5,6 @@ import numpy as np
 import os
 import os.path as osp
 
-from .utils import timeit
-
 
 class Statistics(dict):
     def __init__(self, dir_moma, taxonomy, lookup, reset_cache):
@@ -116,7 +114,6 @@ class Statistics(dict):
             statistics = json.load(f)
         return statistics
 
-    @timeit
     def _read_statistics(self, dir_moma, reset_cache):
         paradigms = self._lookup.retrieve("paradigms")
         splits = self._lookup.retrieve("splits")
