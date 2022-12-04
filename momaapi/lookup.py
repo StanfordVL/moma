@@ -6,7 +6,6 @@ import pickle
 import shutil
 
 from .data import Bidict, LazyDict, Metadatum, Act, SAct, HOI, Clip
-from .utils import timeit
 
 """
 The following functions are publicly available:
@@ -89,7 +88,6 @@ class Lookup:
 
         return data
 
-    @timeit
     def _read_anns(self, dir_moma, reset_cache, names, names_lazy, names_bidict):
         dir_lookup = osp.join(dir_moma, "anns/cache/lookup")
         if reset_cache and osp.exists(dir_lookup):
