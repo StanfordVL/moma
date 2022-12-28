@@ -1,4 +1,4 @@
-Annotation structure
+Annotation Structure
 ====================
 .. automodule:: momaapi.data.ann
     :members:

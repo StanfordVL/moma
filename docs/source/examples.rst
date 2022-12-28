@@ -1,4 +1,4 @@
-Example usage
+Example Usage
 ==============
 Creating a MOMA Object
 -----------------------
