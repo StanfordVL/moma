@@ -197,14 +197,6 @@ class Statistics(dict):
             set([object.cid for ann_hoi in anns_hoi for object in ann_hoi.objects])
         )
 
-        num_ias = sum([len(ann_hoi.ias) for ann_hoi in anns_hoi])
-        num_classes_ia = len(
-            set([ia.cid for ann_hoi in anns_hoi for ia in ann_hoi.ias])
-        )
-        num_tas = sum([len(ann_hoi.tas) for ann_hoi in anns_hoi])
-        num_classes_ta = len(
-            set([ta.cid for ann_hoi in anns_hoi for ta in ann_hoi.tas])
-        )
         num_atts = sum([len(ann_hoi.atts) for ann_hoi in anns_hoi])
         num_classes_att = len(
             set([att.cid for ann_hoi in anns_hoi for att in ann_hoi.atts])
@@ -240,16 +232,12 @@ class Statistics(dict):
         (
             bincount_actor,
             bincount_object,
-            bincount_ia,
-            bincount_ta,
             bincount_att,
             bincount_rel,
-        ) = ([], [], [], [], [], [])
+        ) = ([], [], [], [])
         for ann_hoi in anns_hoi:
             bincount_actor += [actor.cid for actor in ann_hoi.actors]
             bincount_object += [object.cid for object in ann_hoi.objects]
-            bincount_ia += [ia.cid for ia in ann_hoi.ias]
-            bincount_ta += [ta.cid for ta in ann_hoi.tas]
             bincount_att += [att.cid for att in ann_hoi.atts]
             bincount_rel += [rel.cid for rel in ann_hoi.rels]
         bincount_actor = np.bincount(
@@ -257,12 +245,6 @@ class Statistics(dict):
         ).tolist()
         bincount_object = np.bincount(
             bincount_object, minlength=len(self._taxonomy["object"])
-        ).tolist()
-        bincount_ia = np.bincount(
-            bincount_ia, minlength=len(self._taxonomy["ia"])
-        ).tolist()
-        bincount_ta = np.bincount(
-            bincount_ta, minlength=len(self._taxonomy["ta"])
         ).tolist()
         bincount_att = np.bincount(
             bincount_att, minlength=len(self._taxonomy["att"])
@@ -304,16 +286,6 @@ class Statistics(dict):
                 "num_instances_video": num_objects_video,
                 "num_classes": num_classes_object,
                 "distribution": bincount_object,
-            },
-            "ia": {
-                "num_instances": num_ias,
-                "num_classes": num_classes_ia,
-                "distribution": bincount_ia,
-            },
-            "ta": {
-                "num_instances": num_tas,
-                "num_classes": num_classes_ta,
-                "distribution": bincount_ta,
             },
             "att": {
                 "num_instances": num_atts,

@@ -135,7 +135,7 @@ class AnnVisualizer:
                 color="salmon3",
                 shape="circle",
             )
-        for predicate in ann_hoi.tas + ann_hoi.rels:
+        for predicate in ann_hoi.rels:
             G.add_edge(
                 (predicate.id_src, predicate.id_trg),
                 label=predicate.cname,
@@ -144,7 +144,7 @@ class AnnVisualizer:
                 fontsize="10",
                 len=2,
             )
-        for predicate in ann_hoi.ias + ann_hoi.atts:
+        for predicate in ann_hoi.atts:
             G.add_edge(
                 (predicate.id_src, predicate.id_src),
                 label=predicate.cname,
@@ -240,11 +240,11 @@ class AnnVisualizer:
         info_edges = []
         for ann_hoi in anns_hoi:
             edge_to_labels = defaultdict(list)
-            for predicate in ann_hoi.tas + ann_hoi.rels:
+            for predicate in ann_hoi.rels:
                 edge_to_labels[(predicate.id_src, predicate.id_trg)].append(
                     predicate.cname
                 )
-            for predicate in ann_hoi.ias + ann_hoi.atts:
+            for predicate in ann_hoi.atts:
                 edge_to_labels[(predicate.id_src, predicate.id_src)].append(
                     predicate.cname
                 )
@@ -309,11 +309,11 @@ class AnnVisualizer:
 
             # draw edges
             edge_to_labels = defaultdict(list)
-            for predicate in ann_hoi.tas + ann_hoi.rels:
+            for predicate in ann_hoi.rels:
                 edge_to_labels[(predicate.id_src, predicate.id_trg)].append(
                     predicate.cname
                 )
-            for predicate in ann_hoi.ias + ann_hoi.atts:
+            for predicate in ann_hoi.atts:
                 edge_to_labels[(predicate.id_src, predicate.id_src)].append(
                     predicate.cname
                 )
