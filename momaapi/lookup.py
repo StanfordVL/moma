@@ -130,8 +130,6 @@ class Lookup:
                         self.taxonomy["sact"],
                         self.taxonomy["actor"],
                         self.taxonomy["object"],
-                        self.taxonomy["ia"],
-                        self.taxonomy["ta"],
                         self.taxonomy["att"],
                         self.taxonomy["rel"],
                     )
@@ -143,8 +141,6 @@ class Lookup:
                             ann_hoi_raw,
                             self.taxonomy["actor"],
                             self.taxonomy["object"],
-                            self.taxonomy["ia"],
-                            self.taxonomy["ta"],
                             self.taxonomy["att"],
                             self.taxonomy["rel"],
                         )
