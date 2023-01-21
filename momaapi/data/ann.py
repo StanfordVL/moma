@@ -95,8 +95,6 @@ class SAct:
         taxonomy_sact,
         taxonomy_actor,
         taxonomy_object,
-        taxonomy_ia,
-        taxonomy_ta,
         taxonomy_att,
         taxonomy_rel,
     ):
@@ -127,14 +125,6 @@ class SAct:
         # group annotations by entity ID and frame ID
         actors = {id_actor: [None for _ in self.ids_hoi] for id_actor in ids_actor}
         objects = {id_object: [None for _ in self.ids_hoi] for id_object in ids_object}
-        ias = {
-            id_entity: [[] for _ in self.ids_hoi]
-            for id_entity in ids_actor + ids_object
-        }
-        tas = {
-            id_entity: [[] for _ in self.ids_hoi]
-            for id_entity in ids_actor + ids_object
-        }
         atts = {
             id_entity: [[] for _ in self.ids_hoi]
             for id_entity in ids_actor + ids_object
@@ -150,10 +140,6 @@ class SAct:
             for x in ann_hoi_raw["objects"]:
                 assert x["id"] not in objects or objects[x["id"]][i] is None
                 objects[x["id"]][i] = Entity(x, "object", taxonomy_object)
-            for x in ann_hoi_raw["intransitive_actions"]:
-                ias[x["source_id"]][i].append(Predicate(x, "ia", taxonomy_ia))
-            for x in ann_hoi_raw["transitive_actions"]:
-                tas[x["source_id"]][i].append(Predicate(x, "ta", taxonomy_ta))
             for x in ann_hoi_raw["attributes"]:
                 atts[x["source_id"]][i].append(Predicate(x, "att", taxonomy_att))
             for x in ann_hoi_raw["relationships"]:
@@ -165,16 +151,14 @@ class SAct:
             "end_time": self.end,
             "times": self.times,
             "scale_factor": scale_factor,
-            "num_classes_ia": len(taxonomy_ia),
-            "num_classes_ta": len(taxonomy_ta),
             "num_classes_att": len(taxonomy_att),
             "num_classes_rel": len(taxonomy_rel),
         }
         self.aacts_actor = [
-            AAct(info, actors[i], ias[i], tas[i], atts[i], rels[i]) for i in ids_actor
+            AAct(info, actors[i], atts[i], rels[i]) for i in ids_actor
         ]
         self.aacts_object = [
-            AAct(info, objects[i], ias[i], tas[i], atts[i], rels[i]) for i in ids_object
+            AAct(info, objects[i], atts[i], rels[i]) for i in ids_object
         ]
 
     @property
@@ -208,7 +192,7 @@ class AAct:
         relative to the start of the activity video
     """
 
-    def __init__(self, info, entities, ias, tas, atts, rels):
+    def __init__(self, info, entities, atts, rels):
         entity = next(entity for entity in entities if entity is not None)
         self.id_entity = entity.id
         self.kind_entity = entity.kind
@@ -221,12 +205,8 @@ class AAct:
 
         self._scale_factor = info["scale_factor"]
         self._entities = entities
-        self._ias = ias
-        self._tas = tas
         self._atts = atts
         self._rels = rels
-        self._num_classes_ia = info["num_classes_ia"]
-        self._num_classes_ta = info["num_classes_ta"]
         self._num_classes_att = info["num_classes_att"]
         self._num_classes_rel = info["num_classes_rel"]
 
@@ -244,20 +224,6 @@ class AAct:
 
     @property
     def cids_predicate(self):  # binary
-        indices_ia = np.array(
-            [[t, ia.cid] for t, ias in enumerate(self._ias) for ia in ias]
-        ).T
-        cids_ia = np.zeros((self.length, self._num_classes_ia))
-        if len(indices_ia) > 0:
-            cids_ia[indices_ia[0], indices_ia[1]] = 1
-
-        indices_ta = np.array(
-            [[t, ta.cid] for t, tas in enumerate(self._tas) for ta in tas]
-        ).T
-        cids_ta = np.zeros((self.length, self._num_classes_ta))
-        if len(indices_ta) > 0:
-            cids_ta[indices_ta[0], indices_ta[1]] = 1
-
         indices_att = np.array(
             [[t, att.cid] for t, atts in enumerate(self._atts) for att in atts]
         ).T
@@ -272,7 +238,7 @@ class AAct:
         if len(indices_rel) > 0:
             cids_rel[indices_rel[0], indices_rel[1]] = 1
 
-        cids_predicate = np.concatenate((cids_ia, cids_ta, cids_att, cids_rel), axis=1)
+        cids_predicate = np.concatenate((cids_att, cids_rel), axis=1)
         return cids_predicate
 
     @property
@@ -294,8 +260,6 @@ class HOI:
     :ivar id: HOI annotation ID
     :ivar time: time of the HOI annotation in seconds, relative to the start of the activity video
     :ivar actors: list of actor entities involved in the interaction
-    :ivar ias: list of intransitive actions occuring between actors
-    :ivar tas: list of transitive actions occuring between actors
     :ivar atts: list of attributes that the actor has
     :ivar rels: list of relationships between entities in the interaction
     """
@@ -305,8 +269,6 @@ class HOI:
         ann,
         taxonomy_actor,
         taxonomy_object,
-        taxonomy_ia,
-        taxonomy_ta,
         taxonomy_att,
         taxonomy_rel,
     ):
@@ -314,10 +276,6 @@ class HOI:
         self.time = ann["time"]
         self.actors = [Entity(x, "actor", taxonomy_actor) for x in ann["actors"]]
         self.objects = [Entity(x, "object", taxonomy_object) for x in ann["objects"]]
-        self.ias = [
-            Predicate(x, "ia", taxonomy_ia) for x in ann["intransitive_actions"]
-        ]
-        self.tas = [Predicate(x, "ta", taxonomy_ta) for x in ann["transitive_actions"]]
         self.atts = [Predicate(x, "att", taxonomy_att) for x in ann["attributes"]]
         self.rels = [Predicate(x, "rel", taxonomy_rel) for x in ann["relationships"]]
 
@@ -333,7 +291,6 @@ class HOI:
         return (
             f"HOI(id={self.id}, time={self.time}, "
             f"num_actors={len(self.actors)}, num_objects={len(self.objects)}, "
-            f"num_ias={len(self.ias)}, num_tas={len(self.tas)}, "
             f"num_atts={len(self.atts)}, num_rels={len(self.rels)}, "
             f"ids_actor={self.ids_actor}, ids_object={self.ids_object})"
         )
