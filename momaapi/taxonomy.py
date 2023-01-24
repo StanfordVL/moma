@@ -33,23 +33,6 @@ class Taxonomy(dict):
         with open(osp.join(dir_moma, "anns/taxonomy/object.json"), "r") as f:
             taxonomy_object = json.load(f)
             taxonomy_object = sorted(itertools.chain(*taxonomy_object.values()))
-
-        # ia and ta may have been merged with attributes and relationships
-        try:
-            with open(
-                osp.join(dir_moma, "anns/taxonomy/intransitive_action.json"), "r"
-            ) as f:
-                taxonomy_ia = json.load(f)
-                taxonomy_ia = sorted(map(tuple, itertools.chain(*taxonomy_ia.values())))
-        except FileNotFoundError:
-            taxonomy_ia = None
-        try:
-            with open(osp.join(dir_moma, "anns/taxonomy/transitive_action.json"), "r") as f:
-                taxonomy_ta = json.load(f)
-                taxonomy_ta = sorted(map(tuple, itertools.chain(*taxonomy_ta.values())))
-        except FileNotFoundError:
-            taxonomy_ta = None
-
         with open(osp.join(dir_moma, "anns/taxonomy/attribute.json"), "r") as f:
             taxonomy_att = json.load(f)
             taxonomy_att = sorted(map(tuple, itertools.chain(*taxonomy_att.values())))
@@ -106,13 +89,6 @@ class Taxonomy(dict):
                 }
             ),
         }
-
-        # If ia is not None, combine it with att
-        if taxonomy_ia is not None:
-            taxonomy_att = taxonomy_ia + taxonomy_att
-        # If ta is not None, combine it with rel
-        if taxonomy_ta is not None:
-            taxonomy_rel = taxonomy_ta + taxonomy_rel
 
         taxonomy = {
             "actor": taxonomy_actor,
