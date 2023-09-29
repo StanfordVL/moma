@@ -35,7 +35,8 @@ The following attributes are defined:
 
  
 Definitions:
- - kind: ['act', 'sact', 'hoi', 'actor', 'object', 'ia', 'ta', 'att', 'rel']
+ - kind: ['act', 'sact', 'hoi', 'actor', 'object', 'att', 'rel']
+   * Note: ['ia', 'ta'] are deprecated.
 """
 
 
@@ -53,8 +54,6 @@ class MOMA:
     * ``sact``: sub-activity
     * ``hoi``: higher-order interaction
     * ``entity``: entity
-    * ``ia``: intransitive action
-    * ``ta``: transitive action
     * ``att``: attribute
     * ``rel``: relationship
     * ``ann``: annotation
@@ -101,13 +100,13 @@ class MOMA:
 
     def get_cids(
         self,
-        kind: Literal["act", "sact", "actor", "object", "ia", "ta", "att", "rel"],
+        kind: Literal["act", "sact", "actor", "object", "att", "rel"],
         threshold: int,
         split: Literal["train", "val", "test", "either", "all", "combined"],
     ) -> list:
         """
         :param kind: the kind of annotations needed to be retrieved
-        :type kind: Literal['act', 'sact', 'actor', 'object', 'ia', 'ta', 'att', 'rel']
+        :type kind: Literal['act', 'sact', 'actor', 'object', 'att', 'rel']
         :param threshold: exclude classes with fewer than this number of total instances
         :type threshold: int
         :param split: the split to be used for the retrieval. Here, ``train`` refers to
@@ -187,17 +186,8 @@ class MOMA:
         else:
             raise ValueError
 
-    def get_cnames(
-        self,
-        cids_act: list = None,
-        cids_sact: list = None,
-        cids_actor: list = None,
-        cids_object: list = None,
-        cids_ia: list = None,
-        cids_ta: list = None,
-        cids_att: list = None,
-        cids_rel: list = None,
-    ) -> list:
+    def get_cnames(self, cids_act: list = None, cids_sact: list = None, cids_actor: list = None,
+                   cids_object: list = None, cids_att: list = None, cids_rel: list = None) -> list:
         """
         Returns the associated class names given the class IDs.
 
@@ -209,10 +199,6 @@ class MOMA:
         :type cids_actor: Optional[List[int]]
         :param cids_object: a list of class IDs of objects
         :type cids_object: Optional[List[int]]
-        :param cids_ia: a list of class IDs of intransitive actions
-        :type cids_ia: Optional[List[int]]
-        :param cids_ta: a list of class IDs of transitive actions
-        :type cids_ta: Optional[List[int]]
         :param cids_att: a list of class IDs of attributes
         :type cids_att: Optional[List[int]]
         :param cids_rel: a list of class IDs of relationships
@@ -225,12 +211,10 @@ class MOMA:
             cids_sact,
             cids_actor,
             cids_object,
-            cids_ia,
-            cids_ta,
             cids_att,
             cids_rel,
         ]
-        kinds = ["act", "sact", "actor", "object", "ia", "ta", "att", "rel"]
+        kinds = ["act", "sact", "actor", "object", "att", "rel"]
 
         indices = [i for i, x in enumerate(args) if x is not None]
         assert len(indices) == 1
@@ -325,19 +309,9 @@ class MOMA:
         ids_act_intersection = sorted(set.intersection(*map(set, ids_act_intersection)))
         return ids_act_intersection
 
-    def get_ids_sact(
-        self,
-        split: str = None,
-        cnames_sact: list = None,
-        ids_act: list = None,
-        ids_hoi: list = None,
-        cnames_actor: list = None,
-        cnames_object: list = None,
-        cnames_ia: list = None,
-        cnames_ta: list = None,
-        cnames_att: list = None,
-        cnames_rel: list = None,
-    ) -> list:
+    def get_ids_sact(self, split: str = None, cnames_sact: list = None, ids_act: list = None, ids_hoi: list = None,
+                     cnames_actor: list = None, cnames_object: list = None, cnames_att: list = None,
+                     cnames_rel: list = None) -> list:
         """
         Get the unique sub-activity instance IDs that satisfy certain conditions
         dataset split
@@ -354,10 +328,6 @@ class MOMA:
         :type cnames_actor: list
         :param cnames_object: get sub-activity IDs [ids_sact] for given object class names [cnames_object]
         :type cnames_object: list
-        :param cnames_ia: get sub-activity IDs [ids_sact] for given intransitive action class names [cnames_ia]
-        :type cnames_ia: list
-        :param cnames_ta: get sub-activity IDs [ids_sact] for given transitive action class names [cnames_ta]
-        :type cnames_ta: list
         :param cnames_att: get sub-activity IDs [ids_sact] for given attribute class names [cnames_att]
         :type cnames_att: list
         :param cnames_rel: get sub-activity IDs [ids_sact] for given relationship class names [cnames_rel]
@@ -374,8 +344,6 @@ class MOMA:
                 ids_hoi,
                 cnames_actor,
                 cnames_object,
-                cnames_ia,
-                cnames_ta,
                 cnames_att,
                 cnames_rel,
             ]
@@ -387,9 +355,7 @@ class MOMA:
         # split
         if split is not None:
             assert split in self.lookup.retrieve("splits")
-            ids_sact = self.get_ids_sact(
-                ids_act=self.lookup.retrieve("ids_act", f"{self.paradigm}_{split}")
-            )
+            ids_sact = self.get_ids_sact(ids_act=self.lookup.retrieve("ids_act", f"{self.paradigm}_{split}"))
             ids_sact_intersection.append(ids_sact)
 
         # cnames_sact
@@ -415,14 +381,12 @@ class MOMA:
             ]
             ids_sact_intersection.append(ids_sact)
 
-        # cnames_actor, cnames_object, cnames_ia, cnames_ta, cnames_att, cnames_rel
+        # cnames_actor, cnames_object, cnames_att, cnames_rel
         if not all(
             x is None
             for x in [
                 cnames_actor,
                 cnames_object,
-                cnames_ia,
-                cnames_ta,
                 cnames_att,
                 cnames_rel,
             ]
@@ -430,8 +394,6 @@ class MOMA:
             kwargs = {
                 "cnames_actor": cnames_actor,
                 "cnames_object": cnames_object,
-                "cnames_ia": cnames_ia,
-                "cnames_ta": cnames_ta,
                 "cnames_att": cnames_att,
                 "cnames_rel": cnames_rel,
             }
@@ -446,18 +408,8 @@ class MOMA:
         )
         return ids_sact_intersection
 
-    def get_ids_hoi(
-        self,
-        split: str = None,
-        ids_act: list = None,
-        ids_sact: list = None,
-        cnames_actor: list = None,
-        cnames_object: list = None,
-        cnames_ia: list = None,
-        cnames_ta: list = None,
-        cnames_att: list = None,
-        cnames_rel: list = None,
-    ) -> list:
+    def get_ids_hoi(self, split: str = None, ids_act: list = None, ids_sact: list = None, cnames_actor: list = None,
+                    cnames_object: list = None, cnames_att: list = None, cnames_rel: list = None) -> list:
         """
         Get the unique higher-order interaction instance IDs that satisfy certain conditions
         dataset split
@@ -472,10 +424,6 @@ class MOMA:
         :type cnames_actor: list
         :param cnames_object: get higher-order interaction IDs [ids_hoi] for given object class names [cnames_object]
         :type cnames_object: list
-        :param cnames_ia: get higher-order interaction IDs [ids_hoi] for given intransitive action class names [cnames_ia]
-        :type cnames_ia: list
-        :param cnames_ta: get higher-order interaction IDs [ids_hoi] for given transitive action class names [cnames_ta]
-        :type cnames_ta: list
         :param cnames_att: get higher-order interaction IDs [ids_hoi] for given attribute class names [cnames_att]
         :type cnames_att: list
         :param cnames_rel: get higher-order interaction IDs [ids_hoi] for given relationship class names [cnames_rel]
@@ -489,8 +437,6 @@ class MOMA:
                 ids_sact,
                 cnames_actor,
                 cnames_object,
-                cnames_ia,
-                cnames_ta,
                 cnames_att,
                 cnames_rel,
             ]
@@ -502,9 +448,7 @@ class MOMA:
         # split
         if split is not None:
             assert split in self.lookup.retrieve("splits")
-            ids_hoi = self.get_ids_hoi(
-                ids_act=self.lookup.retrieve("ids_act", f"{self.paradigm}_{split}")
-            )
+            ids_hoi = self.get_ids_hoi(ids_act=self.lookup.retrieve("ids_act", f"{self.paradigm}_{split}"))
             ids_hoi_intersection.append(ids_hoi)
 
         # ids_act
@@ -524,12 +468,10 @@ class MOMA:
             )
             ids_hoi_intersection.append(ids_hoi)
 
-        # cnames_actor, cnames_object, cnames_ia, cnames_ta, cnames_att, cnames_rel
+        # cnames_actor, cnames_object, cnames_att, cnames_rel
         cnames_dict = {
             "actors": cnames_actor,
             "objects": cnames_object,
-            "ias": cnames_ia,
-            "tas": cnames_ta,
             "atts": cnames_att,
             "rels": cnames_rel,
         }

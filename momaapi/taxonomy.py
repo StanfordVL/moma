@@ -33,14 +33,6 @@ class Taxonomy(dict):
         with open(osp.join(dir_moma, "anns/taxonomy/object.json"), "r") as f:
             taxonomy_object = json.load(f)
             taxonomy_object = sorted(itertools.chain(*taxonomy_object.values()))
-        with open(
-            osp.join(dir_moma, "anns/taxonomy/intransitive_action.json"), "r"
-        ) as f:
-            taxonomy_ia = json.load(f)
-            taxonomy_ia = sorted(map(tuple, itertools.chain(*taxonomy_ia.values())))
-        with open(osp.join(dir_moma, "anns/taxonomy/transitive_action.json"), "r") as f:
-            taxonomy_ta = json.load(f)
-            taxonomy_ta = sorted(map(tuple, itertools.chain(*taxonomy_ta.values())))
         with open(osp.join(dir_moma, "anns/taxonomy/attribute.json"), "r") as f:
             taxonomy_att = json.load(f)
             taxonomy_att = sorted(map(tuple, itertools.chain(*taxonomy_att.values())))
@@ -101,8 +93,6 @@ class Taxonomy(dict):
         taxonomy = {
             "actor": taxonomy_actor,
             "object": taxonomy_object,
-            "ia": taxonomy_ia,
-            "ta": taxonomy_ta,
             "att": taxonomy_att,
             "rel": taxonomy_rel,
             "act": taxonomy_act,
